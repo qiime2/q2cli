@@ -13,18 +13,18 @@ from qiime.sdk import PluginManager, SubprocessExecutor
 from . import __version__ as q2cli_version
 
 
-CONTEXT_SETTINGS = {'plugin_manager': PluginManager()}
+PLUGIN_MANAGER = PluginManager()
 
 
 class QiimeCLI(click.MultiCommand):
 
     def list_commands(self, ctx):
-        plugins = ctx.obj['plugin_manager'].plugins.keys()
+        plugins = PLUGIN_MANAGER.plugins.keys()
         return sorted(plugins)
 
     def get_command(self, ctx, name):
-        if name in ctx.obj['plugin_manager'].plugins:
-            plugin = ctx.obj['plugin_manager'].plugins[name]
+        if name in PLUGIN_MANAGER.plugins:
+            plugin = PLUGIN_MANAGER.plugins[name]
 
             class PluginCommand(click.MultiCommand):
 
@@ -51,7 +51,7 @@ def _echo_version(ctx, name, value):
 
 def _echo_plugins(ctx, name, value):
     if value:
-        installed_plugins = ctx.obj['plugin_manager'].plugins
+        installed_plugins = PLUGIN_MANAGER.plugins
         if len(installed_plugins) == 0:
             click.echo('No plugins are currently installed.\nYou can browse '
                        'the official QIIME 2 plugins at: '
@@ -77,8 +77,7 @@ def _echo_info(ctx, name, value):
               help='List installed plugins and exit.', expose_value=False)
 @click.option('--info', is_flag=True, callback=_echo_info,
               help='Print system details and exit.', expose_value=False)
-@click.pass_context
-def cli(ctx):
+def cli():
     pass
 
 # TODO: update keys to be the types (rather than their str representations)
@@ -143,4 +142,4 @@ def _build_command(workflow_name, workflow):
 
 # cli entry point
 def main():
-    cli(obj=CONTEXT_SETTINGS)
+    cli()

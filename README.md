@@ -48,3 +48,13 @@ Next you should try to run a command that actually does some work. ``qiime diver
 ```bash
 qiime diversity feature_table_to_pcoa --feature_table table.qtf --phylogeny phylogeny.qtf --metric unweighted_unifrac --depth 50 --distance_matrix uu-dm.qtf --pcoa_results uu-pc.qtf
 ```
+
+## Enabling Bash tab completion
+
+To enable tab completion in Bash, run the following command or add it to your `.bashrc`/`.bash_profile`:
+
+```bash
+eval "$(_QIIME_COMPLETE=source qiime)"
+```
+
+Note: tab completion is currently **VERY** slow, track progress on [#6](https://github.com/qiime2/q2cli/issues/6).
