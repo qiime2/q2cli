@@ -43,7 +43,7 @@ qiime --plugins
 qiime diversity --help
 ```
 
-Next you should try to run a command that actually does some work. ``qiime diversity feature_table_to_pcoa`` is a good one to try. You can download demo input ``qtf`` files to work with [here](https://github.com/qiime2/q2d3/tree/master/demo/analysis-dir). Here's the command I ran:
+Next you should try to run a command that actually does some work. ``qiime diversity feature_table_to_pcoa`` is a good one to try. Download these demo ``.qtf`` files: [`table.qtf`](https://github.com/qiime2/q2d3/raw/master/demo/analysis-dir/table.qtf) and [`phylogeny.qtf`](https://github.com/qiime2/q2d3/raw/master/demo/analysis-dir/phylogeny.qtf). Here's the command I ran:
 
 ```bash
 qiime diversity feature_table_to_pcoa --feature_table table.qtf --phylogeny phylogeny.qtf --metric unweighted_unifrac --depth 50 --distance_matrix uu-dm.qtf --pcoa_results uu-pc.qtf
