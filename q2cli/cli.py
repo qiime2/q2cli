@@ -82,27 +82,24 @@ def cli():
 
 # TODO: update keys to be the types (rather than their str representations)
 # pending biocore/qiime2#46
-_type_map = {'Int': click.INT, 'Str': click.STRING, 'Float': click.FLOAT}
+#_type_map = {int: click.INT, str: click.STRING, float: click.FLOAT}
 
 
 def _create_callback(wf):
     def f(ctx, **kwargs):
         # execute workflow
         executor = SubprocessExecutor()
-        input_artifacts = {
-            ia_name: kwargs[ia_name]
-            for ia_name in wf.signature.input_artifacts}
-        input_parameters = {
-            ip_name: kwargs[ip_name]
-            for ip_name in wf.signature.input_parameters}
-        output_artifacts = {
-            oa_name: kwargs[oa_name]
-            for oa_name in wf.signature.output_artifacts
+        inputs = {
+            ia_name: kwargs[ia_name] for ia_name in wf.signature.inputs}
+        parameters = {
+            ip_name: kwargs[ip_name] for ip_name in wf.signature.parameters}
+        outputs = {
+            oa_name: kwargs[oa_name] for oa_name in wf.signature.outputs
         }
         future_ = executor(wf,
-                           input_artifacts,
-                           input_parameters,
-                           output_artifacts)
+                           inputs,
+                           parameters,
+                           outputs)
 
         # block (i.e., wait) until result is ready
         completed_process = future_.result()
@@ -117,23 +114,22 @@ def _create_callback(wf):
 
 def _build_command(workflow_name, workflow):
     parameters = []
-    for ia_name, ia_type in workflow.signature.input_artifacts.items():
+    for ia_name, ia_type in workflow.signature.inputs.items():
         p = click.Option(['--%s' % ia_name],
                          required=True,
                          type=click.Path(exists=True, dir_okay=False),
-                         help='Input %s' % str(ia_type))
+                         help='Input %s' % str(ia_type[0]))
         parameters.append(p)
-    for ip_name, ip_type in workflow.signature.input_parameters.items():
+    for ip_name, ip_type in workflow.signature.parameters.items():
         p = click.Option(['--%s' % ip_name],
                          required=True,
-                         type=_type_map[str(ip_type)],
-                         help=str(ip_type))
+                         type=ip_type[1])
         parameters.append(p)
-    for oa_name, oa_type in workflow.signature.output_artifacts.items():
+    for oa_name, oa_type in workflow.signature.outputs.items():
         p = click.Option(['--%s' % oa_name],
                          required=True,
                          type=click.Path(exists=False, dir_okay=False),
-                         help='Output %s' % str(oa_type))
+                         help='Output %s' % str(oa_type[0]))
         parameters.append(p)
 
     callback = _create_callback(workflow)
