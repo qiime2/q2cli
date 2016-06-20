@@ -96,10 +96,7 @@ def _create_callback(wf):
         outputs = {
             oa_name: kwargs[oa_name] for oa_name in wf.signature.outputs
         }
-        future_ = executor(wf,
-                           inputs,
-                           parameters,
-                           outputs)
+        future_, _ = executor(wf, inputs, parameters, outputs)
 
         # block (i.e., wait) until result is ready
         completed_process = future_.result()
