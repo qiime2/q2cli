@@ -6,8 +6,11 @@
 # The full license is in the file COPYING.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 
+import tempfile
+
 import click
 import qiime
+import qiime.plugin
 from qiime.sdk import PluginManager, SubprocessExecutor
 
 from . import __version__ as q2cli_version
@@ -29,12 +32,19 @@ class QiimeCLI(click.MultiCommand):
             class PluginCommand(click.MultiCommand):
 
                 def list_commands(self, ctx):
-                    workflows = plugin.workflows.keys()
-                    return sorted(workflows)
+                    # the cli currently doesn't differentiate between workflows
+                    # and visualizations
+                    commands = list(plugin.workflows.keys()) + \
+                               list(plugin.visualizations.keys())
+                    return sorted(commands)
 
                 def get_command(self, ctx, name):
-                    workflow = plugin.workflows[name]
-                    return _build_command(name, workflow)
+                    if name in plugin.workflows:
+                        return _build_workflow_command(
+                            name, plugin.workflows[name])
+                    else:
+                        return _build_visualization_command(
+                            name, plugin.visualizations[name])
 
             return PluginCommand(ctx)
         else:
@@ -80,12 +90,8 @@ def _echo_info(ctx, name, value):
 def cli():
     pass
 
-# TODO: update keys to be the types (rather than their str representations)
-# pending biocore/qiime2#46
-#_type_map = {int: click.INT, str: click.STRING, float: click.FLOAT}
 
-
-def _create_callback(wf):
+def _build_workflow_callback(wf):
     def f(ctx, **kwargs):
         # execute workflow
         executor = SubprocessExecutor()
@@ -109,28 +115,92 @@ def _create_callback(wf):
     return click.pass_context(f)
 
 
-def _build_command(workflow_name, workflow):
+def _build_visualization_callback(wf):
+    # TODO there is a lot of code duplicated between
+    # _build_visualization_callback and _build_workflow_callback - revisit
+    # this after the refactoring that is happening as part of
+    # https://github.com/qiime2/qiime2/issues/39
+    def f(ctx, **kwargs):
+        # TODO nest output_dir under user-configured temporary directory,
+        # pending https://github.com/qiime2/qiime2/issues/12
+        output_dir = tempfile.TemporaryDirectory()
+        executor = SubprocessExecutor()
+        inputs = {
+            ia_name: kwargs[ia_name] for ia_name in wf.signature.inputs}
+        parameters = {}
+        for ip_name, ip_type in wf.signature.parameters.items():
+            if ip_name == 'output_dir':
+                parameters[ip_name] = output_dir.name
+            else:
+                parameters[ip_name] = kwargs[ip_name]
+        outputs = {
+            oa_name: kwargs[oa_name] for oa_name in wf.signature.outputs
+        }
+        future_, _ = executor(wf, inputs, parameters, outputs)
+
+        # block (i.e., wait) until result is ready
+        completed_process = future_.result()
+
+        if completed_process.returncode != 0:
+            click.echo(completed_process.stdout)
+            click.echo(completed_process.stderr, err=True)
+            ctx.exit(completed_process.returncode)
+
+    return click.pass_context(f)
+
+
+def _build_input_option(name, type_):
+    result = click.Option(['--%s' % name],
+                          required=True,
+                          type=click.Path(exists=True, dir_okay=False),
+                          help='Input %s' % str(type_[0]))
+    return result
+
+
+def _build_parameter_option(name, type_):
+    result = click.Option(['--%s' % name],
+                          required=True,
+                          type=type_[1])
+    return result
+
+
+def _build_output_option(name, type_):
+    result = click.Option(['--%s' % name],
+                          required=True,
+                          type=click.Path(exists=False, dir_okay=False),
+                          help='Output %s' % str(type_[0]))
+    return result
+
+
+def _build_workflow_command(name, workflow):
     parameters = []
     for ia_name, ia_type in workflow.signature.inputs.items():
-        p = click.Option(['--%s' % ia_name],
-                         required=True,
-                         type=click.Path(exists=True, dir_okay=False),
-                         help='Input %s' % str(ia_type[0]))
-        parameters.append(p)
+        parameters.append(_build_input_option(ia_name, ia_type))
     for ip_name, ip_type in workflow.signature.parameters.items():
-        p = click.Option(['--%s' % ip_name],
-                         required=True,
-                         type=ip_type[1])
-        parameters.append(p)
+        parameters.append(_build_parameter_option(ip_name, ip_type))
     for oa_name, oa_type in workflow.signature.outputs.items():
-        p = click.Option(['--%s' % oa_name],
-                         required=True,
-                         type=click.Path(exists=False, dir_okay=False),
-                         help='Output %s' % str(oa_type[0]))
-        parameters.append(p)
+        parameters.append(_build_output_option(oa_name, oa_type))
 
-    callback = _create_callback(workflow)
-    return click.Command(workflow_name, params=parameters, callback=callback)
+    callback = _build_workflow_callback(workflow)
+    return click.Command(name, params=parameters, callback=callback)
+
+
+def _build_visualization_command(name, workflow):
+    parameters = []
+    for ia_name, ia_type in workflow.signature.inputs.items():
+        parameters.append(_build_input_option(ia_name, ia_type))
+    for ip_name, ip_type in workflow.signature.parameters.items():
+        if ip_name == 'output_dir':
+            # output_dir is a temporary directory used internally - we'll
+            # create that and clean it up without the user knowing
+            pass
+        else:
+            parameters.append(_build_parameter_option(ip_name, ip_type))
+    for oa_name, oa_type in workflow.signature.outputs.items():
+        parameters.append(_build_output_option(oa_name, oa_type))
+
+    callback = _build_visualization_callback(workflow)
+    return click.Command(name, params=parameters, callback=callback)
 
 
 # cli entry point
