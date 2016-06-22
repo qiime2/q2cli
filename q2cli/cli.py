@@ -6,6 +6,7 @@
 # The full license is in the file COPYING.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 
+import os
 import tempfile
 
 import click
@@ -95,13 +96,20 @@ def _build_workflow_callback(wf):
     def f(ctx, **kwargs):
         # execute workflow
         executor = SubprocessExecutor()
+        # TODO remove hardcoding of extension pending
+        # https://github.com/qiime2/qiime2/issues/59
+        output_extension = '.qza'
         inputs = {
             ia_name: kwargs[ia_name] for ia_name in wf.signature.inputs}
         parameters = {
             ip_name: kwargs[ip_name] for ip_name in wf.signature.parameters}
-        outputs = {
-            oa_name: kwargs[oa_name] for oa_name in wf.signature.outputs
-        }
+        outputs = {}
+        for oa_name in wf.signature.outputs:
+            oa_value = kwargs[oa_name]
+            file_extension = os.path.splitext(oa_value)[1]
+            if file_extension != output_extension:
+                oa_value = ''.join([oa_value, output_extension])
+            outputs[oa_name] = oa_value
         future_, _ = executor(wf, inputs, parameters, outputs)
 
         # block (i.e., wait) until result is ready
@@ -124,6 +132,9 @@ def _build_visualization_callback(wf):
         # TODO nest output_dir under user-configured temporary directory,
         # pending https://github.com/qiime2/qiime2/issues/12
         output_dir = tempfile.TemporaryDirectory()
+        # TODO remove hardcoding of extension pending
+        # https://github.com/qiime2/qiime2/issues/59
+        output_extension = '.qzv'
         executor = SubprocessExecutor()
         inputs = {
             ia_name: kwargs[ia_name] for ia_name in wf.signature.inputs}
@@ -133,9 +144,13 @@ def _build_visualization_callback(wf):
                 parameters[ip_name] = output_dir.name
             else:
                 parameters[ip_name] = kwargs[ip_name]
-        outputs = {
-            oa_name: kwargs[oa_name] for oa_name in wf.signature.outputs
-        }
+        outputs = {}
+        for oa_name in wf.signature.outputs:
+            oa_value = kwargs[oa_name]
+            file_extension = os.path.splitext(oa_value)[1]
+            if file_extension != output_extension:
+                oa_value = ''.join([oa_value, output_extension])
+            outputs[oa_name] = oa_value
         future_, _ = executor(wf, inputs, parameters, outputs)
 
         # block (i.e., wait) until result is ready
