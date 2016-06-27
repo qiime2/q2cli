@@ -9,6 +9,7 @@
 import collections
 import os
 import tempfile
+import pandas as pd
 
 import click
 import qiime
@@ -20,6 +21,9 @@ from . import __version__ as q2cli_version
 
 
 PLUGIN_MANAGER = PluginManager()
+
+def parse_sample_metadata(path):
+    return qiime.Metadata(pd.read_csv(path, sep='\t', index_col=0, dtype=object))
 
 
 class QiimeCLI(click.MultiCommand):
@@ -101,8 +105,17 @@ def _build_method_callback(method):
         output_extension = '.qza'
         inputs = {
             ia_name: qiime.sdk.Artifact.load(kwargs[ia_name]) for ia_name in method.signature.inputs}
-        parameters = {
-            ip_name: kwargs[ip_name] for ip_name in method.signature.parameters}
+        # TODO building parameters is duplicated in _build_visualizer_callback
+        parameters = {}
+        for ip_name, ip_type in method.signature.parameters.items():
+            if ip_type[1] is qiime.Metadata:
+                parameters[ip_name] = parse_sample_metadata(kwargs['%s_file' % ip_name])
+            elif ip_type[1] is qiime.MetadataCategory:
+                metadata = parse_sample_metadata(kwargs['%s_file' % ip_name])
+                metadata_category = metadata.get_category(kwargs['%s_category' % ip_name])
+                parameters[ip_name] = metadata_category
+            else:
+                parameters[ip_name] = kwargs[ip_name]
         outputs = collections.OrderedDict()
         for oa_name in method.signature.outputs:
             oa_value = kwargs[oa_name]
@@ -134,8 +147,16 @@ def _build_visualizer_callback(visualizer):
         output_extension = '.qzv'
         inputs = {
             ia_name: qiime.sdk.Artifact.load(kwargs[ia_name]) for ia_name in visualizer.signature.inputs}
-        parameters = {
-            ip_name: kwargs[ip_name] for ip_name in visualizer.signature.parameters}
+        parameters = {}
+        for ip_name, ip_type in visualizer.signature.parameters.items():
+            if ip_type[1] is qiime.Metadata:
+                parameters[ip_name] = parse_sample_metadata(kwargs['%s_file' % ip_name])
+            elif ip_type[1] is qiime.MetadataCategory:
+                metadata = parse_sample_metadata(kwargs['%s_file' % ip_name])
+                metadata_category = metadata.get_category(kwargs['%s_category' % ip_name])
+                parameters[ip_name] = metadata_category
+            else:
+                parameters[ip_name] = kwargs[ip_name]
         outputs = collections.OrderedDict()
         for oa_name in visualizer.signature.outputs:
             oa_value = kwargs[oa_name]
@@ -165,10 +186,29 @@ def _build_input_option(name, type_):
 
 
 def _build_parameter_option(name, type_):
-    result = click.Option(['--%s' % name],
-                          required=True,
-                          type=type_[1])
-    return result
+    results = []
+    if type_[1] is qiime.MetadataCategory:
+        results.append(click.Option(['--%s-file' % name],
+                                    required=True,
+                                    type=click.Path(exists=True,
+                                                    dir_okay=False),
+                                    help='Sample metadata mapping file'))
+        results.append(click.Option(['--%s-category' % name],
+                                    required=True,
+                                    type=click.STRING,
+                                    help='Category from sample metadata '
+                                         'mapping file'))
+    elif type_[1] is qiime.Metadata:
+        results.append(click.Option(['--%s-file' % name],
+                                    required=True,
+                                    type=click.Path(exists=True,
+                                                    dir_okay=False),
+                                    help='Sample metadata mapping file'))
+    else:
+        results.append(click.Option(['--%s' % name],
+                                    required=True,
+                                    type=type_[1]))
+    return results
 
 
 def _build_output_option(name, type_):
@@ -184,7 +224,7 @@ def _build_method_command(name, method):
     for ia_name, ia_type in method.signature.inputs.items():
         parameters.append(_build_input_option(ia_name, ia_type))
     for ip_name, ip_type in method.signature.parameters.items():
-        parameters.append(_build_parameter_option(ip_name, ip_type))
+        parameters.extend(_build_parameter_option(ip_name, ip_type))
     for oa_name, oa_type in method.signature.outputs.items():
         parameters.append(_build_output_option(oa_name, oa_type))
 
@@ -197,7 +237,7 @@ def _build_visualizer_command(name, visualizer):
     for ia_name, ia_type in visualizer.signature.inputs.items():
         parameters.append(_build_input_option(ia_name, ia_type))
     for ip_name, ip_type in visualizer.signature.parameters.items():
-        parameters.append(_build_parameter_option(ip_name, ip_type))
+        parameters.extend(_build_parameter_option(ip_name, ip_type))
     for oa_name, oa_type in visualizer.signature.outputs.items():
         parameters.append(_build_output_option(oa_name, oa_type))
 
