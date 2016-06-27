@@ -6,13 +6,15 @@
 # The full license is in the file COPYING.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 
+import collections
 import os
 import tempfile
 
 import click
 import qiime
 import qiime.plugin
-from qiime.sdk import PluginManager, SubprocessExecutor
+import qiime.sdk
+from qiime.sdk import PluginManager
 
 from . import __version__ as q2cli_version
 
@@ -33,19 +35,19 @@ class QiimeCLI(click.MultiCommand):
             class PluginCommand(click.MultiCommand):
 
                 def list_commands(self, ctx):
-                    # the cli currently doesn't differentiate between workflows
-                    # and visualizations
-                    commands = list(plugin.workflows.keys()) + \
-                               list(plugin.visualizations.keys())
+                    # the cli currently doesn't differentiate between methods
+                    # and visualizers.
+                    commands = list(plugin.methods.keys()) + \
+                               list(plugin.visualizers.keys())
                     return sorted(commands)
 
                 def get_command(self, ctx, name):
-                    if name in plugin.workflows:
-                        return _build_workflow_command(
-                            name, plugin.workflows[name])
+                    if name in plugin.methods:
+                        return _build_method_command(
+                            name, plugin.methods[name])
                     else:
-                        return _build_visualization_command(
-                            name, plugin.visualizations[name])
+                        return _build_visualizer_command(
+                            name, plugin.visualizers[name])
 
             return PluginCommand(ctx)
         else:
@@ -92,74 +94,64 @@ def cli():
     pass
 
 
-def _build_workflow_callback(wf):
+def _build_method_callback(method):
     def f(ctx, **kwargs):
-        # execute workflow
-        executor = SubprocessExecutor()
         # TODO remove hardcoding of extension pending
         # https://github.com/qiime2/qiime2/issues/59
         output_extension = '.qza'
         inputs = {
-            ia_name: kwargs[ia_name] for ia_name in wf.signature.inputs}
+            ia_name: qiime.sdk.Artifact.load(kwargs[ia_name]) for ia_name in method.signature.inputs}
         parameters = {
-            ip_name: kwargs[ip_name] for ip_name in wf.signature.parameters}
-        outputs = {}
-        for oa_name in wf.signature.outputs:
+            ip_name: kwargs[ip_name] for ip_name in method.signature.parameters}
+        outputs = collections.OrderedDict()
+        for oa_name in method.signature.outputs:
             oa_value = kwargs[oa_name]
             file_extension = os.path.splitext(oa_value)[1]
             if file_extension != output_extension:
                 oa_value = ''.join([oa_value, output_extension])
             outputs[oa_name] = oa_value
-        future_, _ = executor(wf, inputs, parameters, outputs)
+        args = inputs
+        args.update(parameters)
+        output_artifacts = method(**args)
+        if type(output_artifacts) is not tuple:
+            output_artifacts = (output_artifacts,)
 
-        # block (i.e., wait) until result is ready
-        completed_process = future_.result()
-
-        if completed_process.returncode != 0:
-            click.echo(completed_process.stdout)
-            click.echo(completed_process.stderr, err=True)
-            ctx.exit(completed_process.returncode)
+        for output_artifact, output_filepath in zip(output_artifacts,
+                                                    outputs.values()):
+            output_artifact.save(output_filepath)
 
     return click.pass_context(f)
 
 
-def _build_visualization_callback(wf):
+def _build_visualizer_callback(visualizer):
     # TODO there is a lot of code duplicated between
-    # _build_visualization_callback and _build_workflow_callback - revisit
+    # _build_visualizer_callback and _build_method_callback - revisit
     # this after the refactoring that is happening as part of
     # https://github.com/qiime2/qiime2/issues/39
     def f(ctx, **kwargs):
-        # TODO nest output_dir under user-configured temporary directory,
-        # pending https://github.com/qiime2/qiime2/issues/12
-        output_dir = tempfile.TemporaryDirectory()
         # TODO remove hardcoding of extension pending
         # https://github.com/qiime2/qiime2/issues/59
         output_extension = '.qzv'
-        executor = SubprocessExecutor()
         inputs = {
-            ia_name: kwargs[ia_name] for ia_name in wf.signature.inputs}
-        parameters = {}
-        for ip_name, ip_type in wf.signature.parameters.items():
-            if ip_name == 'output_dir':
-                parameters[ip_name] = output_dir.name
-            else:
-                parameters[ip_name] = kwargs[ip_name]
-        outputs = {}
-        for oa_name in wf.signature.outputs:
+            ia_name: qiime.sdk.Artifact.load(kwargs[ia_name]) for ia_name in visualizer.signature.inputs}
+        parameters = {
+            ip_name: kwargs[ip_name] for ip_name in visualizer.signature.parameters}
+        outputs = collections.OrderedDict()
+        for oa_name in visualizer.signature.outputs:
             oa_value = kwargs[oa_name]
             file_extension = os.path.splitext(oa_value)[1]
             if file_extension != output_extension:
                 oa_value = ''.join([oa_value, output_extension])
             outputs[oa_name] = oa_value
-        future_, _ = executor(wf, inputs, parameters, outputs)
+        args = inputs
+        args.update(parameters)
+        output_visualizations = visualizer(**args)
+        if type(output_visualizations) is not tuple:
+            output_visualizations = (output_visualizations,)
 
-        # block (i.e., wait) until result is ready
-        completed_process = future_.result()
-
-        if completed_process.returncode != 0:
-            click.echo(completed_process.stdout)
-            click.echo(completed_process.stderr, err=True)
-            ctx.exit(completed_process.returncode)
+        for output_visualization, output_filepath in zip(output_visualizations,
+                                                         outputs.values()):
+            output_visualization.save(output_filepath)
 
     return click.pass_context(f)
 
@@ -187,34 +179,29 @@ def _build_output_option(name, type_):
     return result
 
 
-def _build_workflow_command(name, workflow):
+def _build_method_command(name, method):
     parameters = []
-    for ia_name, ia_type in workflow.signature.inputs.items():
+    for ia_name, ia_type in method.signature.inputs.items():
         parameters.append(_build_input_option(ia_name, ia_type))
-    for ip_name, ip_type in workflow.signature.parameters.items():
+    for ip_name, ip_type in method.signature.parameters.items():
         parameters.append(_build_parameter_option(ip_name, ip_type))
-    for oa_name, oa_type in workflow.signature.outputs.items():
+    for oa_name, oa_type in method.signature.outputs.items():
         parameters.append(_build_output_option(oa_name, oa_type))
 
-    callback = _build_workflow_callback(workflow)
+    callback = _build_method_callback(method)
     return click.Command(name, params=parameters, callback=callback)
 
 
-def _build_visualization_command(name, workflow):
+def _build_visualizer_command(name, visualizer):
     parameters = []
-    for ia_name, ia_type in workflow.signature.inputs.items():
+    for ia_name, ia_type in visualizer.signature.inputs.items():
         parameters.append(_build_input_option(ia_name, ia_type))
-    for ip_name, ip_type in workflow.signature.parameters.items():
-        if ip_name == 'output_dir':
-            # output_dir is a temporary directory used internally - we'll
-            # create that and clean it up without the user knowing
-            pass
-        else:
-            parameters.append(_build_parameter_option(ip_name, ip_type))
-    for oa_name, oa_type in workflow.signature.outputs.items():
+    for ip_name, ip_type in visualizer.signature.parameters.items():
+        parameters.append(_build_parameter_option(ip_name, ip_type))
+    for oa_name, oa_type in visualizer.signature.outputs.items():
         parameters.append(_build_output_option(oa_name, oa_type))
 
-    callback = _build_visualization_callback(workflow)
+    callback = _build_visualizer_callback(visualizer)
     return click.Command(name, params=parameters, callback=callback)
 
 
