@@ -8,8 +8,6 @@
 
 import collections
 import os
-import tempfile
-import pandas as pd
 
 import click
 import qiime
@@ -21,9 +19,6 @@ from . import __version__ as q2cli_version
 
 
 PLUGIN_MANAGER = PluginManager()
-
-def parse_sample_metadata(path):
-    return qiime.Metadata(pd.read_csv(path, sep='\t', index_col=0, dtype=object))
 
 
 class QiimeCLI(click.MultiCommand):
@@ -98,24 +93,30 @@ def cli():
     pass
 
 
+def _build_parameter(name, type_, options):
+    if type_[0] is qiime.plugin.Metadata:
+        metadata = qiime.Metadata.load(options['%s_file' % name])
+        return metadata
+    elif type_[0] is qiime.plugin.MetadataCategory:
+        metadata_category = qiime.MetadataCategory.load(
+            options['%s_file' % name],
+            options['%s_category' % name])
+        return metadata_category
+    else:
+        return options[name]
+
+
 def _build_method_callback(method):
     def f(ctx, **kwargs):
         # TODO remove hardcoding of extension pending
         # https://github.com/qiime2/qiime2/issues/59
         output_extension = '.qza'
         inputs = {
-            ia_name: qiime.sdk.Artifact.load(kwargs[ia_name]) for ia_name in method.signature.inputs}
-        # TODO building parameters is duplicated in _build_visualizer_callback
+            ia_name: qiime.sdk.Artifact.load(kwargs[ia_name])
+            for ia_name in method.signature.inputs}
         parameters = {}
         for ip_name, ip_type in method.signature.parameters.items():
-            if ip_type[1] is qiime.Metadata:
-                parameters[ip_name] = parse_sample_metadata(kwargs['%s_file' % ip_name])
-            elif ip_type[1] is qiime.MetadataCategory:
-                metadata = parse_sample_metadata(kwargs['%s_file' % ip_name])
-                metadata_category = metadata.get_category(kwargs['%s_category' % ip_name])
-                parameters[ip_name] = metadata_category
-            else:
-                parameters[ip_name] = kwargs[ip_name]
+            parameters[ip_name] = _build_parameter(ip_name, ip_type, kwargs)
         outputs = collections.OrderedDict()
         for oa_name in method.signature.outputs:
             oa_value = kwargs[oa_name]
@@ -146,17 +147,11 @@ def _build_visualizer_callback(visualizer):
         # https://github.com/qiime2/qiime2/issues/59
         output_extension = '.qzv'
         inputs = {
-            ia_name: qiime.sdk.Artifact.load(kwargs[ia_name]) for ia_name in visualizer.signature.inputs}
+            ia_name: qiime.sdk.Artifact.load(kwargs[ia_name])
+            for ia_name in visualizer.signature.inputs}
         parameters = {}
         for ip_name, ip_type in visualizer.signature.parameters.items():
-            if ip_type[1] is qiime.Metadata:
-                parameters[ip_name] = parse_sample_metadata(kwargs['%s_file' % ip_name])
-            elif ip_type[1] is qiime.MetadataCategory:
-                metadata = parse_sample_metadata(kwargs['%s_file' % ip_name])
-                metadata_category = metadata.get_category(kwargs['%s_category' % ip_name])
-                parameters[ip_name] = metadata_category
-            else:
-                parameters[ip_name] = kwargs[ip_name]
+            parameters[ip_name] = _build_parameter(ip_name, ip_type, kwargs)
         outputs = collections.OrderedDict()
         for oa_name in visualizer.signature.outputs:
             oa_value = kwargs[oa_name]
