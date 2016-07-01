@@ -13,7 +13,7 @@ setup(
     version='0.0.0-dev',
     packages=find_packages(),
     include_package_data=True,
-    install_requires=['click', 'qiime >= 2.0.0'],
+    install_requires=['click', 'qiime >= 2.0.0', 'pip'],
     entry_points='''
         [console_scripts]
         qiime=q2cli.cli:main

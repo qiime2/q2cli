@@ -6,8 +6,8 @@
 # The full license is in the file COPYING.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 
-import collections
 import os
+import collections
 
 import click
 import qiime
@@ -15,21 +15,27 @@ import qiime.plugin
 import qiime.sdk
 from qiime.sdk import PluginManager
 
-from . import __version__ as q2cli_version
-
-
-PLUGIN_MANAGER = PluginManager()
+import q2cli._tools
+import q2cli._info
 
 
 class QiimeCLI(click.MultiCommand):
 
+    _plugin_manager = PluginManager()
+    _builtin_commands = {'tools': q2cli._tools.tools,
+                         'info': q2cli._info.info}
+
     def list_commands(self, ctx):
-        plugins = PLUGIN_MANAGER.plugins.keys()
-        return sorted(plugins)
+        plugins = list(sorted(self._plugin_manager.plugins.keys()))
+        builtins = list(sorted(self._builtin_commands.keys()))
+        commands = builtins + plugins
+        return commands
 
     def get_command(self, ctx, name):
-        if name in PLUGIN_MANAGER.plugins:
-            plugin = PLUGIN_MANAGER.plugins[name]
+        if name in self._builtin_commands:
+            return self._builtin_commands[name]
+        elif name in self._plugin_manager.plugins:
+            plugin = self._plugin_manager.plugins[name]
 
             class PluginCommand(click.MultiCommand):
 
@@ -47,48 +53,16 @@ class QiimeCLI(click.MultiCommand):
                     else:
                         return _build_visualizer_command(
                             name, plugin.visualizers[name])
-
+            # TODO: pass help=plugin.description, pending its existence:
+            # https://github.com/qiime2/qiime2/issues/81
             return PluginCommand(ctx)
         else:
             return None
 
 
-# Top-level option handlers
-
-def _echo_version(ctx, name, value):
-    if value:
-        click.echo('QIIME version: %s' % qiime.__version__)
-        click.echo('q2cli version: %s' % q2cli_version)
-
-
-def _echo_plugins(ctx, name, value):
-    if value:
-        installed_plugins = PLUGIN_MANAGER.plugins
-        if len(installed_plugins) == 0:
-            click.echo('No plugins are currently installed.\nYou can browse '
-                       'the official QIIME 2 plugins at: '
-                       'https://github.com/qiime2.')
-        else:
-            click.echo('Installed plugins:')
-            for name, plugin in installed_plugins.items():
-                click.echo(' %s %s (%s)' %
-                           (name, plugin.version, plugin.website))
-
-
-def _echo_info(ctx, name, value):
-    if value:
-        _echo_version(ctx, None, True)
-        _echo_plugins(ctx, None, True)
-
-
-@click.command(cls=QiimeCLI, invoke_without_command=True,
-               no_args_is_help=True)
-@click.option('--version', is_flag=True, callback=_echo_version,
+@click.command(cls=QiimeCLI, invoke_without_command=True, no_args_is_help=True)
+@click.option('--version', is_flag=True, callback=q2cli._info._echo_version,
               help='Print the version and exit.', expose_value=False)
-@click.option('--plugins', is_flag=True, callback=_echo_plugins,
-              help='List installed plugins and exit.', expose_value=False)
-@click.option('--info', is_flag=True, callback=_echo_info,
-              help='Print system details and exit.', expose_value=False)
 def cli():
     pass
 
@@ -232,7 +206,9 @@ def _build_method_command(name, method):
         parameters.append(_build_output_option(oa_name, oa_type))
 
     callback = _build_method_callback(method)
-    return click.Command(name, params=parameters, callback=callback)
+    return click.Command(name, params=parameters, callback=callback,
+                         short_help=method.name,
+                         help=method.description)
 
 
 def _build_visualizer_command(name, visualizer):
@@ -245,7 +221,9 @@ def _build_visualizer_command(name, visualizer):
         parameters.append(_build_output_option(oa_name, oa_type))
 
     callback = _build_visualizer_callback(visualizer)
-    return click.Command(name, params=parameters, callback=callback)
+    return click.Command(name, params=parameters, callback=callback,
+                         short_help=visualizer.name,
+                         help=visualizer.description)
 
 
 # cli entry point
