@@ -182,35 +182,43 @@ def _build_input_option(name, type_):
 
 def _build_parameter_option(name, type_):
     results = []
+    ast = type_[0].to_ast()
     if type_[1] is qiime.MetadataCategory:
-        results.append(click.Option(['--%s-file' % name],
-                                    required=True,
-                                    type=click.Path(exists=True,
-                                                    dir_okay=False),
-                                    help='Sample metadata mapping file'))
-        results.append(click.Option(['--%s-category' % name],
-                                    required=True,
-                                    type=click.STRING,
-                                    help='Category from sample metadata '
-                                         'mapping file'))
+        results.append(click.Option(
+            ['--%s-file' % name],
+            required=True,
+            type=click.Path(exists=True, dir_okay=False),
+            help='Sample metadata mapping file'))
+        results.append(click.Option(
+            ['--%s-category' % name],
+            required=True,
+            type=click.STRING,
+            help='Category from sample metadata mapping file'))
     elif type_[1] is qiime.Metadata:
-        results.append(click.Option(['--%s-file' % name],
-                                    required=True,
-                                    type=click.Path(exists=True,
-                                                    dir_okay=False),
-                                    help='Sample metadata mapping file'))
+        results.append(click.Option(
+            ['--%s-file' % name],
+            required=True,
+            type=click.Path(exists=True, dir_okay=False),
+            help='Sample metadata mapping file'))
+    elif 'choices' in ast['predicate']:
+        results.append(click.Option(
+            ['--%s' % name],
+            required=True,
+            type=click.Choice(sorted(ast['predicate']['choices']))))
     else:
-        results.append(click.Option(['--%s' % name],
-                                    required=True,
-                                    type=type_[1]))
+        results.append(click.Option(
+            ['--%s' % name],
+            required=True,
+            type=type_[1]))
     return results
 
 
 def _build_output_option(name, type_):
-    result = click.Option(['--%s' % name],
-                          required=True,
-                          type=click.Path(exists=False, dir_okay=False),
-                          help='Output %s' % str(type_[0]))
+    result = click.Option(
+        ['--%s' % name],
+        required=True,
+        type=click.Path(exists=False, dir_okay=False),
+        help='Output %s' % str(type_[0]))
     return result
 
 
