@@ -145,8 +145,10 @@ def _build_visualizer_callback(visualizer):
 
     return click.pass_context(f)
 
+
 def _normalize_option_name(name):
     return name.replace('_', '-')
+
 
 def _build_input_option(name, type_):
     name = _normalize_option_name(name)
