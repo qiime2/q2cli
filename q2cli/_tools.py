@@ -8,7 +8,6 @@
 
 import os
 import zipfile
-import tempfile
 
 import click
 import qiime
@@ -31,19 +30,14 @@ def view(visualization_path, index_extension):
     if index_extension.startswith('.'):
         index_extension = index_extension[1:]
     try:
-        type_ = qiime.sdk.Visualization.peek(visualization_path).type
-    # TODO: currently a KeyError is raised in a zipped file that is not a
+        visualization = qiime.sdk.Visualization.load(visualization_path)
+    # TODO: currently a KeyError is raised if a zipped file that is not a
     # QIIME result is passed. This should be handled better by the framework.
-    except (zipfile.BadZipFile, KeyError):
+    except (zipfile.BadZipFile, KeyError, TypeError):
         raise click.BadParameter(
             '%s is not a QIIME Visualization. Only QIIME Visualizations can '
             'be viewed.' % visualization_path)
-    except TypeError:
-        raise click.BadParameter(
-            '%s is not a Visualization. Only Visualizations can be viewed.' %
-            visualization_path)
 
-    visualization = qiime.sdk.Visualization.load(visualization_path)
     index_paths = visualization.get_index_paths(relative=False)
 
     if index_extension not in index_paths:

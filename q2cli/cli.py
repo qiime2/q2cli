@@ -146,7 +146,12 @@ def _build_visualizer_callback(visualizer):
     return click.pass_context(f)
 
 
+def _normalize_option_name(name):
+    return name.replace('_', '-')
+
+
 def _build_input_option(name, type_):
+    name = _normalize_option_name(name)
     result = click.Option(['--%s' % name],
                           required=True,
                           type=click.Path(exists=True, dir_okay=False),
@@ -155,6 +160,7 @@ def _build_input_option(name, type_):
 
 
 def _build_parameter_option(name, type_):
+    name = _normalize_option_name(name)
     results = []
     ast = type_[0].to_ast()
     if type_[1] is qiime.MetadataCategory:
@@ -188,6 +194,7 @@ def _build_parameter_option(name, type_):
 
 
 def _build_output_option(name, type_):
+    name = _normalize_option_name(name)
     result = click.Option(
         ['--%s' % name],
         required=True,
