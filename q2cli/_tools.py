@@ -18,11 +18,34 @@ def tools():
     pass
 
 
+@tools.command(name='import', short_help='Import data.',
+               help="Import data to create a new QIIME Artifact. See "
+                    "http://2.qiime.org/Importing-data for usage examples "
+                    "and details on the file types and associated semantic "
+                    "types that can be imported.")
+@click.option('--type', required=True,
+              help='The semantic type of the new artifact.')
+@click.option('--input-path', required=True,
+              type=click.Path(exists=True, dir_okay=True),
+              help='Path to file or directory that should be imported.')
+@click.option('--output-path', required=True,
+              type=click.Path(exists=False, dir_okay=False),
+              help='Path where output artifact should be written.')
+def import_data(type, input_path, output_path):
+    artifact = qiime.sdk.Artifact.import_data(type, input_path)
+    # TODO remove hardcoding of extension pending
+    # https://github.com/qiime2/qiime2/issues/59
+    if not output_path.endswith('.qza'):
+        output_path = '%s.qza' % output_path
+    artifact.save(output_path)
+
+
 @tools.command(short_help='View a QIIME Visualization.',
                help="Displays a QIIME Visualization until the command exits. "
                     "To open a QIIME Visualization so it can be used after "
                     "the command exits, use 'qiime extract'.")
-@click.argument('visualization-path')
+@click.argument('visualization-path',
+                type=click.Path(exists=True, dir_okay=False))
 @click.option('--index-extension', required=False, default='html',
               help='The extension of the index file that should be opened. '
                    '[default: html]')
@@ -61,7 +84,7 @@ def view(visualization_path, index_extension):
 
 
 @tools.command(help='Extract a QIIME Arifact or Visualization.')
-@click.argument('path')
+@click.argument('path', type=click.Path(exists=True, dir_okay=False))
 @click.option('--output-dir', required=False,
               type=click.Path(exists=True, dir_okay=True),
               help='Directory where result should be extracted '
