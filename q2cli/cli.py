@@ -29,7 +29,7 @@ class QiimeCLI(click.MultiCommand):
         plugins = list(sorted(self._plugin_manager.plugins.keys()))
         for idx, key in enumerate(plugins):
             plugin = self._plugin_manager.plugins[key]
-            if not plugin.methods or not plugin.visualizers:
+            if not plugin.methods and not plugin.visualizers:
                 del plugins[idx]
         builtins = list(sorted(self._builtin_commands.keys()))
         commands = builtins + plugins
