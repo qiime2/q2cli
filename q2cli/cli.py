@@ -55,6 +55,10 @@ class QiimeCLI(click.MultiCommand):
                         return _build_method_command(
                             name, plugin.methods[name])
                     else:
+                        if name not in plugin.visualizers:
+                            click.echo(("%s is not a valid command for plugin "
+                                        "%s.") % (name, plugin.name), err=True)
+                            ctx.exit(1)
                         return _build_visualizer_command(
                             name, plugin.visualizers[name])
             # TODO: pass help=plugin.description, pending its existence:
