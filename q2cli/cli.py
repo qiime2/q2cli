@@ -88,16 +88,17 @@ def _build_method_callback(method):
     def f(ctx, **kwargs):
         # TODO remove hardcoding of extension pending
         # https://github.com/qiime2/qiime2/issues/59
+        name_map = _get_api_names_from_option_names(kwargs)
         output_extension = '.qza'
         inputs = {
-            ia_name: qiime.sdk.Artifact.load(kwargs[ia_name])
+            ia_name: qiime.sdk.Artifact.load(name_map[ia_name])
             for ia_name in method.signature.inputs}
         parameters = {}
         for ip_name, ip_type in method.signature.parameters.items():
             parameters[ip_name] = _build_parameter(ip_name, ip_type, kwargs)
         outputs = collections.OrderedDict()
         for oa_name in method.signature.outputs:
-            oa_value = kwargs[oa_name]
+            oa_value = name_map[oa_name]
             file_extension = os.path.splitext(oa_value)[1]
             if file_extension != output_extension:
                 oa_value = ''.join([oa_value, output_extension])
@@ -123,16 +124,17 @@ def _build_visualizer_callback(visualizer):
     def f(ctx, **kwargs):
         # TODO remove hardcoding of extension pending
         # https://github.com/qiime2/qiime2/issues/59
+        name_map = _get_api_names_from_option_names(kwargs)
         output_extension = '.qzv'
         inputs = {
-            ia_name: qiime.sdk.Artifact.load(kwargs[ia_name])
+            ia_name: qiime.sdk.Artifact.load(name_map[ia_name])
             for ia_name in visualizer.signature.inputs}
         parameters = {}
         for ip_name, ip_type in visualizer.signature.parameters.items():
             parameters[ip_name] = _build_parameter(ip_name, ip_type, kwargs)
         outputs = collections.OrderedDict()
         for oa_name in visualizer.signature.outputs:
-            oa_value = kwargs[oa_name]
+            oa_value = name_map[oa_name]
             file_extension = os.path.splitext(oa_value)[1]
             if file_extension != output_extension:
                 oa_value = ''.join([oa_value, output_extension])
@@ -156,7 +158,7 @@ def _normalize_option_name(name):
 
 def _build_input_option(name, type_):
     name = _normalize_option_name(name)
-    result = click.Option(['--%s' % name],
+    result = click.Option(['--i-%s' % name],
                           required=True,
                           type=click.Path(exists=True, dir_okay=False),
                           help='Input %s' % str(type_[0]))
@@ -200,7 +202,7 @@ def _build_parameter_option(name, type_):
 def _build_output_option(name, type_):
     name = _normalize_option_name(name)
     result = click.Option(
-        ['--%s' % name],
+        ['--o-%s' % name],
         required=True,
         type=click.Path(exists=False, dir_okay=False),
         help='Output %s' % str(type_[0]))
@@ -235,6 +237,15 @@ def _build_visualizer_command(name, visualizer):
     return click.Command(name, params=parameters, callback=callback,
                          short_help=visualizer.name,
                          help=visualizer.description)
+
+
+def _get_api_names_from_option_names(option_names):
+        option_name_map = {}
+        for key in option_names:
+            if key.startswith('i_') or key.startswith('o_'):
+                stripped_key = key[2:]
+                option_name_map[stripped_key] = option_names[key]
+        return option_name_map
 
 
 # cli entry point
