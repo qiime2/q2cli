@@ -75,12 +75,25 @@ def view(visualization_path, index_extension):
             click.echo('Viewing visualization failed while attempting to '
                        'open %s' % index_path, err=True)
         else:
-            # Entering either ^C or Return will cause output_dir to be
-            # cleaned up.
-            click.prompt('Press the Return key or ^C to quit (your '
-                         'visualization may no longer be accessible)',
-                         default='q', prompt_suffix='. ',
-                         show_default=False)
+            while True:
+                click.echo(
+                    "Press the 'q' key, Control-C, or Control-D to quit. Your "
+                    "visualization may no longer be accessible after "
+                    "quitting.", nl=False)
+                # There is currently a bug in click.getchar where translation
+                # of Control-C and Control-D into KeyboardInterrupt and
+                # EOFError (respectively) does not work on Python 3. The code
+                # here should continue to work as expected when the bug is
+                # fixed in Click.
+                #
+                # https://github.com/pallets/click/issues/583
+                try:
+                    char = click.getchar()
+                    click.echo()
+                    if char in {'q', '\x03', '\x04'}:
+                        break
+                except (KeyboardInterrupt, EOFError):
+                    break
 
 
 @tools.command(help='Extract a QIIME Arifact or Visualization.')
