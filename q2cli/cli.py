@@ -111,7 +111,7 @@ def _build_method_callback(method):
             for ia_name in method.signature.inputs}
         parameters = {}
         for ip_name, ip_type in method.signature.parameters.items():
-            parameters[ip_name] = _build_parameter(ip_name, ip_type, kwargs)
+            parameters[ip_name] = _build_parameter(ip_name, ip_type, name_map)
         if not _validate_output_options(kwargs) and output_dir is None:
             click.echo(_output_option_error_message, err=True)
             ctx.exit(1)
@@ -155,7 +155,7 @@ def _build_visualizer_callback(visualizer):
             for ia_name in visualizer.signature.inputs}
         parameters = {}
         for ip_name, ip_type in visualizer.signature.parameters.items():
-            parameters[ip_name] = _build_parameter(ip_name, ip_type, kwargs)
+            parameters[ip_name] = _build_parameter(ip_name, ip_type, name_map)
         if not _validate_output_options(kwargs) and output_dir is None:
             click.echo(_output_option_error_message, err=True)
             ctx.exit(1)
@@ -202,29 +202,29 @@ def _build_parameter_option(name, type_):
     ast = type_[0].to_ast()
     if type_[1] is qiime.MetadataCategory:
         results.append(click.Option(
-            ['--%s-file' % name],
+            ['--m-%s-file' % name],
             required=True,
             type=click.Path(exists=True, dir_okay=False),
             help='Sample metadata mapping file'))
         results.append(click.Option(
-            ['--%s-category' % name],
+            ['--m-%s-category' % name],
             required=True,
             type=click.STRING,
             help='Category from sample metadata mapping file'))
     elif type_[1] is qiime.Metadata:
         results.append(click.Option(
-            ['--%s-file' % name],
+            ['--m-%s-file' % name],
             required=True,
             type=click.Path(exists=True, dir_okay=False),
             help='Sample metadata mapping file'))
     elif 'choices' in ast['predicate']:
         results.append(click.Option(
-            ['--%s' % name],
+            ['--p-%s' % name],
             required=True,
             type=click.Choice(sorted(ast['predicate']['choices']))))
     else:
         results.append(click.Option(
-            ['--%s' % name],
+            ['--p-%s' % name],
             required=True,
             type=type_[1]))
     return results
@@ -295,7 +295,7 @@ def _build_visualizer_command(name, visualizer):
 def _get_api_names_from_option_names(option_names):
     option_name_map = {}
     for key in option_names:
-        if key.startswith('i_') or key.startswith('o_'):
+        if any(key.startswith(pre) for pre in ('i_', 'o_', 'p_', 'm_')):
             stripped_key = key[2:]
             option_name_map[stripped_key] = option_names[key]
     return option_name_map
