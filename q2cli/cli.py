@@ -25,42 +25,52 @@ class QiimeCLI(click.MultiCommand):
     _builtin_commands = {'tools': q2cli._tools.tools,
                          'info': q2cli._info.info}
 
+    @property
+    def _name_map(self):
+        name_map = {}
+        for plugin_name, plugin in self._plugin_manager.plugins.items():
+            if plugin.methods or plugin.visualizers:
+                name_map[_name_to_command(plugin_name)] = plugin_name
+        return name_map
+
     def list_commands(self, ctx):
-        plugins = list(sorted(self._plugin_manager.plugins.keys()))
-        for idx, key in enumerate(plugins):
-            plugin = self._plugin_manager.plugins[key]
-            if not plugin.methods and not plugin.visualizers:
-                del plugins[idx]
         builtins = list(sorted(self._builtin_commands.keys()))
-        commands = builtins + plugins
-        return commands
+        plugins = sorted(list(self._name_map))
+        return builtins + plugins
 
     def get_command(self, ctx, name):
         if name in self._builtin_commands:
             return self._builtin_commands[name]
-        elif name in self._plugin_manager.plugins:
-            plugin = self._plugin_manager.plugins[name]
+        name_map = self._name_map
+        if name in name_map:
+            plugin_name = name_map[name]
+            plugin = self._plugin_manager.plugins[plugin_name]
 
             class PluginCommand(click.MultiCommand):
-
-                def list_commands(self, ctx):
+                @property
+                def _name_map(self):
                     # the cli currently doesn't differentiate between methods
                     # and visualizers.
-                    commands = list(plugin.methods.keys()) + \
-                               list(plugin.visualizers.keys())
-                    return sorted(commands)
+                    return {_name_to_command(k) : k for k in
+                            list(plugin.methods) +
+                            list(plugin.visualizers)}
+
+                def list_commands(self, ctx):
+                    return sorted(self._name_map)
 
                 def get_command(self, ctx, name):
-                    if name in plugin.methods:
+                    name_map = self._name_map
+                    if name not in name_map:
+                        click.echo(("%s is not a valid command for plugin "
+                                    "%s.") % (name, plugin.name), err=True)
+                        ctx.exit(1)
+                    action_name = name_map[name]
+                    if action_name in plugin.methods:
                         return _build_method_command(
-                            name, plugin.methods[name])
+                            name, plugin.methods[action_name])
                     else:
-                        if name not in plugin.visualizers:
-                            click.echo(("%s is not a valid command for plugin "
-                                        "%s.") % (name, plugin.name), err=True)
-                            ctx.exit(1)
                         return _build_visualizer_command(
-                            name, plugin.visualizers[name])
+                            name, plugin.visualizers[action_name])
             # TODO: pass help=plugin.description, pending its existence:
             # https://github.com/qiime2/qiime2/issues/81
             return PluginCommand(ctx)
@@ -156,12 +166,12 @@ def _build_visualizer_callback(visualizer):
     return click.pass_context(f)
 
 
-def _normalize_option_name(name):
+def _name_to_command(name):
     return name.replace('_', '-')
 
 
 def _build_input_option(name, type_):
-    name = _normalize_option_name(name)
+    name = _name_to_command(name)
     result = click.Option(['--i-%s' % name],
                           required=True,
                           type=click.Path(exists=True, dir_okay=False),
@@ -170,7 +180,7 @@ def _build_input_option(name, type_):
 
 
 def _build_parameter_option(name, type_):
-    name = _normalize_option_name(name)
+    name = _name_to_command(name)
     results = []
     ast = type_[0].to_ast()
     if type_[1] is qiime.MetadataCategory:
@@ -204,7 +214,7 @@ def _build_parameter_option(name, type_):
 
 
 def _build_output_option(name, type_):
-    name = _normalize_option_name(name)
+    name = _name_to_command(name)
     result = click.Option(
         ['--o-%s' % name],
         required=True,
