@@ -103,6 +103,7 @@ def _build_method_callback(method):
         # TODO remove hardcoding of extension pending
         # https://github.com/qiime2/qiime2/issues/59
         name_map = _get_api_names_from_option_names(kwargs)
+        output_dir = kwargs['output_dir']
         output_extension = '.qza'
         inputs = {
             ia_name: qiime.sdk.Artifact.load(name_map[ia_name])
@@ -110,9 +111,15 @@ def _build_method_callback(method):
         parameters = {}
         for ip_name, ip_type in method.signature.parameters.items():
             parameters[ip_name] = _build_parameter(ip_name, ip_type, kwargs)
+        if not _validate_output_options(kwargs) and output_dir is None:
+            click.echo(_output_option_error_message, err=True)
+            ctx.exit(1)
         outputs = collections.OrderedDict()
         for oa_name in method.signature.outputs:
-            oa_value = name_map[oa_name]
+            if name_map[oa_name] is not None:
+                oa_value = name_map[oa_name]
+            else:
+                oa_value = os.path.join(output_dir, oa_name)
             file_extension = os.path.splitext(oa_value)[1]
             if file_extension != output_extension:
                 oa_value = ''.join([oa_value, output_extension])
@@ -122,7 +129,8 @@ def _build_method_callback(method):
         output_artifacts = method(**args)
         if type(output_artifacts) is not tuple:
             output_artifacts = (output_artifacts,)
-
+        if output_dir is not None and not os.path.exists(output_dir):
+            os.makedirs(output_dir)
         for output_artifact, output_filepath in zip(output_artifacts,
                                                     outputs.values()):
             output_artifact.save(output_filepath)
@@ -139,6 +147,7 @@ def _build_visualizer_callback(visualizer):
         # TODO remove hardcoding of extension pending
         # https://github.com/qiime2/qiime2/issues/59
         name_map = _get_api_names_from_option_names(kwargs)
+        output_dir = kwargs['output_dir']
         output_extension = '.qzv'
         inputs = {
             ia_name: qiime.sdk.Artifact.load(name_map[ia_name])
@@ -146,9 +155,15 @@ def _build_visualizer_callback(visualizer):
         parameters = {}
         for ip_name, ip_type in visualizer.signature.parameters.items():
             parameters[ip_name] = _build_parameter(ip_name, ip_type, kwargs)
+        if not _validate_output_options(kwargs) and output_dir is None:
+            click.echo(_output_option_error_message, err=True)
+            ctx.exit(1)
         outputs = collections.OrderedDict()
         for oa_name in visualizer.signature.outputs:
-            oa_value = name_map[oa_name]
+            if name_map[oa_name] is not None:
+                oa_value = name_map[oa_name]
+            else:
+                oa_value = os.path.join(output_dir, oa_name)
             file_extension = os.path.splitext(oa_value)[1]
             if file_extension != output_extension:
                 oa_value = ''.join([oa_value, output_extension])
@@ -158,7 +173,8 @@ def _build_visualizer_callback(visualizer):
         output_visualizations = visualizer(**args)
         if type(output_visualizations) is not tuple:
             output_visualizations = (output_visualizations,)
-
+        if output_dir is not None and not os.path.exists(output_dir):
+            os.makedirs(output_dir)
         for output_visualization, output_filepath in zip(output_visualizations,
                                                          outputs.values()):
             output_visualization.save(output_filepath)
@@ -217,10 +233,18 @@ def _build_output_option(name, type_):
     name = _name_to_command(name)
     result = click.Option(
         ['--o-%s' % name],
-        required=True,
+        required=False,
         type=click.Path(exists=False, dir_okay=False),
         help='Output %s' % str(type_[0]))
     return result
+
+
+def _build_output_dir_option():
+    return click.Option(
+        ['--output-dir'],
+        required=False,
+        type=click.Path(exists=False, dir_okay=True, file_okay=False),
+        help='Output all results to a directory')
 
 
 def _build_method_command(name, method):
@@ -231,6 +255,7 @@ def _build_method_command(name, method):
         parameters.extend(_build_parameter_option(ip_name, ip_type))
     for oa_name, oa_type in method.signature.outputs.items():
         parameters.append(_build_output_option(oa_name, oa_type))
+    parameters.append(_build_output_dir_option())
 
     callback = _build_method_callback(method)
     return click.Command(name, params=parameters, callback=callback,
@@ -246,6 +271,7 @@ def _build_visualizer_command(name, visualizer):
         parameters.extend(_build_parameter_option(ip_name, ip_type))
     for oa_name, oa_type in visualizer.signature.outputs.items():
         parameters.append(_build_output_option(oa_name, oa_type))
+    parameters.append(_build_output_dir_option())
 
     callback = _build_visualizer_callback(visualizer)
     return click.Command(name, params=parameters, callback=callback,
@@ -254,14 +280,27 @@ def _build_visualizer_command(name, visualizer):
 
 
 def _get_api_names_from_option_names(option_names):
-        option_name_map = {}
-        for key in option_names:
-            if key.startswith('i_') or key.startswith('o_'):
-                stripped_key = key[2:]
-                option_name_map[stripped_key] = option_names[key]
-        return option_name_map
+    option_name_map = {}
+    for key in option_names:
+        if key.startswith('i_') or key.startswith('o_'):
+            stripped_key = key[2:]
+            option_name_map[stripped_key] = option_names[key]
+    return option_name_map
+
+
+def _validate_output_options(options):
+    for key in options:
+        if key.startswith('o_') and options[key] is None:
+            return False
+    return True
 
 
 # cli entry point
 def main():
     cli()
+
+
+_output_option_error_message = \
+    'Error: Missing an output Artifact filename. When only providing names ' \
+    'for a subset of the output Artifacts, you must specify an output ' \
+    'directory through use of the --output-dir DIRECTORY flag.'
