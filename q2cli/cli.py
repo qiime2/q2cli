@@ -51,7 +51,7 @@ class QiimeCLI(click.MultiCommand):
                 def _name_map(self):
                     # the cli currently doesn't differentiate between methods
                     # and visualizers.
-                    return {_name_to_command(k) : k for k in
+                    return {_name_to_command(k): k for k in
                             list(plugin.methods) +
                             list(plugin.visualizers)}
 
