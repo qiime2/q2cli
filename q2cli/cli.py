@@ -41,6 +41,7 @@ class QiimeCLI(click.MultiCommand):
     def get_command(self, ctx, name):
         if name in self._builtin_commands:
             return self._builtin_commands[name]
+
         name_map = self._name_map
         if name in name_map:
             plugin_name = name_map[name]
@@ -225,11 +226,17 @@ def _build_output_option(name, type_):
 
 def _build_method_command(name, method):
     parameters = []
-    for ia_name, ia_type in method.signature.inputs.items():
+    # TODO Update order of inputs and parameters to match `method.signature`
+    # when signature retains API order:
+    # https://github.com/qiime2/qiime2/issues/70
+    for ia_name in sorted(method.signature.inputs):
+        ia_type = method.signature.inputs[ia_name]
         parameters.append(_build_input_option(ia_name, ia_type))
-    for ip_name, ip_type in method.signature.parameters.items():
+    for ip_name in sorted(method.signature.parameters):
+        ip_type = method.signature.parameters[ip_name]
         parameters.extend(_build_parameter_option(ip_name, ip_type))
-    for oa_name, oa_type in method.signature.outputs.items():
+    for oa_name in sorted(method.signature.outputs):
+        oa_type = method.signature.outputs[oa_name]
         parameters.append(_build_output_option(oa_name, oa_type))
 
     callback = _build_method_callback(method)
@@ -240,11 +247,17 @@ def _build_method_command(name, method):
 
 def _build_visualizer_command(name, visualizer):
     parameters = []
-    for ia_name, ia_type in visualizer.signature.inputs.items():
+    # TODO Update order of inputs and parameters to match
+    # `visualizer.signature` when signature retains API order:
+    # https://github.com/qiime2/qiime2/issues/70
+    for ia_name in sorted(visualizer.signature.inputs):
+        ia_type = visualizer.signature.inputs[ia_name]
         parameters.append(_build_input_option(ia_name, ia_type))
-    for ip_name, ip_type in visualizer.signature.parameters.items():
+    for ip_name in sorted(visualizer.signature.parameters):
+        ip_type = visualizer.signature.parameters[ip_name]
         parameters.extend(_build_parameter_option(ip_name, ip_type))
-    for oa_name, oa_type in visualizer.signature.outputs.items():
+    for oa_name in sorted(visualizer.signature.outputs):
+        oa_type = visualizer.signature.outputs[oa_name]
         parameters.append(_build_output_option(oa_name, oa_type))
 
     callback = _build_visualizer_callback(visualizer)
