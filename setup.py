@@ -11,6 +11,7 @@ from setuptools import setup, find_packages
 setup(
     name='q2cli',
     version='0.0.2',
+    license='BSD-3-Clause',
     packages=find_packages(),
     include_package_data=True,
     install_requires=['click', 'qiime >= 2.0.0', 'pip'],

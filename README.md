@@ -1,5 +1,5 @@
 # q2cli
-A [click-based](http://click.pocoo.org/) command line interface for [QIIME 2](https://github.com/biocore/qiime2).
+A [click-based](http://click.pocoo.org/) command line interface for [QIIME 2](https://github.com/qiime2/qiime2).
 
 ## Installation and usage
 
