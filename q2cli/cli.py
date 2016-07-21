@@ -205,18 +205,18 @@ def _build_parameter_option(name, type_):
             ['--m-%s-file' % name],
             required=True,
             type=click.Path(exists=True, dir_okay=False),
-            help='Sample metadata mapping file'))
+            help='Metadata mapping file'))
         results.append(click.Option(
             ['--m-%s-category' % name],
             required=True,
             type=click.STRING,
-            help='Category from sample metadata mapping file'))
+            help='Category from metadata mapping file'))
     elif type_[1] is qiime.Metadata:
         results.append(click.Option(
             ['--m-%s-file' % name],
             required=True,
             type=click.Path(exists=True, dir_okay=False),
-            help='Sample metadata mapping file'))
+            help='Metadata mapping file'))
     elif 'choices' in ast['predicate']:
         results.append(click.Option(
             ['--p-%s' % name],
