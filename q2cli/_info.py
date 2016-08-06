@@ -62,8 +62,6 @@ def info(py_packages):
     if py_packages:
         click.secho('\nInstalled Python packages', fg='green')
         _echo_installed_packages()
-    # TODO: update to import these URLs from the framework, pending
-    # https://github.com/qiime2/qiime2/issues/80
-    click.secho('\nTo get help with QIIME, visit http://help.qiime.org.')
-    click.secho('If you use QIIME in any published work, please cite '
-                'http://www.ncbi.nlm.nih.gov/pubmed/20383131')
+    click.secho('\nTo get help with QIIME, visit %s.' % qiime.sdk.HELP_URL)
+    click.secho('If you use QIIME in any published work, please cite %s' %
+                qiime.sdk.CITATION)
