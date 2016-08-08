@@ -72,9 +72,13 @@ class QiimeCLI(click.MultiCommand):
                     else:
                         return _build_visualizer_command(
                             name, plugin.visualizers[action_name])
-            # TODO: pass help=plugin.description, pending its existence:
-            # https://github.com/qiime2/qiime2/issues/81
-            return PluginCommand(ctx)
+            # TODO: pass short_help=plugin.description, pending its
+            # existence: https://github.com/qiime2/qiime2/issues/81
+            _support = 'Getting user support: %s' % plugin.user_support_text
+            _citing = 'Citing this plugin: %s' % plugin.citation_text
+            _website = 'Plugin website: %s' % plugin.website
+            _help = '\n\n'.join([_website, _support, _citing])
+            return PluginCommand(ctx, short_help='', help=_help)
         else:
             return None
 

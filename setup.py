@@ -14,7 +14,7 @@ setup(
     license='BSD-3-Clause',
     packages=find_packages(),
     include_package_data=True,
-    install_requires=['click', 'qiime >= 2.0.0', 'pip'],
+    install_requires=['click', 'qiime >= 2.0.2', 'pip'],
     entry_points='''
         [console_scripts]
         qiime=q2cli.cli:main

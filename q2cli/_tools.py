@@ -136,3 +136,19 @@ def extract(path, output_dir):
         raise click.BadParameter(
             '%s is not a QIIME Result. Only QIIME Visualizations and Artifacts'
             ' can be extracted.' % path)
+
+
+@tools.command(help='Present citations for QIIME and installed plugins.')
+def citations():
+    click.secho('If you use QIIME 2 in any published work, you should cite '
+                'QIIME 2 and the plugins that you used. The citations for '
+                'QIIME and all installed plugins follow.')
+    click.secho('\nQIIME 2 framework and command line interface', fg='green')
+    click.secho('Pending a QIIME 2 publication, please cite QIIME using the '
+                'original publication: %s' % qiime.sdk.CITATION)
+
+    plugin_manager = qiime.sdk.PluginManager()
+    installed_plugins = plugin_manager.plugins
+    for name, plugin in sorted(installed_plugins.items()):
+        click.secho('\n%s' % name, fg='green')
+        click.secho(plugin.citation_text)
