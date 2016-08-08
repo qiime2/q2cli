@@ -34,11 +34,10 @@ def _echo_plugins():
         # https://github.com/qiime2/qiime2/issues/82
         click.secho('No plugins are currently installed.\nYou can browse '
                     'the official QIIME 2 plugins at: '
-                    'https://github.com/qiime2')
+                    'http://2.qiime.org/Plugins')
     else:
         for name, plugin in installed_plugins.items():
-            click.echo('%s %s (%s)' %
-                       (name, plugin.version, plugin.website))
+            click.echo('%s %s' % (name, plugin.version))
 
 
 def _echo_installed_packages():
@@ -62,6 +61,12 @@ def info(py_packages):
     if py_packages:
         click.secho('\nInstalled Python packages', fg='green')
         _echo_installed_packages()
-    click.secho('\nTo get help with QIIME, visit %s.' % qiime.sdk.HELP_URL)
-    click.secho('If you use QIIME in any published work, please cite %s' %
-                qiime.sdk.CITATION)
+
+    click.secho('\nGetting help', fg='green')
+    click.secho('To get help with QIIME 2, visit %s.' % qiime.sdk.HELP_URL)
+
+    click.secho('\nCiting QIIME 2', fg='green')
+    click.secho('If you use QIIME 2 in any published work, you should cite '
+                'QIIME 2 and the plugins that you used. To find the relevant '
+                'citations, run:')
+    click.secho('\tqiime tools citations')
