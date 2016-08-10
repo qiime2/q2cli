@@ -16,7 +16,7 @@ import qiime
 from . import __version__ as q2cli_version
 
 
-def _echo_version(ctx=None, name=None, value=True):
+def echo_version(ctx=None, name=None, value=True):
     if value:
         pyver = sys.version_info
         click.echo('Python version: %d.%d.%d' %
@@ -55,7 +55,7 @@ def _echo_installed_packages():
                    'packages.')
 def info(py_packages):
     click.secho('System versions', fg='green')
-    _echo_version()
+    echo_version()
     click.secho('\nInstalled plugins', fg='green')
     _echo_plugins()
     if py_packages:

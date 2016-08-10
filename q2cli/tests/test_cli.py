@@ -15,9 +15,9 @@ from click.testing import CliRunner
 from qiime import Artifact, Visualization
 from qiime.core.testing.type import IntSequence1
 
-from q2cli._info import info
-from q2cli._tools import tools
-from q2cli.cli import QiimeCLI
+from q2cli.info import info
+from q2cli.tools import tools
+from q2cli.commands import RootCommand
 
 
 class CliTests(unittest.TestCase):
@@ -42,7 +42,7 @@ class CliTests(unittest.TestCase):
 
     def test_list_commands(self):
         # top level commands, including a plugin, are present
-        qiime_cli = QiimeCLI()
+        qiime_cli = RootCommand()
         commands = qiime_cli.list_commands(ctx=None)
         self.assertTrue('info' in commands)
         self.assertTrue('tools' in commands)
@@ -51,7 +51,7 @@ class CliTests(unittest.TestCase):
     def test_plugin_list_commands(self):
         # plugin commands are present including method (from function),
         # method (from markdown) and visualization
-        qiime_cli = QiimeCLI()
+        qiime_cli = RootCommand()
         command = qiime_cli.get_command(ctx=None, name='dummy-plugin')
         commands = command.list_commands(ctx=None)
         self.assertTrue('split-ints' in commands)
@@ -76,7 +76,7 @@ class CliTests(unittest.TestCase):
         self.assertEqual(data_f.read(), "0\n42\n43\n")
 
     def test_split_ints(self):
-        qiime_cli = QiimeCLI()
+        qiime_cli = RootCommand()
         command = qiime_cli.get_command(ctx=None, name='dummy-plugin')
 
         # build output file names
@@ -98,7 +98,7 @@ class CliTests(unittest.TestCase):
         self.assertEqual(right.view(list), [42, 43])
 
     def test_qza_extension(self):
-        qiime_cli = QiimeCLI()
+        qiime_cli = RootCommand()
         command = qiime_cli.get_command(ctx=None, name='dummy-plugin')
 
         # build output parameter arguments and expected output file names
@@ -122,7 +122,7 @@ class CliTests(unittest.TestCase):
         self.assertEqual(right.view(list), [42, 43])
 
     def test_qzv_extension(self):
-        qiime_cli = QiimeCLI()
+        qiime_cli = RootCommand()
         command = qiime_cli.get_command(ctx=None, name='dummy-plugin')
         # build output parameter arguments and expected output file names
         viz_path = os.path.join(self.tempdir, 'viz')
