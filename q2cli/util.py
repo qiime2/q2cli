@@ -6,17 +6,6 @@
 # The full license is in the file COPYING.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 
-from setuptools import setup, find_packages
 
-setup(
-    name='q2cli',
-    version='0.0.3',
-    license='BSD-3-Clause',
-    packages=find_packages(),
-    include_package_data=True,
-    install_requires=['click', 'qiime >= 2.0.2', 'pip'],
-    entry_points='''
-        [console_scripts]
-        qiime=q2cli.__main__:cli
-    ''',
-)
+def to_cli_name(name):
+    return name.replace('_', '-')
