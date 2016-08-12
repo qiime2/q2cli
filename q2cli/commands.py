@@ -84,7 +84,7 @@ class PluginCommand(click.MultiCommand):
         else:
             extension = qiime.sdk.Visualization.extension
 
-        return ActionCommand(name, action, extension)
+        return ActionCommand(name, self._plugin, action, extension)
 
 
 class ActionCommand(click.Command):
@@ -97,13 +97,16 @@ class ActionCommand(click.Command):
     are handled explicitly and generally return a `fallback` function which
     can be used to supplement value lookup in the regular handlers.
     """
-    def __init__(self, name, action, extension):
+    def __init__(self, name, plugin, action, extension):
         self.action = action
         self.extension = extension
         self.generated_handlers = self.build_generated_handlers()
         # Meta-Handlers:
         self.output_dir_handler = q2cli.handlers.OutputDirHandler()
-
+        self.cmd_config_handler = q2cli.handlers.CommandConfigHandler(
+            q2cli.util.to_cli_name(plugin.name),
+            q2cli.util.to_cli_name(self.action.id)
+        )
         super().__init__(name, params=list(self.get_click_parameters()),
                          callback=self, short_help=action.name,
                          help=action.description)
@@ -135,6 +138,7 @@ class ActionCommand(click.Command):
 
         # Meta-Handlers' Options:
         yield from self.output_dir_handler.get_click_options()
+        yield from self.cmd_config_handler.get_click_options()
 
     def __call__(self, **kwargs):
         """Called when user hits return, **kwargs are Dict[click_names, Obj]"""
@@ -161,12 +165,15 @@ class ActionCommand(click.Command):
     def handle_in_params(self, kwargs):
         arguments = {}
         missing = []
+        cmd_fallback = self.cmd_config_handler.get_value(kwargs)
+
         for name in itertools.chain(self.action.signature.inputs,
                                     self.action.signature.parameters):
             handler = self.generated_handlers[name]
             try:
-                # TODO: get the fallback from a config file handler
-                arguments[name] = handler.get_value(kwargs)
+                arguments[name] = handler.get_value(
+                    kwargs, fallback=cmd_fallback
+                )
             except q2cli.handlers.ValueNotFoundException:
                 missing += handler.missing
 
@@ -175,8 +182,16 @@ class ActionCommand(click.Command):
     def handle_out_params(self, kwargs):
         outputs = []
         missing = []
-        # TODO: use the fallback from a config file handler in get_value
-        fallback = self.output_dir_handler.get_value(kwargs)
+        cmd_fallback = self.cmd_config_handler.get_value(kwargs)
+        out_fallback = self.output_dir_handler.get_value(
+            kwargs, fallback=cmd_fallback
+        )
+
+        def fallback(*args):
+            try:
+                return cmd_fallback(*args)
+            except q2cli.handlers.ValueNotFoundException:
+                return out_fallback(*args)
 
         for name in self.action.signature.outputs:
             handler = self.generated_handlers[name]
