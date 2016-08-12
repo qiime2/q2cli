@@ -146,7 +146,10 @@ class ActionCommand(click.Command):
         outputs, missing_out = self.handle_out_params(kwargs)
 
         if missing_in or missing_out:
-            ctx = click.get_current_context()
+            # A new context is generated for a callback, which will result in
+            # the ctx.command_path duplicating the action, so just use the
+            # parent so we can print the help *within* a callback.
+            ctx = click.get_current_context().parent
             click.echo(ctx.get_help()+"\n", err=True)
             for option in itertools.chain(missing_in, missing_out):
                 click.secho("Error: Missing option: --%s" % option, err=True,
