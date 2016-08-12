@@ -7,6 +7,8 @@
 # ----------------------------------------------------------------------------
 import os
 import collections
+import configparser
+import warnings
 
 import click
 import qiime
@@ -94,6 +96,52 @@ class OutputDirHandler(Handler):
 
             def fallback_(name, cli_name):
                 return os.path.join(path, name)
+            return fallback_
+
+        except ValueNotFoundException:
+            # Always fail to find a value as this handler doesn't exist.
+            def fail(*_):
+                raise ValueNotFoundException()
+
+            return fail
+
+
+class CommandConfigHandler(Handler):
+    """Meta handler which returns a fallback function as its value."""
+
+    def __init__(self, cli_plugin, cli_action):
+        self.cli_plugin = cli_plugin
+        self.cli_action = cli_action
+        super().__init__('cmd_config')
+
+    def get_click_options(self):
+        yield click.Option(
+            ['--' + self.cli_name],
+            type=click.Path(exists=True, dir_okay=False, file_okay=True,
+                            readable=True),
+            help='Use config file for command options')
+
+    def get_value(self, arguments, fallback=None):
+        try:
+            path = self._locate_value(arguments, fallback=fallback)
+            config = configparser.ConfigParser()
+            config.read(path)
+            try:
+                config_section = config['.'.join([
+                    self.cli_plugin, self.cli_action
+                ])]
+            except KeyError:
+                warnings.warn("Config file does not contain a section"
+                              " for %s"
+                              % '.'.join([self.cli_plugin, self.cli_action]),
+                              UserWarning)
+                raise ValueNotFoundException()
+
+            def fallback_(name, cli_name):
+                try:
+                    return config_section[cli_name]
+                except KeyError:
+                    raise ValueNotFoundException()
             return fallback_
 
         except ValueNotFoundException:
@@ -223,7 +271,7 @@ class RegularParameterHandler(GeneratedHandler):
         if predicate:
             if predicate['name'] != 'Choices' and self.ast['name'] != 'Str':
                 raise NotImplementedError()
-            return click.Choices(predicate['choices'])
+            return click.Choice(predicate['choices'])
         return mapping[self.ast['name']]
 
     def get_click_options(self):
