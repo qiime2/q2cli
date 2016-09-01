@@ -176,21 +176,13 @@ class ArtifactHandler(GeneratedHandler):
 class ResultHandler(GeneratedHandler):
     prefix = 'o_'
 
-    def __init__(self, extension, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.extension = extension
-
     def get_click_options(self):
         yield click.Option(['--' + self.cli_name],
                            type=click.Path(exists=False, dir_okay=False),
                            help="Output %r" % self.semtype)
 
     def get_value(self, arguments, fallback=None):
-        path = self._locate_value(arguments, fallback)
-        if not path.endswith(self.extension):
-            path += self.extension
-
-        return path
+        return self._locate_value(arguments, fallback)
 
 
 def parameter_handler_factory(name, semtype, default=NoDefault):

@@ -50,7 +50,7 @@ class CliTests(unittest.TestCase):
 
     def test_plugin_list_commands(self):
         # plugin commands are present including method (from function),
-        # method (from markdown) and visualization
+        # method (from markdown) and visualizer
         qiime_cli = RootCommand()
         command = qiime_cli.get_command(ctx=None, name='dummy-plugin')
         commands = command.list_commands(ctx=None)

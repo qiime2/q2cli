@@ -8,7 +8,6 @@
 
 import collections
 import itertools
-import functools
 
 import click
 import qiime.sdk
@@ -29,7 +28,7 @@ class RootCommand(click.MultiCommand):
         plugin_manager = qiime.sdk.PluginManager()
         name_map = {}
         for plugin_name, plugin in plugin_manager.plugins.items():
-            if plugin.methods or plugin.visualizers:
+            if plugin.actions:
                 name_map[q2cli.util.to_cli_name(plugin_name)] = plugin
         return name_map
 
@@ -58,15 +57,14 @@ class RootCommand(click.MultiCommand):
 
 
 class PluginCommand(click.MultiCommand):
-    """Provides ActionCommands based on available Methods/Visualizers"""
+    """Provides ActionCommands based on available Actions"""
     def __init__(self, plugin, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # the cli currently doesn't differentiate between methods
-        # and visualizers.
+        # and visualizers, it treats them generically as Actions
         self._plugin = plugin
         self._action_lookup = {q2cli.util.to_cli_name(k): v for k, v in
-                               itertools.chain(plugin.methods.items(),
-                                               plugin.visualizers.items())}
+                               plugin.actions.items()}
 
     def list_commands(self, ctx):
         return sorted(self._action_lookup)
@@ -79,12 +77,7 @@ class PluginCommand(click.MultiCommand):
                        % (self._plugin.name, name), err=True)
             ctx.exit(2)  # Match exit code of `return None`
 
-        if type(action) is qiime.sdk.Method:
-            extension = qiime.sdk.Artifact.extension
-        else:
-            extension = qiime.sdk.Visualization.extension
-
-        return ActionCommand(name, self._plugin, action, extension)
+        return ActionCommand(name, self._plugin, action)
 
 
 class ActionCommand(click.Command):
@@ -97,9 +90,8 @@ class ActionCommand(click.Command):
     are handled explicitly and generally return a `fallback` function which
     can be used to supplement value lookup in the regular handlers.
     """
-    def __init__(self, name, plugin, action, extension):
+    def __init__(self, name, plugin, action):
         self.action = action
-        self.extension = extension
         self.generated_handlers = self.build_generated_handlers()
         # Meta-Handlers:
         self.output_dir_handler = q2cli.handlers.OutputDirHandler()
@@ -116,14 +108,13 @@ class ActionCommand(click.Command):
         handler_map = collections.OrderedDict([
             ('inputs', q2cli.handlers.ArtifactHandler),
             ('parameters', q2cli.handlers.parameter_handler_factory),
-            ('outputs', functools.partial(q2cli.handlers.ResultHandler,
-                                          self.extension))
+            ('outputs', q2cli.handlers.ResultHandler)
         ])
 
         for group_type, constructor in handler_map.items():
             grp = getattr(self.action.signature, group_type)
             # TODO Update order of inputs and parameters to match
-            # `method.signature when signature retains API order:
+            # `Action.signature` when signature retains API order:
             # https://github.com/qiime2/qiime2/issues/70
             # (i.e. just remove the sorted call)
             for name, (semtype, _) in sorted(grp.items(), key=lambda x: x[0]):
@@ -159,10 +150,12 @@ class ActionCommand(click.Command):
             ctx.exit(1)
 
         results = self.action(**arguments)
-        if type(results) is not tuple:
+        if not isinstance(results, tuple):
             results = results,
 
         for result, output in zip(results, outputs):
+            if not output.endswith(result.extension):
+                output += result.extension
             result.save(output)
 
     def handle_in_params(self, kwargs):
@@ -207,7 +200,8 @@ class ActionCommand(click.Command):
         return outputs, missing
 
 
-_OUTPUT_OPTION_ERR_MSG = \
-    'Note: When only providing names ' \
-    'for a subset of the output Artifacts, you must specify an output ' \
-    'directory through use of the --output-dir DIRECTORY flag.'
+_OUTPUT_OPTION_ERR_MSG = """\
+Note: When only providing names for a subset of the output Artifacts or
+Visualizations, you must specify an output directory through use of the
+--output-dir DIRECTORY flag.\
+"""
