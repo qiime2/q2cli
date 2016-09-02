@@ -176,21 +176,13 @@ class ArtifactHandler(GeneratedHandler):
 class ResultHandler(GeneratedHandler):
     prefix = 'o_'
 
-    def __init__(self, extension, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.extension = extension
-
     def get_click_options(self):
         yield click.Option(['--' + self.cli_name],
                            type=click.Path(exists=False, dir_okay=False),
                            help="Output %r" % self.semtype)
 
     def get_value(self, arguments, fallback=None):
-        path = self._locate_value(arguments, fallback)
-        if not path.endswith(self.extension):
-            path += self.extension
-
-        return path
+        return self._locate_value(arguments, fallback)
 
 
 def parameter_handler_factory(name, semtype, default=NoDefault):
@@ -263,7 +255,8 @@ class RegularParameterHandler(GeneratedHandler):
             'Int': int,
             'Str': str,
             'Float': float,
-            'Color': str
+            'Color': str,
+            'Bool': bool
         }
         # TODO: This is a hack because we only support Str % Choices(...) at
         # this point. This entire class should be revisited at some point.
@@ -275,9 +268,16 @@ class RegularParameterHandler(GeneratedHandler):
         return mapping[self.ast['name']]
 
     def get_click_options(self):
-        yield click.Option(['--' + self.cli_name],
-                           type=self.get_type())  # Use the ugly lookup above
+        type = self.get_type()  # Use the ugly lookup above
+        if type is bool:
+            no_name = self.prefix + 'no_' + self.name
+            cli_no_name = q2cli.util.to_cli_name(no_name)
+            yield click.Option(['--' + self.cli_name + '/--' + cli_no_name])
+        else:
+            yield click.Option(['--' + self.cli_name], type=type)
 
     def get_value(self, arguments, fallback=None):
         value = self._locate_value(arguments, fallback)
+        if self.get_type() is bool:
+            value = self.semtype.encode(value)
         return self.semtype.decode(value)
