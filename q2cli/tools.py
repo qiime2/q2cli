@@ -57,8 +57,13 @@ def plugin_init(ctx, output_dir):
 @click.option('--output-path', required=True,
               type=click.Path(exists=False, dir_okay=False),
               help='Path where output artifact should be written.')
-def import_data(type, input_path, output_path):
-    artifact = qiime.sdk.Artifact.import_data(type, input_path)
+@click.option('--source-format', required=False,
+              help='The format of the data to be imported. If not provided, '
+                   'data must be in the format expected by the semantic type '
+                   'provided via --type.')
+def import_data(type, input_path, output_path, source_format=None):
+    artifact = qiime.sdk.Artifact.import_data(type, input_path,
+                                              view_type=source_format)
     # TODO remove hardcoding of extension pending
     # https://github.com/qiime2/qiime2/issues/59
     if not output_path.endswith('.qza'):
