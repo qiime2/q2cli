@@ -27,7 +27,7 @@ class CliTests(unittest.TestCase):
         self.tempdir = tempfile.mkdtemp(prefix='qiime2-test-temp-')
         self.artifact1_path = os.path.join(self.tempdir, 'a1.qza')
 
-        artifact1 = Artifact._from_view([0, 42, 43], IntSequence1, None)
+        artifact1 = Artifact._from_view(IntSequence1, [0, 42, 43], list, None)
         artifact1.save(self.artifact1_path)
 
     def tearDown(self):
