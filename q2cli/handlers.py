@@ -272,9 +272,19 @@ class RegularParameterHandler(GeneratedHandler):
         if type is bool:
             no_name = self.prefix + 'no_' + self.name
             cli_no_name = q2cli.util.to_cli_name(no_name)
-            yield click.Option(['--' + self.cli_name + '/--' + cli_no_name])
+            name = '--' + self.cli_name + '/--' + cli_no_name
+            if self.default is NoDefault:
+                yield click.Option([name])
+            else:
+                yield click.Option([name], default=self.default,
+                                   show_default=True)
         else:
-            yield click.Option(['--' + self.cli_name], type=type)
+            name = '--' + self.cli_name
+            if self.default is NoDefault:
+                yield click.Option([name], type=type)
+            else:
+                yield click.Option([name], type=type, default=self.default,
+                                   show_default=True)
 
     def get_value(self, arguments, fallback=None):
         value = self._locate_value(arguments, fallback)
