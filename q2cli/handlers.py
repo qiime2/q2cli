@@ -255,7 +255,8 @@ class RegularParameterHandler(GeneratedHandler):
             'Int': int,
             'Str': str,
             'Float': float,
-            'Color': str
+            'Color': str,
+            'Bool': bool
         }
         # TODO: This is a hack because we only support Str % Choices(...) at
         # this point. This entire class should be revisited at some point.
@@ -267,9 +268,16 @@ class RegularParameterHandler(GeneratedHandler):
         return mapping[self.ast['name']]
 
     def get_click_options(self):
-        yield click.Option(['--' + self.cli_name],
-                           type=self.get_type())  # Use the ugly lookup above
+        type = self.get_type()  # Use the ugly lookup above
+        if type is bool:
+            no_name = self.prefix + 'no_' + self.name
+            cli_no_name = q2cli.util.to_cli_name(no_name)
+            yield click.Option(['--' + self.cli_name + '/--' + cli_no_name])
+        else:
+            yield click.Option(['--' + self.cli_name], type=type)
 
     def get_value(self, arguments, fallback=None):
         value = self._locate_value(arguments, fallback)
+        if self.get_type() is bool:
+            return value
         return self.semtype.decode(value)
