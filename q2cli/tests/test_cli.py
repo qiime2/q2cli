@@ -29,6 +29,7 @@ class CliTests(unittest.TestCase):
 
         artifact1 = Artifact._from_view(IntSequence1, [0, 42, 43], list, None)
         artifact1.save(self.artifact1_path)
+        self.artifact1_root_dir = str(artifact1.uuid)
 
     def tearDown(self):
         shutil.rmtree(self.tempdir)
@@ -69,10 +70,11 @@ class CliTests(unittest.TestCase):
         # command completes sucessfully and creates the correct
         # output directory
         self.assertEqual(result.exit_code, 0)
-        self.assertTrue(os.path.exists(os.path.join(self.tempdir, 'a1')))
+        self.assertTrue(os.path.exists(
+            os.path.join(self.tempdir, self.artifact1_root_dir)))
         # results are correct
-        data_f = open(os.path.join(self.tempdir, 'a1', 'data',
-                                   'ints.txt'))
+        data_f = open(os.path.join(self.tempdir, self.artifact1_root_dir,
+                                   'data', 'ints.txt'))
         self.assertEqual(data_f.read(), "0\n42\n43\n")
 
     def test_split_ints(self):
