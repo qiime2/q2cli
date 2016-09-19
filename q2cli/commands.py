@@ -117,8 +117,10 @@ class ActionCommand(click.Command):
             # `Action.signature` when signature retains API order:
             # https://github.com/qiime2/qiime2/issues/70
             # (i.e. just remove the sorted call)
+            defaults = self.action.signature.defaults
             for name, (semtype, _) in sorted(grp.items(), key=lambda x: x[0]):
-                handlers[name] = constructor(name, semtype)
+                default = defaults.get(name, q2cli.handlers.NoDefault)
+                handlers[name] = constructor(name, semtype, default)
 
         return handlers
 
