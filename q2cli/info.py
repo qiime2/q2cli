@@ -6,41 +6,41 @@
 # The full license is in the file COPYING.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 
-
-import sys
-
-import pip
 import click
-import qiime
-
-from . import __version__ as q2cli_version
 
 
 def echo_version(ctx=None, name=None, value=True):
     if value:
+        # Conditional imports because this callback appears to be invoked when
+        # any command is run (in most cases, `value` is `False`).
+        import sys
+        import qiime
+        import q2cli
+
         pyver = sys.version_info
         click.echo('Python version: %d.%d.%d' %
                    (pyver.major, pyver.minor, pyver.micro))
         click.echo('QIIME version: %s' % qiime.__version__)
-        click.echo('q2cli version: %s' % q2cli_version)
+        click.echo('q2cli version: %s' % q2cli.__version__)
 
 
 def _echo_plugins():
-    plugin_manager = qiime.sdk.PluginManager()
-    installed_plugins = plugin_manager.plugins
-    if len(installed_plugins) == 0:
-        # TODO: update this URL, pending:
-        # https://github.com/qiime2/qiime2/issues/80
-        # https://github.com/qiime2/qiime2/issues/82
+    import qiime.sdk
+    import q2cli.cache
+
+    plugins = q2cli.cache.CACHE.plugins
+    if plugins:
+        for name, plugin in sorted(plugins.items()):
+            click.echo('%s %s' % (name, plugin['version']))
+    else:
         click.secho('No plugins are currently installed.\nYou can browse '
                     'the official QIIME 2 plugins at: '
-                    'http://2.qiime.org/Plugins')
-    else:
-        for name, plugin in installed_plugins.items():
-            click.echo('%s %s' % (name, plugin.version))
+                    '%s/Plugins' % qiime.sdk.HELP_URL)
 
 
 def _echo_installed_packages():
+    import pip
+
     # This code was derived from an example provide here:
     # http://stackoverflow.com/a/23885252/3424666
     installed_packages = sorted(["%s==%s" % (i.key, i.version)
@@ -49,11 +49,15 @@ def _echo_installed_packages():
         click.echo(e)
 
 
-@click.command(help='Display information about QIIME.')
+@click.command(help='Display information about the current QIIME deployment.')
 @click.option('--py-packages', is_flag=True,
               help='Display names and versions of all installed Python '
                    'packages.')
 def info(py_packages):
+    import qiime.sdk
+    import q2cli.util
+    import q2cli.cache
+
     click.secho('System versions', fg='green')
     echo_version()
     click.secho('\nInstalled plugins', fg='green')
@@ -61,6 +65,9 @@ def info(py_packages):
     if py_packages:
         click.secho('\nInstalled Python packages', fg='green')
         _echo_installed_packages()
+
+    click.secho('\nApplication config directory', fg='green')
+    click.secho(q2cli.util.get_app_dir())
 
     click.secho('\nGetting help', fg='green')
     click.secho('To get help with QIIME 2, visit %s.' % qiime.sdk.HELP_URL)

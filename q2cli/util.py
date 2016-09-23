@@ -7,5 +7,10 @@
 # ----------------------------------------------------------------------------
 
 
+def get_app_dir():
+    import click
+    return click.get_app_dir('q2cli', roaming=False)
+
+
 def to_cli_name(name):
     return name.replace('_', '-')

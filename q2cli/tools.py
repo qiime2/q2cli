@@ -7,41 +7,13 @@
 # ----------------------------------------------------------------------------
 
 import os
-import zipfile
 
 import click
-import qiime
-import qiime.plugin
 
 
 @click.group(help='Tools for working with QIIME files.')
 def tools():
     pass
-
-
-@tools.command(name='plugin-init',
-               short_help='Initialize plugin package from template.',
-               help="Initializes plugin package from template to specified"
-                    " output directory. Use this command if you are a"
-                    " plugin developer starting to develop a new plugin.")
-@click.pass_context
-@click.option('--output-dir', required=False,
-              type=click.Path(exists=False, file_okay=False, dir_okay=True,
-                              writable=True),
-              help='Directory in which to create plugin package.',
-              default='.')
-def plugin_init(ctx, output_dir):
-    try:
-        path = qiime.plugin.plugin_init(output_dir=output_dir)
-    except FileExistsError as e:
-        click.secho("Plugin package directory name already exists under %s"
-                    % (output_dir if output_dir != '.' else
-                       'the current directory'),
-                    err=True, fg='red')
-        click.secho("Original error message:\n%s" % e, err=True, fg='red')
-        ctx.exit(1)
-    click.secho("Your plugin package has been created at %s" % path,
-                fg='green')
 
 
 @tools.command(name='import', short_help='Import data.',
@@ -62,12 +34,10 @@ def plugin_init(ctx, output_dir):
                    'data must be in the format expected by the semantic type '
                    'provided via --type.')
 def import_data(type, input_path, output_path, source_format=None):
+    import qiime.sdk
+
     artifact = qiime.sdk.Artifact.import_data(type, input_path,
                                               view_type=source_format)
-    # TODO remove hardcoding of extension pending
-    # https://github.com/qiime2/qiime2/issues/59
-    if not output_path.endswith('.qza'):
-        output_path = '%s.qza' % output_path
     artifact.save(output_path)
 
 
@@ -81,6 +51,9 @@ def import_data(type, input_path, output_path, source_format=None):
               help='The extension of the index file that should be opened. '
                    '[default: html]')
 def view(visualization_path, index_extension):
+    import zipfile
+    import qiime.sdk
+
     if index_extension.startswith('.'):
         index_extension = index_extension[1:]
     try:
@@ -127,7 +100,7 @@ def view(visualization_path, index_extension):
                     break
 
 
-@tools.command(help='Extract a QIIME Arifact or Visualization.')
+@tools.command(help='Extract a QIIME Artifact or Visualization.')
 @click.argument('path', type=click.Path(exists=True, dir_okay=False))
 @click.option('--output-dir', required=False,
               type=click.Path(exists=True, dir_okay=True),
@@ -135,6 +108,9 @@ def view(visualization_path, index_extension):
                    '[default: current working directory]',
               default=os.getcwd())
 def extract(path, output_dir):
+    import zipfile
+    import qiime.sdk
+
     try:
         qiime.sdk.Result.extract(path, output_dir)
     except zipfile.BadZipFile:
@@ -145,6 +121,9 @@ def extract(path, output_dir):
 
 @tools.command(help='Present citations for QIIME and installed plugins.')
 def citations():
+    import qiime.sdk
+    import q2cli.cache
+
     click.secho('If you use QIIME 2 in any published work, you should cite '
                 'QIIME 2 and the plugins that you used. The citations for '
                 'QIIME and all installed plugins follow.')
@@ -152,8 +131,12 @@ def citations():
     click.secho('Pending a QIIME 2 publication, please cite QIIME using the '
                 'original publication: %s' % qiime.sdk.CITATION)
 
-    plugin_manager = qiime.sdk.PluginManager()
-    installed_plugins = plugin_manager.plugins
-    for name, plugin in sorted(installed_plugins.items()):
-        click.secho('\n%s' % name, fg='green')
-        click.secho(plugin.citation_text)
+    plugins = q2cli.cache.CACHE.plugins
+    if plugins:
+        for name, plugin in sorted(plugins.items()):
+            click.secho('\n%s %s' % (name, plugin['version']), fg='green')
+            click.secho(plugin['citation_text'])
+    else:
+        click.secho('\nNo plugins are currently installed.\nYou can browse '
+                    'the official QIIME 2 plugins at: '
+                    '%s/Plugins' % qiime.sdk.HELP_URL)
