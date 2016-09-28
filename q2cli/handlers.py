@@ -288,6 +288,9 @@ class RegularParameterHandler(GeneratedHandler):
 
     def get_value(self, arguments, fallback=None):
         value = self._locate_value(arguments, fallback)
-        if self.get_type() is bool:
+        if value is None:
+            return None
+        elif self.get_type() is bool:
             return value
-        return self.semtype.decode(value)
+        else:
+            return self.semtype.decode(value)
