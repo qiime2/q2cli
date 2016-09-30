@@ -15,6 +15,9 @@ import qiime
 
 import q2cli.util
 
+# TODO: revisit how default values are handled when optional artifacts are
+# supported.
+
 # Sentinel to avoid the situation where `None` *is* the default value.
 NoDefault = collections.namedtuple('NoDefault', [])()
 
@@ -165,7 +168,7 @@ class ArtifactHandler(GeneratedHandler):
     def get_click_options(self):
         yield click.Option(['--' + self.cli_name],
                            type=click.Path(exists=False, dir_okay=False),
-                           help="Input %r" % self.semtype)
+                           help="Artifact: %r  [required]" % self.semtype)
 
     def get_value(self, arguments, fallback=None):
         path = self._locate_value(arguments, fallback)
@@ -179,7 +182,8 @@ class ResultHandler(GeneratedHandler):
     def get_click_options(self):
         yield click.Option(['--' + self.cli_name],
                            type=click.Path(exists=False, dir_okay=False),
-                           help="Output %r" % self.semtype)
+                           help="Artifact: %r  [required if not passing "
+                                "--output-dir]" % self.semtype)
 
     def get_value(self, arguments, fallback=None):
         return self._locate_value(arguments, fallback)
@@ -188,21 +192,30 @@ class ResultHandler(GeneratedHandler):
 def parameter_handler_factory(name, semtype, default=NoDefault):
     ast = semtype.to_ast()
     if ast['name'] == 'Metadata':
-        return MetadataHandler(name)
+        return MetadataHandler(name, default=default)
     elif ast['name'] == 'MetadataCategory':
-        return MetadataCategoryHandler(name)
-    return RegularParameterHandler(name, semtype, default=default)
+        return MetadataCategoryHandler(name, default=default)
+    else:
+        return RegularParameterHandler(name, semtype, default=default)
 
 
 class MetadataHandler(Handler):
-    def __init__(self, name):
-        super().__init__(name, prefix='m_')
+    def __init__(self, name, default=NoDefault):
+        super().__init__(name, prefix='m_', default=default)
         self.click_name += '_file'
 
     def get_click_options(self):
-        yield click.Option(['--' + self.cli_name],
-                           type=click.Path(exists=True, dir_okay=False),
-                           help='Metadata mapping file')
+        name = '--' + self.cli_name
+        type = click.Path(exists=True, dir_okay=False)
+        help = 'Metadata mapping file'
+
+        # Metadata currently supports a default of None. Anything else makes it
+        # required.
+        if self.default is None:
+            yield click.Option([name], type=type, default=self.default,
+                               help='%s  [optional]' % help)
+        else:
+            yield click.Option([name], type=type, help='%s  [required]' % help)
 
     def get_value(self, arguments, fallback=None):
         path = self._locate_value(arguments, fallback)
@@ -210,21 +223,34 @@ class MetadataHandler(Handler):
 
 
 class MetadataCategoryHandler(Handler):
-    def __init__(self, name):
-        super().__init__(name, prefix='m_')
+    def __init__(self, name, default=NoDefault):
+        super().__init__(name, prefix='m_', default=default)
         self.name = name
         self.click_names = ['m_%s_file' % name, 'm_%s_category' % name]
         self.cli_names = [
             q2cli.util.to_cli_name(n) for n in self.click_names]
 
     def get_click_options(self):
-        yield click.Option(['--' + self.cli_names[0]],
-                           type=click.Path(exists=True, dir_okay=False),
-                           help='Metadata mapping file')
+        md_name = '--' + self.cli_names[0]
+        md_type = click.Path(exists=True, dir_okay=False)
+        md_help = 'Metadata mapping file'
 
-        yield click.Option(['--' + self.cli_names[1]],
-                           type=str,
-                           help='Category from metadata mapping file')
+        mdc_name = '--' + self.cli_names[1]
+        mdc_type = str
+        mdc_help = 'Category from metadata mapping file'
+
+        # Metadata currently supports a default of None. Anything else makes it
+        # required.
+        if self.default is None:
+            yield click.Option([md_name], type=md_type, default=self.default,
+                               help='%s  [optional]' % md_help)
+            yield click.Option([mdc_name], type=mdc_type, default=self.default,
+                               help='%s  [optional]' % mdc_help)
+        else:
+            yield click.Option([md_name], type=md_type,
+                               help='%s  [required]' % md_help)
+            yield click.Option([mdc_name], type=mdc_type,
+                               help='%s  [required]' % mdc_help)
 
     def get_value(self, arguments, fallback=None):
         values = []
@@ -273,18 +299,17 @@ class RegularParameterHandler(GeneratedHandler):
             no_name = self.prefix + 'no_' + self.name
             cli_no_name = q2cli.util.to_cli_name(no_name)
             name = '--' + self.cli_name + '/--' + cli_no_name
-            if self.default is NoDefault:
-                yield click.Option([name])
-            else:
-                yield click.Option([name], default=self.default,
-                                   show_default=True)
         else:
             name = '--' + self.cli_name
-            if self.default is NoDefault:
-                yield click.Option([name], type=type)
-            else:
-                yield click.Option([name], type=type, default=self.default,
-                                   show_default=True)
+
+        if self.default is NoDefault:
+            yield click.Option([name], type=type, help='[required]')
+        elif self.default is None:
+            yield click.Option([name], type=type, default=self.default,
+                               help='[optional]')
+        else:
+            yield click.Option([name], type=type, default=self.default,
+                               show_default=True)
 
     def get_value(self, arguments, fallback=None):
         value = self._locate_value(arguments, fallback)
