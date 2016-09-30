@@ -231,26 +231,32 @@ class MetadataCategoryHandler(Handler):
             q2cli.util.to_cli_name(n) for n in self.click_names]
 
     def get_click_options(self):
-        md_name = '--' + self.cli_names[0]
-        md_type = click.Path(exists=True, dir_okay=False)
         md_help = 'Metadata mapping file'
+        md_kwargs = {
+            'name': ['--' + self.cli_names[0]],
+            'type': click.Path(exists=True, dir_okay=False)
+        }
 
-        mdc_name = '--' + self.cli_names[1]
-        mdc_type = str
         mdc_help = 'Category from metadata mapping file'
+        mdc_kwargs = {
+            'name': '--' + self.cli_names[1],
+            'type': str
+        }
 
         # Metadata currently supports a default of None. Anything else makes it
         # required.
         if self.default is None:
-            yield click.Option([md_name], type=md_type, default=self.default,
-                               help='%s  [optional]' % md_help)
-            yield click.Option([mdc_name], type=mdc_type, default=self.default,
-                               help='%s  [optional]' % mdc_help)
+            md_kwargs['default'] = self.default
+            md_kwargs['help'] = '%s  [optional]' % md_help
+
+            mdc_kwargs['default'] = self.default
+            mdc_kwargs['help'] = '%s  [optional]' % mdc_help
         else:
-            yield click.Option([md_name], type=md_type,
-                               help='%s  [required]' % md_help)
-            yield click.Option([mdc_name], type=mdc_type,
-                               help='%s  [required]' % mdc_help)
+            md_kwargs['help'] = '%s  [required]' % md_help
+            mdc_kwargs['help'] = '%s  [required]' % mdc_help
+
+        yield click.Option(**md_kwargs)
+        yield click.Option(**mdc_kwargs)
 
     def get_value(self, arguments, fallback=None):
         values = []
