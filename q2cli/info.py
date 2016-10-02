@@ -9,19 +9,16 @@
 import click
 
 
-def echo_version(ctx=None, name=None, value=True):
-    if value:
-        # Conditional imports because this callback appears to be invoked when
-        # any command is run (in most cases, `value` is `False`).
-        import sys
-        import qiime
-        import q2cli
+def _echo_version():
+    import sys
+    import qiime
+    import q2cli
 
-        pyver = sys.version_info
-        click.echo('Python version: %d.%d.%d' %
-                   (pyver.major, pyver.minor, pyver.micro))
-        click.echo('QIIME version: %s' % qiime.__version__)
-        click.echo('q2cli version: %s' % q2cli.__version__)
+    pyver = sys.version_info
+    click.echo('Python version: %d.%d.%d' %
+               (pyver.major, pyver.minor, pyver.micro))
+    click.echo('QIIME version: %s' % qiime.__version__)
+    click.echo('q2cli version: %s' % q2cli.__version__)
 
 
 def _echo_plugins():
@@ -59,7 +56,7 @@ def info(py_packages):
     import q2cli.cache
 
     click.secho('System versions', fg='green')
-    echo_version()
+    _echo_version()
     click.secho('\nInstalled plugins', fg='green')
     _echo_plugins()
     if py_packages:

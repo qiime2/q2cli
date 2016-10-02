@@ -9,14 +9,14 @@
 import click
 
 import q2cli.commands
-import q2cli.info
 
 
 # Entry point for CLI
 @click.command(cls=q2cli.commands.RootCommand, invoke_without_command=True,
                no_args_is_help=True)
-@click.option('--version', is_flag=True, callback=q2cli.info.echo_version,
-              help='Print the version and exit.', expose_value=False)
+@click.version_option(prog_name='q2cli',
+                      message='%(prog)s version %(version)s\nRun `qiime info` '
+                              'for more version details.')
 def cli():
     pass
 
