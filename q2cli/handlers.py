@@ -5,15 +5,8 @@
 #
 # The full license is in the file COPYING.txt, distributed with this software.
 # ----------------------------------------------------------------------------
-import os
+
 import collections
-import configparser
-import warnings
-
-import click
-import qiime
-
-import q2cli.util
 
 # TODO: revisit how default values are handled when optional artifacts are
 # supported.
@@ -37,6 +30,8 @@ class Handler:
 
     @property
     def cli_name(self):
+        import q2cli.util
+
         # e.g. p-my-option-name
         return q2cli.util.to_cli_name(self.click_name)
 
@@ -86,12 +81,17 @@ class OutputDirHandler(Handler):
         super().__init__('output_dir')
 
     def get_click_options(self):
+        import click
+
         yield click.Option(
             ['--' + self.cli_name],
             type=click.Path(exists=False, dir_okay=True, file_okay=False),
             help='Output unspecified results to a directory')
 
     def get_value(self, arguments, fallback=None):
+        import os
+        import os.path
+
         try:
             path = self._locate_value(arguments, fallback=fallback)
             # TODO: do we want a --force like flag?
@@ -118,6 +118,8 @@ class CommandConfigHandler(Handler):
         super().__init__('cmd_config')
 
     def get_click_options(self):
+        import click
+
         yield click.Option(
             ['--' + self.cli_name],
             type=click.Path(exists=True, dir_okay=False, file_okay=True,
@@ -125,6 +127,9 @@ class CommandConfigHandler(Handler):
             help='Use config file for command options')
 
     def get_value(self, arguments, fallback=None):
+        import configparser
+        import warnings
+
         try:
             path = self._locate_value(arguments, fallback=fallback)
             config = configparser.ConfigParser()
@@ -156,23 +161,25 @@ class CommandConfigHandler(Handler):
 
 
 class GeneratedHandler(Handler):
-    def __init__(self, name, semtype, default=NoDefault):
+    def __init__(self, name, repr, default=NoDefault):
         super().__init__(name, prefix=self.prefix, default=default)
-        self.semtype = semtype
-        self.ast = semtype.to_ast()
+        self.repr = repr
 
 
 class ArtifactHandler(GeneratedHandler):
     prefix = 'i_'
 
     def get_click_options(self):
+        import click
+
         yield click.Option(['--' + self.cli_name],
                            type=click.Path(exists=False, dir_okay=False),
-                           help="Artifact: %r  [required]" % self.semtype)
+                           help="Artifact: %s  [required]" % self.repr)
 
     def get_value(self, arguments, fallback=None):
-        path = self._locate_value(arguments, fallback)
+        import qiime
 
+        path = self._locate_value(arguments, fallback)
         return qiime.Artifact.load(path)
 
 
@@ -180,23 +187,24 @@ class ResultHandler(GeneratedHandler):
     prefix = 'o_'
 
     def get_click_options(self):
+        import click
+
         yield click.Option(['--' + self.cli_name],
                            type=click.Path(exists=False, dir_okay=False),
-                           help="Artifact: %r  [required if not passing "
-                                "--output-dir]" % self.semtype)
+                           help="Artifact: %s  [required if not passing "
+                                "--output-dir]" % self.repr)
 
     def get_value(self, arguments, fallback=None):
         return self._locate_value(arguments, fallback)
 
 
-def parameter_handler_factory(name, semtype, default=NoDefault):
-    ast = semtype.to_ast()
+def parameter_handler_factory(name, repr, ast, default=NoDefault):
     if ast['name'] == 'Metadata':
         return MetadataHandler(name, default=default)
     elif ast['name'] == 'MetadataCategory':
         return MetadataCategoryHandler(name, default=default)
     else:
-        return RegularParameterHandler(name, semtype, default=default)
+        return RegularParameterHandler(name, repr, ast, default=default)
 
 
 class MetadataHandler(Handler):
@@ -205,6 +213,8 @@ class MetadataHandler(Handler):
         self.click_name += '_file'
 
     def get_click_options(self):
+        import click
+
         name = '--' + self.cli_name
         type = click.Path(exists=True, dir_okay=False)
         help = 'Metadata mapping file'
@@ -218,12 +228,16 @@ class MetadataHandler(Handler):
             yield click.Option([name], type=type, help='%s  [required]' % help)
 
     def get_value(self, arguments, fallback=None):
+        import qiime
+
         path = self._locate_value(arguments, fallback)
         return qiime.Metadata.load(path)
 
 
 class MetadataCategoryHandler(Handler):
     def __init__(self, name, default=NoDefault):
+        import q2cli.util
+
         super().__init__(name, prefix='m_', default=default)
         self.name = name
         self.click_names = ['m_%s_file' % name, 'm_%s_category' % name]
@@ -231,15 +245,17 @@ class MetadataCategoryHandler(Handler):
             q2cli.util.to_cli_name(n) for n in self.click_names]
 
     def get_click_options(self):
+        import click
+
+        md_name = '--' + self.cli_names[0]
         md_help = 'Metadata mapping file'
         md_kwargs = {
-            'name': ['--' + self.cli_names[0]],
             'type': click.Path(exists=True, dir_okay=False)
         }
 
+        mdc_name = '--' + self.cli_names[1]
         mdc_help = 'Category from metadata mapping file'
         mdc_kwargs = {
-            'name': '--' + self.cli_names[1],
             'type': str
         }
 
@@ -255,10 +271,12 @@ class MetadataCategoryHandler(Handler):
             md_kwargs['help'] = '%s  [required]' % md_help
             mdc_kwargs['help'] = '%s  [required]' % mdc_help
 
-        yield click.Option(**md_kwargs)
-        yield click.Option(**mdc_kwargs)
+        yield click.Option([md_name], **md_kwargs)
+        yield click.Option([mdc_name], **mdc_kwargs)
 
     def get_value(self, arguments, fallback=None):
+        import qiime
+
         values = []
         failed = False
         # This is nastier looking than it really is.
@@ -282,7 +300,13 @@ class MetadataCategoryHandler(Handler):
 class RegularParameterHandler(GeneratedHandler):
     prefix = 'p_'
 
+    def __init__(self, name, repr, ast, default=NoDefault):
+        super().__init__(name, repr, default=default)
+        self.ast = ast
+
     def get_type(self):
+        import click
+
         mapping = {
             'Int': int,
             'Str': str,
@@ -300,6 +324,9 @@ class RegularParameterHandler(GeneratedHandler):
         return mapping[self.ast['name']]
 
     def get_click_options(self):
+        import click
+        import q2cli.util
+
         type = self.get_type()  # Use the ugly lookup above
         if type is bool:
             no_name = self.prefix + 'no_' + self.name
@@ -324,4 +351,6 @@ class RegularParameterHandler(GeneratedHandler):
         elif self.get_type() is bool:
             return value
         else:
-            return self.semtype.decode(value)
+            import qiime.sdk
+            return qiime.sdk.parse_type(
+                self.repr, expect='primitive').decode(value)

@@ -20,5 +20,6 @@ import q2cli.info
 def cli():
     pass
 
+
 if __name__ is '__main__':
     cli()

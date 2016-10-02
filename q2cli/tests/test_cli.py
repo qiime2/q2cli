@@ -37,9 +37,11 @@ class CliTests(unittest.TestCase):
     def test_info(self):
         result = self.runner.invoke(info)
         self.assertEqual(result.exit_code, 0)
-        self.assertTrue(result.output.startswith('System versions'))
-        self.assertTrue('Installed plugins' in result.output)
-        self.assertTrue('dummy-plugin' in result.output)
+        # May not always start with "System versions" if cache updating message
+        # is printed.
+        self.assertIn('System versions', result.output)
+        self.assertIn('Installed plugins', result.output)
+        self.assertIn('dummy-plugin', result.output)
 
     def test_list_commands(self):
         # top level commands, including a plugin, are present
