@@ -247,15 +247,15 @@ class MetadataCategoryHandler(Handler):
     def get_click_options(self):
         import click
 
+        md_name = '--' + self.cli_names[0]
         md_help = 'Metadata mapping file'
         md_kwargs = {
-            'name': ['--' + self.cli_names[0]],
             'type': click.Path(exists=True, dir_okay=False)
         }
 
+        mdc_name = '--' + self.cli_names[1]
         mdc_help = 'Category from metadata mapping file'
         mdc_kwargs = {
-            'name': ['--' + self.cli_names[1]],
             'type': str
         }
 
@@ -271,8 +271,8 @@ class MetadataCategoryHandler(Handler):
             md_kwargs['help'] = '%s  [required]' % md_help
             mdc_kwargs['help'] = '%s  [required]' % mdc_help
 
-        yield click.Option(**md_kwargs)
-        yield click.Option(**mdc_kwargs)
+        yield click.Option([md_name], **md_kwargs)
+        yield click.Option([mdc_name], **mdc_kwargs)
 
     def get_value(self, arguments, fallback=None):
         import qiime

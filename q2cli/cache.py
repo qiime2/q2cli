@@ -182,7 +182,7 @@ class DeploymentCache:
         click.secho(
             "QIIME is caching your current deployment for improved "
             "performance. This may take a few moments and should only happen "
-            "once per deployment.", fg='yellow')
+            "once per deployment.", fg='yellow', err=True)
 
         cache_dir = self._cache_dir
 
