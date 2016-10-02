@@ -112,11 +112,13 @@ def extract(path, output_dir):
     import qiime.sdk
 
     try:
-        qiime.sdk.Result.extract(path, output_dir)
-    except zipfile.BadZipFile:
+        extracted_dir = qiime.sdk.Result.extract(path, output_dir)
+    except (zipfile.BadZipFile, ValueError):
         raise click.BadParameter(
-            '%s is not a QIIME Result. Only QIIME Visualizations and Artifacts'
-            ' can be extracted.' % path)
+            '%s is not a valid QIIME Result. Only QIIME Artifacts and '
+            'Visualizations can be extracted.' % path)
+    else:
+        click.echo('Extracted to %s' % extracted_dir)
 
 
 @tools.command(help='Present citations for QIIME and installed plugins.')
