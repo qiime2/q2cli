@@ -46,11 +46,33 @@ def _echo_installed_packages():
         click.echo(e)
 
 
+def _echo_citations():
+    import qiime.sdk
+    import q2cli.cache
+
+    click.secho('\nCitations', fg='green')
+    click.secho('QIIME 2 framework and command line interface', fg='cyan')
+    click.secho('Pending a QIIME 2 publication, please cite QIIME using the '
+                'original publication: %s' % qiime.sdk.CITATION)
+
+    plugins = q2cli.cache.CACHE.plugins
+    if plugins:
+        for name, plugin in sorted(plugins.items()):
+            click.secho('\n%s %s' % (name, plugin['version']), fg='cyan')
+            click.secho(plugin['citation_text'])
+    else:
+        click.secho('\nNo plugins are currently installed.\nYou can browse '
+                    'the official QIIME 2 plugins at: '
+                    '%s/Plugins' % qiime.sdk.HELP_URL)
+
+
 @click.command(help='Display information about the current QIIME deployment.')
+@click.option('--citations', is_flag=True,
+              help='Display citations for QIIME and installed plugins.')
 @click.option('--py-packages', is_flag=True,
               help='Display names and versions of all installed Python '
                    'packages.')
-def info(py_packages):
+def info(citations, py_packages):
     import qiime.sdk
     import q2cli.util
     import q2cli.cache
@@ -71,6 +93,13 @@ def info(py_packages):
 
     click.secho('\nCiting QIIME 2', fg='green')
     click.secho('If you use QIIME 2 in any published work, you should cite '
-                'QIIME 2 and the plugins that you used. To find the relevant '
-                'citations, run:')
-    click.secho('\tqiime tools citations')
+                'QIIME 2 and the plugins that you used. ', nl=False)
+
+    if citations:
+        click.secho('The citations for QIIME and all installed plugins '
+                    'follow.')
+        _echo_citations()
+    else:
+        click.secho('To display the citations for QIIME and all installed '
+                    'plugins, run:')
+        click.secho('\n  qiime info --citations\n')
