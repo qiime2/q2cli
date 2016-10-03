@@ -41,6 +41,23 @@ def import_data(type, input_path, output_path, source_format=None):
     artifact.save(output_path)
 
 
+@tools.command(short_help='Take a peek at a QIIME Artifact or Visualization.',
+               help="Display basic information about a QIIME Artifact or "
+                    "Visualization, including its UUID and type.")
+@click.argument('path', type=click.Path(exists=True, dir_okay=False))
+def peek(path):
+    import qiime.sdk
+
+    metadata = qiime.sdk.Result.peek(path)
+
+    click.secho("UUID:        ", fg="green", nl=False)
+    click.secho(str(metadata.uuid))
+    click.secho("Type:        ", fg="green", nl=False)
+    click.secho(repr(metadata.type))
+    click.secho("Data format: ", fg="green", nl=False)
+    click.secho(str(metadata.format))
+
+
 @tools.command(short_help='View a QIIME Visualization.',
                help="Displays a QIIME Visualization until the command exits. "
                     "To open a QIIME Visualization so it can be used after "
