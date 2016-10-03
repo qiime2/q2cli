@@ -332,17 +332,22 @@ class RegularParameterHandler(GeneratedHandler):
             no_name = self.prefix + 'no_' + self.name
             cli_no_name = q2cli.util.to_cli_name(no_name)
             name = '--' + self.cli_name + '/--' + cli_no_name
+            # click.Option type is determined implicitly for flags with
+            # secondary options, and explicitly passing type=bool results in a
+            # TypeError, so we pass type=None (the default).
+            option_type = None
         else:
             name = '--' + self.cli_name
+            option_type = type
 
         if self.default is NoDefault:
-            yield click.Option([name], type=type, help='[required]')
+            yield click.Option([name], type=option_type, help='[required]')
         elif self.default is None:
-            yield click.Option([name], type=type, default=self.default,
-                               help='[optional]')
+            yield click.Option([name], default=self.default,
+                               type=option_type, help='[optional]')
         else:
-            yield click.Option([name], type=type, default=self.default,
-                               show_default=True)
+            yield click.Option([name], default=self.default,
+                               type=option_type, show_default=True)
 
     def get_value(self, arguments, fallback=None):
         value = self._locate_value(arguments, fallback)
