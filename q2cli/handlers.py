@@ -73,6 +73,61 @@ class Handler:
         self.missing.append(cli_name)
         raise ValueNotFoundException()
 
+    def _parse_boolean(self, string):
+        """Parse string representing a boolean into Python bool type.
+
+        Supported values match `configparser.ConfigParser.getboolean`.
+
+        """
+        trues = ['1', 'yes', 'true', 'on']
+        falses = ['0', 'no', 'false', 'off']
+
+        string_lower = string.lower()
+        if string_lower in trues:
+            return True
+        elif string_lower in falses:
+            return False
+        else:
+            import itertools
+            import click
+
+            msg = (
+                "Error: unrecognized value for --%s flag: %s\n"
+                "Supported values (case-insensitive): %s" %
+                (self.cli_name, string,
+                 ', '.join(itertools.chain(trues, falses)))
+            )
+            click.secho(msg, err=True, fg='red', bold=True)
+            ctx = click.get_current_context()
+            ctx.exit(1)
+
+
+class VerboseHandler(Handler):
+    """Handler for verbose output (--verbose flag)."""
+
+    def __init__(self):
+        super().__init__('verbose', default=False)
+
+    def get_click_options(self):
+        import click
+
+        # `is_flag` will set the default to `False`, but `self._locate_value`
+        # needs to distinguish between the presence or absence of the flag
+        # provided by the user.
+        yield click.Option(
+            ['--' + self.cli_name], is_flag=True, default=None,
+            help='Display verbose output to stdout and/or stderr during '
+                 'execution of this action.  [default: %s]' % self.default)
+
+    def get_value(self, arguments, fallback=None):
+        value = self._locate_value(arguments, fallback)
+        # Value may have been specified in --cmd-config (or another source in
+        # the future). If we don't have a bool type yet, attempt to interpret a
+        # string representing a boolean.
+        if type(value) is not bool:
+            value = self._parse_boolean(value)
+        return value
+
 
 class OutputDirHandler(Handler):
     """Meta handler which returns a fallback function as its value."""
@@ -91,10 +146,19 @@ class OutputDirHandler(Handler):
     def get_value(self, arguments, fallback=None):
         import os
         import os.path
+        import click
 
         try:
             path = self._locate_value(arguments, fallback=fallback)
+
             # TODO: do we want a --force like flag?
+            if os.path.exists(path):
+                click.secho("Error: --%s directory already exists, won't "
+                            "overwrite." % self.cli_name, err=True, fg='red',
+                            bold=True)
+                ctx = click.get_current_context()
+                ctx.exit(1)
+
             os.makedirs(path)
 
             def fallback_(name, cli_name):
@@ -222,8 +286,7 @@ class MetadataHandler(Handler):
         # Metadata currently supports a default of None. Anything else makes it
         # required.
         if self.default is None:
-            yield click.Option([name], type=type, default=self.default,
-                               help='%s  [optional]' % help)
+            yield click.Option([name], type=type, help='%s  [optional]' % help)
         else:
             yield click.Option([name], type=type, help='%s  [required]' % help)
 
@@ -262,10 +325,7 @@ class MetadataCategoryHandler(Handler):
         # Metadata currently supports a default of None. Anything else makes it
         # required.
         if self.default is None:
-            md_kwargs['default'] = self.default
             md_kwargs['help'] = '%s  [optional]' % md_help
-
-            mdc_kwargs['default'] = self.default
             mdc_kwargs['help'] = '%s  [optional]' % mdc_help
         else:
             md_kwargs['help'] = '%s  [required]' % md_help
@@ -340,20 +400,32 @@ class RegularParameterHandler(GeneratedHandler):
             name = '--' + self.cli_name
             option_type = type
 
+        # Pass `default=None` and `show_default=False` to `click.Option`
+        # because the handlers are responsible for resolving missing values and
+        # supplying defaults. Telling Click about the default value here makes
+        # it impossible to determine whether the user supplied or omitted a
+        # value once the handlers are invoked.
         if self.default is NoDefault:
-            yield click.Option([name], type=option_type, help='[required]')
+            yield click.Option([name], type=option_type, default=None,
+                               show_default=False, help='[required]')
         elif self.default is None:
-            yield click.Option([name], default=self.default,
-                               type=option_type, help='[optional]')
+            yield click.Option([name], type=option_type, default=None,
+                               show_default=False, help='[optional]')
         else:
-            yield click.Option([name], default=self.default,
-                               type=option_type, show_default=True)
+            yield click.Option([name], type=option_type, default=None,
+                               show_default=False,
+                               help='[default: %s]' % self.default)
 
     def get_value(self, arguments, fallback=None):
         value = self._locate_value(arguments, fallback)
         if value is None:
             return None
         elif self.get_type() is bool:
+            # Value may have been specified in --cmd-config (or another source
+            # in the future). If we don't have a bool type yet, attempt to
+            # interpret a string representing a boolean.
+            if type(value) is not bool:
+                value = self._parse_boolean(value)
             return value
         else:
             import qiime.sdk
