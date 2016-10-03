@@ -87,9 +87,14 @@ class CliTests(unittest.TestCase):
         left_path = os.path.join(self.tempdir, 'left.qza')
         right_path = os.path.join(self.tempdir, 'right.qza')
 
+        # TODO: currently must pass `--verbose` to commands invoked by Click's
+        # test runner because redirecting stdout/stderr raises an
+        # "io.UnsupportedOperation: fileno" error. Likely related to Click
+        # mocking a filesystem in the test runner.
         result = self.runner.invoke(
             command, ['split-ints', '--i-ints', self.artifact1_path,
-                      '--o-left', left_path, '--o-right', right_path])
+                      '--o-left', left_path, '--o-right', right_path,
+                      '--verbose'])
         # command completes successfully and creates the correct
         # output files
         self.assertEqual(result.exit_code, 0)
@@ -113,7 +118,8 @@ class CliTests(unittest.TestCase):
 
         result = self.runner.invoke(
             command, ['split-ints', '--i-ints', self.artifact1_path,
-                      '--o-left', left_path, '--o-right', right_path])
+                      '--o-left', left_path, '--o-right', right_path,
+                      '--verbose'])
         # command completes successfully and creates the correct
         # output files
         self.assertEqual(result.exit_code, 0)
@@ -134,7 +140,7 @@ class CliTests(unittest.TestCase):
 
         result = self.runner.invoke(
             command, ['most-common-viz', '--i-ints', self.artifact1_path,
-                      '--o-visualization', viz_path])
+                      '--o-visualization', viz_path, '--verbose'])
         # command completes successfully and creates the correct
         # output file
         self.assertEqual(result.exit_code, 0)
