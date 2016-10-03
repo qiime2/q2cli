@@ -136,26 +136,3 @@ def extract(path, output_dir):
             'Visualizations can be extracted.' % path)
     else:
         click.echo('Extracted to %s' % extracted_dir)
-
-
-@tools.command(help='Present citations for QIIME and installed plugins.')
-def citations():
-    import qiime.sdk
-    import q2cli.cache
-
-    click.secho('If you use QIIME 2 in any published work, you should cite '
-                'QIIME 2 and the plugins that you used. The citations for '
-                'QIIME and all installed plugins follow.')
-    click.secho('\nQIIME 2 framework and command line interface', fg='green')
-    click.secho('Pending a QIIME 2 publication, please cite QIIME using the '
-                'original publication: %s' % qiime.sdk.CITATION)
-
-    plugins = q2cli.cache.CACHE.plugins
-    if plugins:
-        for name, plugin in sorted(plugins.items()):
-            click.secho('\n%s %s' % (name, plugin['version']), fg='green')
-            click.secho(plugin['citation_text'])
-    else:
-        click.secho('\nNo plugins are currently installed.\nYou can browse '
-                    'the official QIIME 2 plugins at: '
-                    '%s/Plugins' % qiime.sdk.HELP_URL)
