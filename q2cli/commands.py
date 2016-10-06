@@ -23,13 +23,29 @@ class RootCommand(click.MultiCommand):
         ('dev', q2cli.dev.dev)
     ])
 
+    def __init__(self, *args, **kwargs):
+        # 'help' is `None`, drop it to supply our own.
+        if 'help' in kwargs:
+            del kwargs['help']
+        super().__init__(help=ROOT_COMMAND_HELP, *args, **kwargs)
+
+        # Plugin state for current deployment that will be loaded from cache.
+        # Used to construct the dynamic CLI.
+        self._plugins = None
+
     @property
     def _plugin_lookup(self):
-        import q2cli.cache
         import q2cli.util
 
+        # See note in `q2cli.completion.write_bash_completion_script` for why
+        # `self._plugins` will not always be obtained from
+        # `q2cli.cache.CACHE.plugins`.
+        if self._plugins is None:
+            import q2cli.cache
+            self._plugins = q2cli.cache.CACHE.plugins
+
         name_map = {}
-        for name, plugin in q2cli.cache.CACHE.plugins.items():
+        for name, plugin in self._plugins.items():
             if plugin['actions']:
                 name_map[q2cli.util.to_cli_name(name)] = plugin
         return name_map
@@ -60,7 +76,7 @@ class RootCommand(click.MultiCommand):
         website = 'Plugin website: %s' % plugin['website']
         help_ = '\n\n'.join([website, support, citing])
 
-        return PluginCommand(plugin, ctx, short_help='', help=help_)
+        return PluginCommand(plugin, name=name, short_help='', help=help_)
 
 
 class PluginCommand(click.MultiCommand):
@@ -249,6 +265,19 @@ class ActionCommand(click.Command):
 
         return outputs, missing
 
+
+# TODO use  `qiime.sdk.HELP_URL` when importing qiime isn't slow.
+ROOT_COMMAND_HELP = """\
+QIIME 2 command-line interface (q2cli)
+
+To get help with QIIME 2, visit http://2.qiime.org.
+
+To enable tab completion in Bash, run the following command or add it to your \
+.bashrc/.bash_profile:
+
+    eval "$(register-qiime-completion 2> /dev/null)"
+
+"""
 
 _OUTPUT_OPTION_ERR_MSG = """\
 Note: When only providing names for a subset of the output Artifacts or

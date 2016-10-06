@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+
+# Bash completion script that defers to a cached completion script representing
+# the state of the current QIIME 2 deployment.
+#
+# This script is intended to be evaluated on the command-line or in
+# .bashrc/.bash_profile:
+#
+#     eval "$(register-qiime-completion 2> /dev/null)"
+#
+cat << 'EOF'
+_qiime_completion()
+{
+    # Attempt to find the cached completion script. If q2cli isn't installed,
+    # or is an incompatible version, don't attempt completion.
+    local path="$(python -c "import q2cli.util; print(q2cli.util.get_completion_path())" 2> /dev/null)"
+
+    if [[ $? != 0 ]]; then
+        unset COMPREPLY
+        return 0
+    fi
+
+    # If the completion script exists, attempt completion by invoking the
+    # script in a subshell, supplying COMP_WORDS and COMP_CWORD. Capture the
+    # output as the completion reply. If the completion script failed, don't
+    # attempt completion.
+    if [[ -f "$path" ]] ; then
+      COMPREPLY=( $(COMP_WORDS="${COMP_WORDS[*]}" COMP_CWORD="${COMP_CWORD}" "$path" 2> /dev/null) )
+
+      if [[ $? != 0 ]]; then
+          unset COMPREPLY
+          return 0
+      fi
+    else
+      unset COMPREPLY
+      return 0
+    fi
+
+    return 0
+}
+
+# Enable default readline and bash completion behavior when `_qiime_complete`
+# doesn't have a reply.
+complete -F _qiime_completion -o default -o bashdefault qiime
+EOF

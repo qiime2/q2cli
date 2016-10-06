@@ -15,3 +15,4 @@ install:
 script:
   - QIIMETEST= nosetests
   - flake8 q2cli setup.py
+  - eval "$(register-qiime-completion 2> /dev/null)"
