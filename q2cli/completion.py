@@ -108,6 +108,9 @@ def _generate_command_reply(cmd):
 # with tab completion suffer from the same issue, and each one deals with this
 # bug differently (some not at all, e.g. `git`). The workaround used below
 # seems to provide the least destructive completion behavior for our CLI.
+#
+# Bug report reference:
+#   https://lists.gnu.org/archive/html/bug-bash/2009-07/msg00108.html
 
 COMPLETION_SCRIPT_TEMPLATE = """\
 #!/usr/bin/env bash

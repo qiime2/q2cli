@@ -24,10 +24,7 @@ class RootCommand(click.MultiCommand):
     ])
 
     def __init__(self, *args, **kwargs):
-        # 'help' is `None`, drop it to supply our own.
-        if 'help' in kwargs:
-            del kwargs['help']
-        super().__init__(help=ROOT_COMMAND_HELP, *args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         # Plugin state for current deployment that will be loaded from cache.
         # Used to construct the dynamic CLI.
@@ -265,19 +262,6 @@ class ActionCommand(click.Command):
 
         return outputs, missing
 
-
-# TODO use  `qiime.sdk.HELP_URL` when importing qiime isn't slow.
-ROOT_COMMAND_HELP = """\
-QIIME 2 command-line interface (q2cli)
-
-To get help with QIIME 2, visit http://2.qiime.org.
-
-To enable tab completion in Bash, run the following command or add it to your \
-.bashrc/.bash_profile:
-
-    eval "$(register-qiime-completion 2> /dev/null)"
-
-"""
 
 _OUTPUT_OPTION_ERR_MSG = """\
 Note: When only providing names for a subset of the output Artifacts or
