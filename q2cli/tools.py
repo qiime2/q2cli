@@ -99,8 +99,8 @@ def view(visualization_path, index_extension):
             while True:
                 click.echo(
                     "Press the 'q' key, Control-C, or Control-D to quit. This "
-                    "view may no longer be accessible after quitting.",
-                    nl=False)
+                    "view may no longer be accessible or work correctly after "
+                    "quitting.", nl=False)
                 # There is currently a bug in click.getchar where translation
                 # of Control-C and Control-D into KeyboardInterrupt and
                 # EOFError (respectively) does not work on Python 3. The code
