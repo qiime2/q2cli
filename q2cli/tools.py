@@ -51,11 +51,11 @@ def peek(path):
     metadata = qiime.sdk.Result.peek(path)
 
     click.secho("UUID:        ", fg="green", nl=False)
-    click.secho(str(metadata.uuid))
+    click.secho(metadata.uuid)
     click.secho("Type:        ", fg="green", nl=False)
-    click.secho(repr(metadata.type))
+    click.secho(metadata.type)
     click.secho("Data format: ", fg="green", nl=False)
-    click.secho(str(metadata.format))
+    click.secho(metadata.format)
 
 
 @tools.command(short_help='View a QIIME Visualization.',
