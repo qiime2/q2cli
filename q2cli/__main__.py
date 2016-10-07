@@ -17,9 +17,9 @@ import q2cli.commands
 @click.version_option(prog_name='q2cli',
                       message='%(prog)s version %(version)s\nRun `qiime info` '
                               'for more version details.')
-def cli():
+def qiime():
     pass
 
 
 if __name__ is '__main__':
-    cli()
+    qiime()

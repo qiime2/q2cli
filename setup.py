@@ -15,8 +15,9 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     install_requires=['click', 'qiime >= 2.0.2', 'pip'],
+    scripts=['bin/register-qiime-completion'],
     entry_points='''
         [console_scripts]
-        qiime=q2cli.__main__:cli
+        qiime=q2cli.__main__:qiime
     ''',
 )

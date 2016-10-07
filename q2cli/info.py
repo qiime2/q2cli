@@ -66,7 +66,7 @@ def _echo_citations():
                     '%s/Plugins' % qiime.sdk.HELP_URL)
 
 
-@click.command(help='Display information about the current QIIME deployment.')
+@click.command(help='Display information about current deployment.')
 @click.option('--citations', is_flag=True,
               help='Display citations for QIIME and installed plugins.')
 @click.option('--py-packages', is_flag=True,

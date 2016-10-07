@@ -79,19 +79,22 @@ class DeploymentCache:
 
     def _get_cache_dir(self):
         import os
-        import os.path
         import q2cli.util
 
-        cache_dir = os.path.join(q2cli.util.get_app_dir(), 'cache')
+        cache_dir = q2cli.util.get_cache_dir()
         os.makedirs(cache_dir, exist_ok=True)
         return cache_dir
 
     def _get_cached_state(self, refresh):
         import json
         import os.path
+        import q2cli.util
 
         current_requirements = self._get_current_requirements()
         state_path = os.path.join(self._cache_dir, 'state.json')
+        # See note on `get_completion_path` for why knowledge of this path
+        # exists in `q2cli.util` and not in this class.
+        completion_path = q2cli.util.get_completion_path()
 
         # The cache must be refreshed in the following cases:
 
@@ -105,13 +108,16 @@ class DeploymentCache:
         # 3) The cached state file does not exist.
         elif not os.path.exists(state_path):
             self._cache_current_state(current_requirements)
+        # 4) The cached bash completion script does not exist.
+        elif not os.path.exists(completion_path):
+            self._cache_current_state(current_requirements)
 
         # Now that the cache is up-to-date, read it.
         try:
             with open(state_path, 'r') as fh:
                 return json.load(fh)
         except json.JSONDecodeError:
-            # 4) The cached state file can't be read as JSON.
+            # 5) The cached state file can't be read as JSON.
             self._cache_current_state(current_requirements)
             with open(state_path, 'r') as fh:
                 return json.load(fh)
@@ -178,6 +184,8 @@ class DeploymentCache:
         import json
         import os.path
         import click
+        import q2cli.completion
+        import q2cli.util
 
         click.secho(
             "QIIME is caching your current deployment for improved "
@@ -199,6 +207,9 @@ class DeploymentCache:
         path = os.path.join(cache_dir, 'state.json')
         with open(path, 'w') as fh:
             json.dump(state, fh)
+
+        q2cli.completion.write_bash_completion_script(
+            state['plugins'], q2cli.util.get_completion_path())
 
         self._refreshed = True
 
