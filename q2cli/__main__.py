@@ -21,7 +21,7 @@ To get help with QIIME 2, visit http://2.qiime.org.
 To enable tab completion in Bash, run the following command or add it to your \
 .bashrc/.bash_profile:
 
-    eval "$(register-qiime-completion 2> /dev/null)"
+    source tab-qiime
 
 """
 
