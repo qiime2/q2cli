@@ -1,3 +1,53 @@
+# Version 0.0.5 (2016-10-08)
+
+* ENH: easier tab completion activation: `source tab-qiime` (#84)
+
+* ENH: update language for qiime tools view (#85)
+
+* ENH: update language for qiime tools view (#83)
+
+* MAINT: update peek to match framework (#82)
+
+* REF: set root command help using decorator instead of within constructor (#81)
+
+* ENH: fast Bash tab completion (#79)
+
+* ENH/BUG: add --verbose flag; fix two --cmd-config bugs (#78)
+
+* BUG: fixes broken boolean flag handler (#77)
+
+* ENH: add `qiime info --citations` flag, remove `qiime tools citations` (#76)
+
+* ENH: `qiime tools peek` (#75)
+
+* ENH: `qiime tools extract` displays extracted directory (#74)
+
+* ENH: faster `qiime --version` flag with shorter output (#73)
+
+* ENH: cached CLI state for performance improvements (#67)
+
+* ENH: more descriptive option help text (e.g. required vs optional) (#66)
+
+* ENH: adds support for None as a default value (#65)
+
+* ENH: added defaults for regular parameters (#54)
+
+* TST: update unit tests to work with archive version 0.3.0 (#62)
+
+* ENH: added bool as for #52 (#55)
+
+* ENH: Optional source format on import_data. (#57)
+
+* TST: Update test runner for transformers (#56)
+
+* ENH/REF/MAINT: use new "actions" API; flexible support for output file extensions
+
+* BUG: fixed duplicate command on action
+
+* ENH: Adds `cmd-config` option to cli
+
+* REF: Uses "Handlers" to interface with click allowing better parsing/errors
+
 # Version 0.0.3 (2016-08-08)
 
 * A new command has been added, ``qiime tools plugin-init``, which initializes a new QIIME 2 plugin. This simplifies plugin development by providing a working plugin template that can serve as the basis for a new QIIME 2 plugin. This is developed using [cookiecutter](https://github.com/audreyr/cookiecutter).
