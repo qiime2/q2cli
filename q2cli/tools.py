@@ -16,6 +16,23 @@ def tools():
     pass
 
 
+@tools.command(name='export', short_help='Export data.',
+               help="Export data from a QIIME Artifact or Visualization.")
+@click.option('--input-path', required=True,
+              type=click.Path(exists=True, dir_okay=True),
+              help='Path to Artifact or Visualization that should be '
+                   'exported.')
+@click.option('--output-path', required=True,
+              type=click.Path(exists=False, dir_okay=False),
+              help='Path where Result data should be written.')
+def export_data(input_path, output_path):
+    import qiime.sdk
+
+    result = qiime.sdk.Result.load(input_path)
+
+    return result.export_data(output_path)
+
+
 @tools.command(name='import', short_help='Import data.',
                help="Import data to create a new QIIME Artifact. See "
                     "http://2.qiime.org/Importing-data for usage examples "
