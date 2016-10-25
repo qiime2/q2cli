@@ -14,6 +14,8 @@ import shutil
 from click.testing import CliRunner
 from qiime import Artifact, Visualization
 from qiime.core.testing.type import IntSequence1
+from qiime.core.archive import ImportProvenanceCapture
+
 
 from q2cli.info import info
 from q2cli.tools import tools
@@ -27,7 +29,9 @@ class CliTests(unittest.TestCase):
         self.tempdir = tempfile.mkdtemp(prefix='qiime2-test-temp-')
         self.artifact1_path = os.path.join(self.tempdir, 'a1.qza')
 
-        artifact1 = Artifact._from_view(IntSequence1, [0, 42, 43], list)
+        artifact1 = Artifact._from_view(
+            IntSequence1, [0, 42, 43], list,
+            provenance_capture=ImportProvenanceCapture())
         artifact1.save(self.artifact1_path)
         self.artifact1_root_dir = str(artifact1.uuid)
 
