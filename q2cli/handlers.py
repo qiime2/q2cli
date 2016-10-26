@@ -294,7 +294,10 @@ class MetadataHandler(Handler):
         import qiime
 
         path = self._locate_value(arguments, fallback)
-        return qiime.Metadata.load(path)
+        if path is None:
+            return None
+        else:
+            return qiime.Metadata.load(path)
 
 
 class MetadataCategoryHandler(Handler):
@@ -353,8 +356,10 @@ class MetadataCategoryHandler(Handler):
 
         if failed:
             raise ValueNotFoundException()
-
-        return qiime.MetadataCategory.load(*values)
+        if values == [None, None]:
+            return None
+        else:
+            return qiime.MetadataCategory.load(*values)
 
 
 class RegularParameterHandler(GeneratedHandler):
