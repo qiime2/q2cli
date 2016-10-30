@@ -35,7 +35,7 @@ def export_data(input_path, output_path):
 
 @tools.command(name='import', short_help='Import data.',
                help="Import data to create a new QIIME Artifact. See "
-                    "http://2.qiime.org/Importing-data for usage examples "
+                    "https://docs.qiime2.org/2.0.5/import/ for usage examples "
                     "and details on the file types and associated semantic "
                     "types that can be imported.")
 @click.option('--type', required=True,
