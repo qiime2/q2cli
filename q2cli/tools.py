@@ -37,7 +37,8 @@ def export_data(path, output_dir):
     result.export_data(output_dir)
 
 
-@tools.command(name='import', short_help='Import data into a QIIME Artifact.',
+@tools.command(name='import',
+               short_help='Import data into a new QIIME Artifact.',
                help="Import data to create a new QIIME Artifact. See "
                     "https://docs.qiime2.org/ for usage examples and details "
                     "on the file types and associated semantic types that can "
@@ -140,10 +141,10 @@ def view(visualization_path, index_extension):
 
 @tools.command(short_help="Extract a QIIME Artifact or Visualization archive.",
                help="Extract all contents of a QIIME Artifact or "
-                    "Visualization's archive. Use 'qiime tools export' to "
-                    "export only the data stored in an Artifact or "
-                    "Visualization, with the choice of exporting to different "
-                    "formats.")
+                    "Visualization's archive, including provenance, metadata, "
+                    "and actual data. Use 'qiime tools export' to export only "
+                    "the data stored in an Artifact or Visualization, with "
+                    "the choice of exporting to different formats.")
 @click.argument('path', type=click.Path(exists=True, dir_okay=False))
 @click.option('--output-dir', required=False,
               type=click.Path(exists=True, dir_okay=True),
