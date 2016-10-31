@@ -16,28 +16,32 @@ def tools():
     pass
 
 
-@tools.command(name='export', short_help='Export data.',
-               help="Export data from a QIIME Artifact or Visualization.")
-@click.option('--input-path', required=True,
-              type=click.Path(exists=True, dir_okay=True),
-              help='Path to Artifact or Visualization that should be '
-                   'exported.')
-@click.option('--output-path', required=True,
-              type=click.Path(exists=False, dir_okay=False),
-              help='Path where Result data should be written.')
-def export_data(input_path, output_path):
+@tools.command(name='export',
+               short_help='Export data from a QIIME Artifact or '
+                          'Visualization.',
+               help="Export data from a QIIME Artifact or Visualization. "
+                    "Exporting extracts the data stored in an Artifact or "
+                    "Visualization and will support exporting to multiple "
+                    "formats in the future. For now, the data is exported in "
+                    "the format it is stored within the Artifact or "
+                    "Visualization. Use 'qiime tools extract' to extract the "
+                    "Artifact or Visualization's entire archive.")
+@click.argument('path', type=click.Path(exists=True, dir_okay=False))
+@click.option('--output-dir', required=True,
+              type=click.Path(exists=False, dir_okay=True),
+              help='Directory where data should be exported to')
+def export_data(path, output_dir):
     import qiime.sdk
 
-    result = qiime.sdk.Result.load(input_path)
+    result = qiime.sdk.Result.load(path)
+    result.export_data(output_dir)
 
-    return result.export_data(output_path)
 
-
-@tools.command(name='import', short_help='Import data.',
+@tools.command(name='import', short_help='Import data into a QIIME Artifact.',
                help="Import data to create a new QIIME Artifact. See "
-                    "https://docs.qiime2.org/2.0.5/import/ for usage examples "
-                    "and details on the file types and associated semantic "
-                    "types that can be imported.")
+                    "https://docs.qiime2.org/ for usage examples and details "
+                    "on the file types and associated semantic types that can "
+                    "be imported.")
 @click.option('--type', required=True,
               help='The semantic type of the new artifact.')
 @click.option('--input-path', required=True,
@@ -134,11 +138,16 @@ def view(visualization_path, index_extension):
                     break
 
 
-@tools.command(help='Extract a QIIME Artifact or Visualization.')
+@tools.command(short_help="Extract a QIIME Artifact or Visualization archive.",
+               help="Extract all contents of a QIIME Artifact or "
+                    "Visualization's archive. Use 'qiime tools export' to "
+                    "export only the data stored in an Artifact or "
+                    "Visualization, with the choice of exporting to different "
+                    "formats.")
 @click.argument('path', type=click.Path(exists=True, dir_okay=False))
 @click.option('--output-dir', required=False,
               type=click.Path(exists=True, dir_okay=True),
-              help='Directory where result should be extracted '
+              help='Directory where archive should be extracted to '
                    '[default: current working directory]',
               default=os.getcwd())
 def extract(path, output_dir):
