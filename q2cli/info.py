@@ -22,7 +22,6 @@ def _echo_version():
 
 
 def _echo_plugins():
-    import qiime.sdk
     import q2cli.cache
 
     plugins = q2cli.cache.CACHE.plugins
@@ -31,8 +30,7 @@ def _echo_plugins():
             click.echo('%s %s' % (name, plugin['version']))
     else:
         click.secho('No plugins are currently installed.\nYou can browse '
-                    'the official QIIME 2 plugins at: '
-                    '%s/Plugins' % qiime.sdk.HELP_URL)
+                    'the official QIIME 2 plugins at https://qiime2.org')
 
 
 def _echo_installed_packages():
@@ -47,13 +45,13 @@ def _echo_installed_packages():
 
 
 def _echo_citations():
-    import qiime.sdk
     import q2cli.cache
 
     click.secho('\nCitations', fg='green')
     click.secho('QIIME 2 framework and command line interface', fg='cyan')
     click.secho('Pending a QIIME 2 publication, please cite QIIME using the '
-                'original publication: %s' % qiime.sdk.CITATION)
+                'original publication: '
+                'http://www.ncbi.nlm.nih.gov/pubmed/20383131')
 
     plugins = q2cli.cache.CACHE.plugins
     if plugins:
@@ -62,8 +60,7 @@ def _echo_citations():
             click.secho(plugin['citation_text'])
     else:
         click.secho('\nNo plugins are currently installed.\nYou can browse '
-                    'the official QIIME 2 plugins at: '
-                    '%s/Plugins' % qiime.sdk.HELP_URL)
+                    'the official QIIME 2 plugins at https://qiime2.org')
 
 
 @click.command(help='Display information about current deployment.')
@@ -73,7 +70,6 @@ def _echo_citations():
               help='Display names and versions of all installed Python '
                    'packages.')
 def info(citations, py_packages):
-    import qiime.sdk
     import q2cli.util
     import q2cli.cache
 
@@ -89,7 +85,7 @@ def info(citations, py_packages):
     click.secho(q2cli.util.get_app_dir())
 
     click.secho('\nGetting help', fg='green')
-    click.secho('To get help with QIIME 2, visit %s.' % qiime.sdk.HELP_URL)
+    click.secho('To get help with QIIME 2, visit https://qiime2.org')
 
     click.secho('\nCiting QIIME 2', fg='green')
     click.secho('If you use QIIME 2 in any published work, you should cite '

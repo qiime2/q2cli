@@ -11,12 +11,11 @@ import click
 import q2cli.commands
 
 
-# TODO use  `qiime.sdk.HELP_URL` when importing qiime isn't slow.
 ROOT_COMMAND_HELP = """\
 QIIME 2 command-line interface (q2cli)
 --------------------------------------
 
-To get help with QIIME 2, visit http://2.qiime.org.
+To get help with QIIME 2, visit https://qiime2.org.
 
 To enable tab completion in Bash, run the following command or add it to your \
 .bashrc/.bash_profile:
