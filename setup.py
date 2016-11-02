@@ -10,11 +10,11 @@ from setuptools import setup, find_packages
 
 setup(
     name='q2cli',
-    version='0.0.5',
+    version='0.0.6',
     license='BSD-3-Clause',
     packages=find_packages(),
     include_package_data=True,
-    install_requires=['click', 'qiime >= 2.0.5', 'pip'],
+    install_requires=['click', 'qiime >= 2.0.6', 'pip'],
     scripts=['bin/tab-qiime'],
     entry_points='''
         [console_scripts]
