@@ -10,7 +10,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='q2cli',
-    version='0.0.6.dev',
+    version='0.0.7.dev0',
     license='BSD-3-Clause',
     packages=find_packages(),
     include_package_data=True,
