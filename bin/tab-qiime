@@ -13,7 +13,7 @@ _qiime_completion()
 {
   # Attempt to find the cached completion script. If q2cli isn't installed, or
   # is an incompatible version, don't attempt completion.
-  local qpath="$(python -c "import q2cli.util; print(q2cli.util.get_completion_path())" 2> /dev/null)"
+  local completion_path="$(python -c "import q2cli.util; print(q2cli.util.get_completion_path())" 2> /dev/null)"
 
   if [[ $? != 0 ]]; then
     unset COMPREPLY
@@ -24,8 +24,8 @@ _qiime_completion()
   # in a subshell, supplying COMP_WORDS and COMP_CWORD. Capture the output as
   # the completion reply. If the completion script failed, don't attempt
   # completion.
-  if [[ -f "$qpath" ]] ; then
-    COMPREPLY=( $(COMP_WORDS="${COMP_WORDS[*]}" COMP_CWORD="${COMP_CWORD}" "$qpath" 2> /dev/null) )
+  if [[ -f "$completion_path" ]] ; then
+    COMPREPLY=( $(COMP_WORDS="${COMP_WORDS[*]}" COMP_CWORD="${COMP_CWORD}" "$completion_path" 2> /dev/null) )
 
     if [[ $? != 0 ]]; then
       unset COMPREPLY
