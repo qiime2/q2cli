@@ -20,7 +20,5 @@ source tab-qiime
 To enable tab completion in ZSH, run the following commands or add them to your `.zshrc`:
 
 ```bash
-autoload bashcompinit
-bashcompinit
-source tab-qiime
+autoload bashcompinit && bashcompinit && source tab-qiime
 ```
