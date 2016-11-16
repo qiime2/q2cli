@@ -76,8 +76,9 @@ def peek(path):
     click.secho(metadata.uuid)
     click.secho("Type:        ", fg="green", nl=False)
     click.secho(metadata.type)
-    click.secho("Data format: ", fg="green", nl=False)
-    click.secho(metadata.format)
+    if metadata.format is not None:
+        click.secho("Data format: ", fg="green", nl=False)
+        click.secho(metadata.format)
 
 
 @tools.command(short_help='View a QIIME Visualization.',
