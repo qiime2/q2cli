@@ -97,7 +97,7 @@ def view(visualization_path, index_extension):
             'Visualization viewing is currently not supported in headless '
             'environments. You can view Visualizations (and Artifacts) at '
             'https://view.qiime2.org, or move the Visualization to an '
-            'environment with a display and view it with qiime tools view.')
+            'environment with a display and view it with `qiime tools view`.')
 
     import zipfile
     import qiime.sdk
