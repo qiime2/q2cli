@@ -94,10 +94,10 @@ def view(visualization_path, index_extension):
     # Guard headless envs from having to import anything
     if not os.getenv("DISPLAY"):
         raise click.UsageError(
-            'Visualization viewing is currently not supported on headless '
-            'environments. You can provide a public path to your file at '
-            'https://view.qiime2.org, or move the Visualization to your '
-            'local machine and view it through qiime tools view.')
+            'Visualization viewing is currently not supported in headless '
+            'environments. You can view Visualizations (and Artifacts) at '
+            'https://view.qiime2.org, or move the Visualization to an '
+            'environment with a display and view it with qiime tools view.')
 
     import zipfile
     import qiime.sdk
