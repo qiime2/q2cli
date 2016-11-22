@@ -56,17 +56,14 @@ class CliTests(unittest.TestCase):
         self.assertTrue('dummy-plugin' in commands)
 
     def test_plugin_list_commands(self):
-        # plugin commands are present including method (from function),
-        # method (from markdown) and visualizer
+        # plugin commands are present including a method and visualizer
         qiime_cli = RootCommand()
         command = qiime_cli.get_command(ctx=None, name='dummy-plugin')
         commands = command.list_commands(ctx=None)
         self.assertTrue('split-ints' in commands)
-        self.assertTrue('split-ints-markdown' in commands)
         self.assertTrue('mapping-viz' in commands)
 
         self.assertFalse('split_ints' in commands)
-        self.assertFalse('split_ints_markdown' in commands)
         self.assertFalse('mapping_viz' in commands)
 
     def test_extract(self):
