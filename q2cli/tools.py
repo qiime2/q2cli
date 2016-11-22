@@ -91,6 +91,14 @@ def peek(path):
               help='The extension of the index file that should be opened. '
                    '[default: html]')
 def view(visualization_path, index_extension):
+    # Guard headless envs from having to import anything
+    if not os.getenv("DISPLAY"):
+        raise click.UsageError(
+            'Visualization viewing is currently not supported in headless '
+            'environments. You can view Visualizations (and Artifacts) at '
+            'https://view.qiime2.org, or move the Visualization to an '
+            'environment with a display and view it with `qiime tools view`.')
+
     import zipfile
     import qiime.sdk
 
