@@ -131,7 +131,6 @@ class ActionCommand(click.Command):
                          help=action['description'])
 
     def build_generated_handlers(self):
-        import operator
         import q2cli.handlers
 
         handlers = collections.OrderedDict()
@@ -147,13 +146,7 @@ class ActionCommand(click.Command):
         for group_type, constructor in handler_map.items():
             grp = signature[group_type]
 
-            # TODO Update order of inputs and parameters to match
-            # `Action.signature` when signature retains API order:
-            #
-            #     https://github.com/qiime2/qiime2/issues/70
-            #
-            # i.e. remove the `sorted` call below.
-            for item in sorted(grp, key=operator.itemgetter('name')):
+            for item in grp:
                 name = item['name']
                 default = defaults.get(name, q2cli.handlers.NoDefault)
                 handlers[name] = constructor(default=default, **item)

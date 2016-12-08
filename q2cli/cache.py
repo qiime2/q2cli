@@ -272,17 +272,17 @@ class DeploymentCache:
         # Inputs and outputs are handled the same. Parameters must be handled a
         # little differently because they require an AST representation.
         for group in 'inputs', 'outputs':
-            for name, (type, _) in getattr(action.signature, group).items():
+            for name, spec in getattr(action.signature, group).items():
                 state['signature'][group].append({
                     'name': name,
-                    'repr': repr(type)
+                    'repr': repr(spec.qiime_type)
                 })
 
-        for name, (type, _) in action.signature.parameters.items():
+        for name, spec in action.signature.parameters.items():
             state['signature']['parameters'].append({
                 'name': name,
-                'repr': repr(type),
-                'ast': type.to_ast()
+                'repr': repr(spec.qiime_type),
+                'ast': spec.qiime_type.to_ast()
             })
 
         return state
