@@ -142,6 +142,7 @@ class ActionCommand(click.Command):
 
         signature = self.action['signature']
         defaults = signature['defaults']
+        descriptions = signature['descriptions']
 
         for group_type, constructor in handler_map.items():
             grp = signature[group_type]
@@ -149,7 +150,9 @@ class ActionCommand(click.Command):
             for item in grp:
                 name = item['name']
                 default = defaults.get(name, q2cli.handlers.NoDefault)
-                handlers[name] = constructor(default=default, **item)
+                description = descriptions.get(name, q2cli.handlers.NoDefault)
+                handlers[name] = constructor(default=default,
+                                             description=description, **item)
 
         return handlers
 

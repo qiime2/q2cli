@@ -20,12 +20,14 @@ class ValueNotFoundException(Exception):
 
 
 class Handler:
-    def __init__(self, name, prefix='', default=NoDefault):
+    def __init__(self, name, prefix='', default=NoDefault,
+                 description=NoDefault):
         # e.g. my_option_name
         self.name = name
         # e.g. p_my_option_name
         self.click_name = prefix + name
         self.default = default
+        self.description = description
         self.missing = []
 
     @property
@@ -100,6 +102,11 @@ class Handler:
             click.secho(msg, err=True, fg='red', bold=True)
             ctx = click.get_current_context()
             ctx.exit(1)
+
+    def _add_description(self, option):
+        if self.description is not NoDefault:
+            option.help += '\n%s' % self.description
+        return option
 
 
 class VerboseHandler(Handler):
@@ -225,8 +232,9 @@ class CommandConfigHandler(Handler):
 
 
 class GeneratedHandler(Handler):
-    def __init__(self, name, repr, default=NoDefault):
-        super().__init__(name, prefix=self.prefix, default=default)
+    def __init__(self, name, repr, default=NoDefault, description=NoDefault):
+        super().__init__(name, prefix=self.prefix, default=default,
+                         description=description)
         self.repr = repr
 
 
@@ -236,9 +244,10 @@ class ArtifactHandler(GeneratedHandler):
     def get_click_options(self):
         import click
 
-        yield click.Option(['--' + self.cli_name],
-                           type=click.Path(exists=False, dir_okay=False),
-                           help="Artifact: %s  [required]" % self.repr)
+        option = click.Option(['--' + self.cli_name],
+                              type=click.Path(exists=False, dir_okay=False),
+                              help="Artifact: %s  [required]" % self.repr)
+        yield self._add_description(option)
 
     def get_value(self, arguments, fallback=None):
         import qiime
@@ -253,27 +262,32 @@ class ResultHandler(GeneratedHandler):
     def get_click_options(self):
         import click
 
-        yield click.Option(['--' + self.cli_name],
-                           type=click.Path(exists=False, dir_okay=False),
-                           help="Artifact: %s  [required if not passing "
-                                "--output-dir]" % self.repr)
+        option = click.Option(['--' + self.cli_name],
+                              type=click.Path(exists=False, dir_okay=False),
+                              help="Artifact: %s  [required if not passing "
+                              "--output-dir]" % self.repr)
+        yield self._add_description(option)
 
     def get_value(self, arguments, fallback=None):
         return self._locate_value(arguments, fallback)
 
 
-def parameter_handler_factory(name, repr, ast, default=NoDefault):
+def parameter_handler_factory(name, repr, ast, default=NoDefault,
+                              description=NoDefault):
     if ast['name'] == 'Metadata':
-        return MetadataHandler(name, default=default)
+        return MetadataHandler(name, default=default, description=description)
     elif ast['name'] == 'MetadataCategory':
-        return MetadataCategoryHandler(name, default=default)
+        return MetadataCategoryHandler(name, default=default,
+                                       description=description)
     else:
-        return RegularParameterHandler(name, repr, ast, default=default)
+        return RegularParameterHandler(name, repr, ast, default=default,
+                                       description=description)
 
 
 class MetadataHandler(Handler):
-    def __init__(self, name, default=NoDefault):
-        super().__init__(name, prefix='m_', default=default)
+    def __init__(self, name, default=NoDefault, description=NoDefault):
+        super().__init__(name, prefix='m_', default=default,
+                         description=description)
         self.click_name += '_file'
 
     def get_click_options(self):
@@ -285,10 +299,15 @@ class MetadataHandler(Handler):
 
         # Metadata currently supports a default of None. Anything else makes it
         # required.
+        option = None
         if self.default is None:
-            yield click.Option([name], type=type, help='%s  [optional]' % help)
+            option = click.Option([name], type=type,
+                                  help='%s  [optional]' % help)
         else:
-            yield click.Option([name], type=type, help='%s  [required]' % help)
+            option = click.Option([name], type=type,
+                                  help='%s  [required]' % help)
+
+        yield self._add_description(option)
 
     def get_value(self, arguments, fallback=None):
         import qiime
@@ -301,7 +320,7 @@ class MetadataHandler(Handler):
 
 
 class MetadataCategoryHandler(Handler):
-    def __init__(self, name, default=NoDefault):
+    def __init__(self, name, default=NoDefault, description=NoDefault):
         import q2cli.util
 
         super().__init__(name, prefix='m_', default=default)
@@ -365,8 +384,9 @@ class MetadataCategoryHandler(Handler):
 class RegularParameterHandler(GeneratedHandler):
     prefix = 'p_'
 
-    def __init__(self, name, repr, ast, default=NoDefault):
-        super().__init__(name, repr, default=default)
+    def __init__(self, name, repr, ast, default=NoDefault,
+                 description=NoDefault):
+        super().__init__(name, repr, default=default, description=description)
         self.ast = ast
 
     def get_type(self):
@@ -410,16 +430,19 @@ class RegularParameterHandler(GeneratedHandler):
         # supplying defaults. Telling Click about the default value here makes
         # it impossible to determine whether the user supplied or omitted a
         # value once the handlers are invoked.
+        option = None
         if self.default is NoDefault:
-            yield click.Option([name], type=option_type, default=None,
-                               show_default=False, help='[required]')
+            option = click.Option([name], type=option_type, default=None,
+                                  show_default=False, help='[required]')
         elif self.default is None:
-            yield click.Option([name], type=option_type, default=None,
-                               show_default=False, help='[optional]')
+            option = click.Option([name], type=option_type, default=None,
+                                  show_default=False, help='[optional]')
         else:
-            yield click.Option([name], type=option_type, default=None,
-                               show_default=False,
-                               help='[default: %s]' % self.default)
+            option = click.Option([name], type=option_type, default=None,
+                                  show_default=False,
+                                  help='[default: %s]' % self.default)
+
+        yield self._add_description(option)
 
     def get_value(self, arguments, fallback=None):
         value = self._locate_value(arguments, fallback)

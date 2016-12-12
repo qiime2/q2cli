@@ -265,7 +265,8 @@ class DeploymentCache:
                 'inputs': [],
                 'parameters': [],
                 'outputs': [],
-                'defaults': action.signature.defaults
+                'defaults': action.signature.defaults,
+                'descriptions': action.signature.descriptions
             }
         }
 
