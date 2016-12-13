@@ -24,6 +24,18 @@ class RootCommand(click.MultiCommand):
     ])
 
     def __init__(self, *args, **kwargs):
+        import sys
+        invalid = []
+        unicodes = ["\u2018", "\u2019", "\u201C", "\u201D", "\u2014"]
+        for command in sys.argv:
+            if any(x in command for x in unicodes):
+                invalid.append(command)
+        if invalid:
+            click.secho("Error: Detected invalid character in: %s\n"
+                        "Verify the correct quotes or dashes (ASCII) are "
+                        "being used." %
+                        ', '.join(invalid), err=True, fg='red', bold=True)
+            sys.exit(-1)
         super().__init__(*args, **kwargs)
 
         # Plugin state for current deployment that will be loaded from cache.
