@@ -215,7 +215,8 @@ class ActionCommand(click.Command):
             results = action(**arguments)
 
         for result, output in zip(results, outputs):
-            result.save(output)
+            click.echo('Saved to: %s' % result.save(output))
+
 
     def handle_in_params(self, kwargs):
         import itertools
