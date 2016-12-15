@@ -215,8 +215,8 @@ class ActionCommand(click.Command):
             results = action(**arguments)
 
         for result, output in zip(results, outputs):
-            click.echo('Saved to: %s' % result.save(output))
-
+            click.secho('Saved %s to: %s' % (result.type,
+                                             result.save(output)), fg='green')
 
     def handle_in_params(self, kwargs):
         import itertools
