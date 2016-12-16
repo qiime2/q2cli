@@ -274,22 +274,16 @@ class DeploymentCache:
         for group in 'inputs', 'outputs':
             for name, spec in getattr(action.signature, group).items():
                 data = {'name': name, 'repr': repr(spec.qiime_type)}
-
-                if isinstance(spec.description, str):
-                    data['description'] = spec.description
-                else:
-                    data['description'] = ''
+                data['description'] = spec.description if \
+                    spec.has_description() else None
 
                 state['signature'][group].append(data)
 
         for name, spec in action.signature.parameters.items():
             data = {'name': name, 'repr': repr(spec.qiime_type),
                     'ast': spec.qiime_type.to_ast()}
-
-            if isinstance(spec.description, str):
-                data['description'] = spec.description
-            else:
-                data['description'] = ''
+            data['description'] = spec.description if \
+                spec.has_description() else None
 
             state['signature']['parameters'].append(data)
 

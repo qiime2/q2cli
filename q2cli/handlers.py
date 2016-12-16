@@ -20,8 +20,7 @@ class ValueNotFoundException(Exception):
 
 
 class Handler:
-    def __init__(self, name, prefix='', default=NoDefault,
-                 description=NoDefault):
+    def __init__(self, name, prefix='', default=NoDefault, description=None):
         # e.g. my_option_name
         self.name = name
         # e.g. p_my_option_name
@@ -104,7 +103,7 @@ class Handler:
             ctx.exit(1)
 
     def _add_description(self, option):
-        if self.description != '':
+        if self.description:
             option.help += '\n%s' % self.description
         return option
 
@@ -232,7 +231,7 @@ class CommandConfigHandler(Handler):
 
 
 class GeneratedHandler(Handler):
-    def __init__(self, name, repr, default=NoDefault, description=NoDefault):
+    def __init__(self, name, repr, default=NoDefault, description=None):
         super().__init__(name, prefix=self.prefix, default=default,
                          description=description)
         self.repr = repr
@@ -273,7 +272,7 @@ class ResultHandler(GeneratedHandler):
 
 
 def parameter_handler_factory(name, repr, ast, default=NoDefault,
-                              description=NoDefault):
+                              description=None):
     if ast['name'] == 'Metadata':
         return MetadataHandler(name, default=default, description=description)
     elif ast['name'] == 'MetadataCategory':
@@ -285,7 +284,7 @@ def parameter_handler_factory(name, repr, ast, default=NoDefault,
 
 
 class MetadataHandler(Handler):
-    def __init__(self, name, default=NoDefault, description=NoDefault):
+    def __init__(self, name, default=NoDefault, description=None):
         super().__init__(name, prefix='m_', default=default,
                          description=description)
         self.click_name += '_file'
@@ -320,7 +319,7 @@ class MetadataHandler(Handler):
 
 
 class MetadataCategoryHandler(Handler):
-    def __init__(self, name, default=NoDefault, description=NoDefault):
+    def __init__(self, name, default=NoDefault, description=None):
         import q2cli.util
 
         super().__init__(name, prefix='m_', default=default)
@@ -384,8 +383,7 @@ class MetadataCategoryHandler(Handler):
 class RegularParameterHandler(GeneratedHandler):
     prefix = 'p_'
 
-    def __init__(self, name, repr, ast, default=NoDefault,
-                 description=NoDefault):
+    def __init__(self, name, repr, ast, default=NoDefault, description=None):
         super().__init__(name, repr, default=default, description=description)
         self.ast = ast
 
