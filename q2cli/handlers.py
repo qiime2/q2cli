@@ -104,7 +104,7 @@ class Handler:
             ctx.exit(1)
 
     def _add_description(self, option):
-        if self.description is not NoDefault:
+        if self.description != '':
             option.help += '\n%s' % self.description
         return option
 

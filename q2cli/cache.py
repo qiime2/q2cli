@@ -265,8 +265,7 @@ class DeploymentCache:
                 'inputs': [],
                 'parameters': [],
                 'outputs': [],
-                'defaults': action.signature.defaults,
-                'descriptions': action.signature.descriptions
+                'defaults': action.signature.defaults
             }
         }
 
@@ -274,17 +273,25 @@ class DeploymentCache:
         # little differently because they require an AST representation.
         for group in 'inputs', 'outputs':
             for name, spec in getattr(action.signature, group).items():
-                state['signature'][group].append({
-                    'name': name,
-                    'repr': repr(spec.qiime_type)
-                })
+                data = {'name': name, 'repr': repr(spec.qiime_type)}
+
+                if isinstance(spec.description, str):
+                    data['description'] = spec.description
+                else:
+                    data['description'] = ''
+
+                state['signature'][group].append(data)
 
         for name, spec in action.signature.parameters.items():
-            state['signature']['parameters'].append({
-                'name': name,
-                'repr': repr(spec.qiime_type),
-                'ast': spec.qiime_type.to_ast()
-            })
+            data = {'name': name, 'repr': repr(spec.qiime_type),
+                    'ast': spec.qiime_type.to_ast()}
+
+            if isinstance(spec.description, str):
+                data['description'] = spec.description
+            else:
+                data['description'] = ''
+
+            state['signature']['parameters'].append(data)
 
         return state
 
