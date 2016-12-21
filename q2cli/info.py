@@ -11,13 +11,13 @@ import click
 
 def _echo_version():
     import sys
-    import qiime
+    import qiime2
     import q2cli
 
     pyver = sys.version_info
     click.echo('Python version: %d.%d.%d' %
                (pyver.major, pyver.minor, pyver.micro))
-    click.echo('QIIME version: %s' % qiime.__version__)
+    click.echo('QIIME 2 version: %s' % qiime2.__version__)
     click.echo('q2cli version: %s' % q2cli.__version__)
 
 
@@ -65,7 +65,7 @@ def _echo_citations():
 
 @click.command(help='Display information about current deployment.')
 @click.option('--citations', is_flag=True,
-              help='Display citations for QIIME and installed plugins.')
+              help='Display citations for QIIME 2 and installed plugins.')
 @click.option('--py-packages', is_flag=True,
               help='Display names and versions of all installed Python '
                    'packages.')
@@ -92,10 +92,10 @@ def info(citations, py_packages):
                 'QIIME 2 and the plugins that you used. ', nl=False)
 
     if citations:
-        click.secho('The citations for QIIME and all installed plugins '
+        click.secho('The citations for QIIME 2 and all installed plugins '
                     'follow.')
         _echo_citations()
     else:
-        click.secho('To display the citations for QIIME and all installed '
+        click.secho('To display the citations for QIIME 2 and all installed '
                     'plugins, run:')
         click.secho('\n  qiime info --citations\n')

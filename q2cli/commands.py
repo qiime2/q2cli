@@ -107,7 +107,7 @@ class PluginCommand(click.MultiCommand):
         try:
             action = self._action_lookup[name]
         except KeyError:
-            click.echo("Error: QIIME plugin %r has no action %r."
+            click.echo("Error: QIIME 2 plugin %r has no action %r."
                        % (self._plugin['name'], name), err=True)
             ctx.exit(2)  # Match exit code of `return None`
 
@@ -115,7 +115,7 @@ class PluginCommand(click.MultiCommand):
 
 
 class ActionCommand(click.Command):
-    """A click manifestation of a QIIME API Action (Method/Visualizer)
+    """A click manifestation of a QIIME 2 API Action (Method/Visualizer)
 
     The ActionCommand generates Handlers which map from 1 Action API parameter
     to one or more Click.Options.
@@ -181,7 +181,7 @@ class ActionCommand(click.Command):
         import importlib
         import itertools
         import os
-        import qiime.util
+        import qiime2.util
 
         arguments, missing_in, verbose = self.handle_in_params(kwargs)
         outputs, missing_out = self.handle_out_params(kwargs)
@@ -199,19 +199,19 @@ class ActionCommand(click.Command):
                 click.echo(_OUTPUT_OPTION_ERR_MSG, err=True)
             ctx.exit(1)
 
-        module_path = 'qiime.plugins.%s.actions' % self.plugin['id']
+        module_path = 'qiime2.plugins.%s.actions' % self.plugin['id']
         actions_module = importlib.import_module(module_path)
         action = getattr(actions_module, self.action['id'])
 
         stdout = os.devnull
         stderr = os.devnull
         if verbose:
-            # `qiime.util.redirected_stdio` defaults to stdout/stderr when
+            # `qiime2.util.redirected_stdio` defaults to stdout/stderr when
             # supplied `None`.
             stdout = None
             stderr = None
 
-        with qiime.util.redirected_stdio(stdout=stdout, stderr=stderr):
+        with qiime2.util.redirected_stdio(stdout=stdout, stderr=stderr):
             results = action(**arguments)
 
         for result, output in zip(results, outputs):

@@ -8,11 +8,13 @@ before_install:
   - ./miniconda.sh -b
   - export PATH=/home/travis/miniconda3/bin:$PATH
 install:
-  - conda create --yes -n test-env python=$PYTHON_VERSION nose flake8
+  - conda create --yes -n test-env python=$PYTHON_VERSION nose
   - source activate test-env
   - pip install https://github.com/qiime2/qiime2/archive/master.zip
+  # pip has a much newer version of flake8 than conda.
+  - pip install flake8
   - pip install .
 script:
   - QIIMETEST= nosetests
-  - flake8 q2cli setup.py
+  - flake8
   - source tab-qiime

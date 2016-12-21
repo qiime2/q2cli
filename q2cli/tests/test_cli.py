@@ -12,9 +12,9 @@ import tempfile
 import shutil
 
 from click.testing import CliRunner
-from qiime import Artifact, Visualization
-from qiime.core.testing.type import IntSequence1
-from qiime.core.archive import ImportProvenanceCapture
+from qiime2 import Artifact, Visualization
+from qiime2.core.testing.type import IntSequence1
+from qiime2.core.archive import ImportProvenanceCapture
 
 
 from q2cli.info import info

@@ -26,10 +26,10 @@ def dev():
               help='Directory in which to create plugin package.',
               default='.')
 def plugin_init(ctx, output_dir):
-    import qiime.plugin
+    import qiime2.plugin
 
     try:
-        path = qiime.plugin.plugin_init(output_dir=output_dir)
+        path = qiime2.plugin.plugin_init(output_dir=output_dir)
     except FileExistsError as e:
         click.secho("Plugin package directory name already exists under %s"
                     % (output_dir if output_dir != '.' else
