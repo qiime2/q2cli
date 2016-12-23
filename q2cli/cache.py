@@ -1,9 +1,9 @@
 # ----------------------------------------------------------------------------
-# Copyright (c) 2016--, QIIME 2 development team.
+# Copyright (c) 2016-2017, QIIME 2 development team.
 #
 # Distributed under the terms of the Modified BSD License.
 #
-# The full license is in the file COPYING.txt, distributed with this software.
+# The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 
 
@@ -144,17 +144,17 @@ class DeploymentCache:
         # cache is outdated.
         #
         # TODO: this code is copied from
-        # `qiime.sdk.PluginManager.iter_entry_points`. Importing QIIME is
+        # `qiime2.sdk.PluginManager.iter_entry_points`. Importing QIIME is
         # currently slow, and it adds ~600-700ms to any CLI command. This makes
         # the CLI pretty unresponsive, especially when running help/informative
         # commands. Uncomment the following lines when
         # https://github.com/qiime2/qiime2/issues/151 is fixed:
         #
-        # for ep in qiime.sdk.PluginManager.iter_entry_points():
+        # for ep in qiime2.sdk.PluginManager.iter_entry_points():
         #     reqs.add(ep.dist.as_requirement())
         #
         for entry_point in pkg_resources.iter_entry_points(
-                group='qiime.plugins'):
+                group='qiime2.plugins'):
             if entry_point.name != 'dummy-plugin' or 'QIIMETEST' in os.environ:
                 reqs.add(entry_point.dist.as_requirement())
 
@@ -220,13 +220,13 @@ class DeploymentCache:
         cache needs to be refreshed.
 
         """
-        import qiime.sdk
+        import qiime2.sdk
 
         state = {
             'plugins': {}
         }
 
-        plugin_manager = qiime.sdk.PluginManager()
+        plugin_manager = qiime2.sdk.PluginManager()
         for name, plugin in plugin_manager.plugins.items():
             state['plugins'][name] = self._get_plugin_state(plugin)
 
@@ -235,7 +235,7 @@ class DeploymentCache:
     def _get_plugin_state(self, plugin):
         state = {
             # TODO this conversion also happens in the framework
-            # (qiime/plugins.py) to generate an importable module name from a
+            # (qiime2/plugins.py) to generate an importable module name from a
             # plugin's `.name` attribute. Centralize this knowledge in the
             # framework, ideally as a machine-friendly plugin ID (similar to
             # `Action.id`).

@@ -1,9 +1,9 @@
 # ----------------------------------------------------------------------------
-# Copyright (c) 2016--, QIIME 2 development team.
+# Copyright (c) 2016-2017, QIIME 2 development team.
 #
 # Distributed under the terms of the Modified BSD License.
 #
-# The full license is in the file COPYING.txt, distributed with this software.
+# The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 
 import collections
@@ -241,10 +241,10 @@ class ArtifactHandler(GeneratedHandler):
                            help="Artifact: %s  [required]" % self.repr)
 
     def get_value(self, arguments, fallback=None):
-        import qiime
+        import qiime2
 
         path = self._locate_value(arguments, fallback)
-        return qiime.Artifact.load(path)
+        return qiime2.Artifact.load(path)
 
 
 class ResultHandler(GeneratedHandler):
@@ -291,13 +291,13 @@ class MetadataHandler(Handler):
             yield click.Option([name], type=type, help='%s  [required]' % help)
 
     def get_value(self, arguments, fallback=None):
-        import qiime
+        import qiime2
 
         path = self._locate_value(arguments, fallback)
         if path is None:
             return None
         else:
-            return qiime.Metadata.load(path)
+            return qiime2.Metadata.load(path)
 
 
 class MetadataCategoryHandler(Handler):
@@ -338,7 +338,7 @@ class MetadataCategoryHandler(Handler):
         yield click.Option([mdc_name], **mdc_kwargs)
 
     def get_value(self, arguments, fallback=None):
-        import qiime
+        import qiime2
 
         values = []
         failed = False
@@ -359,7 +359,7 @@ class MetadataCategoryHandler(Handler):
         if values == [None, None]:
             return None
         else:
-            return qiime.MetadataCategory.load(*values)
+            return qiime2.MetadataCategory.load(*values)
 
 
 class RegularParameterHandler(GeneratedHandler):
@@ -433,6 +433,6 @@ class RegularParameterHandler(GeneratedHandler):
                 value = self._parse_boolean(value)
             return value
         else:
-            import qiime.sdk
-            return qiime.sdk.parse_type(
+            import qiime2.sdk
+            return qiime2.sdk.parse_type(
                 self.repr, expect='primitive').decode(value)

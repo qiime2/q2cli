@@ -1,9 +1,9 @@
 # ----------------------------------------------------------------------------
-# Copyright (c) 2016--, QIIME 2 development team.
+# Copyright (c) 2016-2017, QIIME 2 development team.
 #
 # Distributed under the terms of the Modified BSD License.
 #
-# The full license is in the file COPYING.txt, distributed with this software.
+# The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 
 import os
@@ -11,15 +11,15 @@ import os
 import click
 
 
-@click.group(help='Tools for working with QIIME files.')
+@click.group(help='Tools for working with QIIME 2 files.')
 def tools():
     pass
 
 
 @tools.command(name='export',
-               short_help='Export data from a QIIME Artifact or '
+               short_help='Export data from a QIIME 2 Artifact or '
                           'Visualization.',
-               help="Export data from a QIIME Artifact or Visualization. "
+               help="Export data from a QIIME 2 Artifact or Visualization. "
                     "Exporting extracts the data stored in an Artifact or "
                     "Visualization and will support exporting to multiple "
                     "formats in the future. For now, the data is exported in "
@@ -31,15 +31,15 @@ def tools():
               type=click.Path(exists=False, dir_okay=True),
               help='Directory where data should be exported to')
 def export_data(path, output_dir):
-    import qiime.sdk
+    import qiime2.sdk
 
-    result = qiime.sdk.Result.load(path)
+    result = qiime2.sdk.Result.load(path)
     result.export_data(output_dir)
 
 
 @tools.command(name='import',
-               short_help='Import data into a new QIIME Artifact.',
-               help="Import data to create a new QIIME Artifact. See "
+               short_help='Import data into a new QIIME 2 Artifact.',
+               help="Import data to create a new QIIME 2 Artifact. See "
                     "https://docs.qiime2.org/ for usage examples and details "
                     "on the file types and associated semantic types that can "
                     "be imported.")
@@ -56,21 +56,22 @@ def export_data(path, output_dir):
                    'data must be in the format expected by the semantic type '
                    'provided via --type.')
 def import_data(type, input_path, output_path, source_format=None):
-    import qiime.sdk
+    import qiime2.sdk
 
-    artifact = qiime.sdk.Artifact.import_data(type, input_path,
-                                              view_type=source_format)
+    artifact = qiime2.sdk.Artifact.import_data(type, input_path,
+                                               view_type=source_format)
     artifact.save(output_path)
 
 
-@tools.command(short_help='Take a peek at a QIIME Artifact or Visualization.',
-               help="Display basic information about a QIIME Artifact or "
+@tools.command(short_help='Take a peek at a QIIME 2 Artifact or '
+                          'Visualization.',
+               help="Display basic information about a QIIME 2 Artifact or "
                     "Visualization, including its UUID and type.")
 @click.argument('path', type=click.Path(exists=True, dir_okay=False))
 def peek(path):
-    import qiime.sdk
+    import qiime2.sdk
 
-    metadata = qiime.sdk.Result.peek(path)
+    metadata = qiime2.sdk.Result.peek(path)
 
     click.secho("UUID:        ", fg="green", nl=False)
     click.secho(metadata.uuid)
@@ -81,10 +82,10 @@ def peek(path):
         click.secho(metadata.format)
 
 
-@tools.command(short_help='View a QIIME Visualization.',
-               help="Displays a QIIME Visualization until the command exits. "
-                    "To open a QIIME Visualization so it can be used after "
-                    "the command exits, use 'qiime extract'.")
+@tools.command(short_help='View a QIIME 2 Visualization.',
+               help="Displays a QIIME 2 Visualization until the command "
+                    "exits. To open a QIIME 2 Visualization so it can be "
+                    "used after the command exits, use 'qiime extract'.")
 @click.argument('visualization-path',
                 type=click.Path(exists=True, dir_okay=False))
 @click.option('--index-extension', required=False, default='html',
@@ -100,18 +101,18 @@ def view(visualization_path, index_extension):
             'environment with a display and view it with `qiime tools view`.')
 
     import zipfile
-    import qiime.sdk
+    import qiime2.sdk
 
     if index_extension.startswith('.'):
         index_extension = index_extension[1:]
     try:
-        visualization = qiime.sdk.Visualization.load(visualization_path)
+        visualization = qiime2.sdk.Visualization.load(visualization_path)
     # TODO: currently a KeyError is raised if a zipped file that is not a
-    # QIIME result is passed. This should be handled better by the framework.
+    # QIIME 2 result is passed. This should be handled better by the framework.
     except (zipfile.BadZipFile, KeyError, TypeError):
         raise click.BadParameter(
-            '%s is not a QIIME Visualization. Only QIIME Visualizations can '
-            'be viewed.' % visualization_path)
+            '%s is not a QIIME 2 Visualization. Only QIIME 2 Visualizations '
+            'can be viewed.' % visualization_path)
 
     index_paths = visualization.get_index_paths(relative=False)
 
@@ -148,8 +149,9 @@ def view(visualization_path, index_extension):
                     break
 
 
-@tools.command(short_help="Extract a QIIME Artifact or Visualization archive.",
-               help="Extract all contents of a QIIME Artifact or "
+@tools.command(short_help="Extract a QIIME 2 Artifact or Visualization "
+                          "archive.",
+               help="Extract all contents of a QIIME 2 Artifact or "
                     "Visualization's archive, including provenance, metadata, "
                     "and actual data. Use 'qiime tools export' to export only "
                     "the data stored in an Artifact or Visualization, with "
@@ -162,13 +164,13 @@ def view(visualization_path, index_extension):
               default=os.getcwd())
 def extract(path, output_dir):
     import zipfile
-    import qiime.sdk
+    import qiime2.sdk
 
     try:
-        extracted_dir = qiime.sdk.Result.extract(path, output_dir)
+        extracted_dir = qiime2.sdk.Result.extract(path, output_dir)
     except (zipfile.BadZipFile, ValueError):
         raise click.BadParameter(
-            '%s is not a valid QIIME Result. Only QIIME Artifacts and '
+            '%s is not a valid QIIME 2 Result. Only QIIME 2 Artifacts and '
             'Visualizations can be extracted.' % path)
     else:
         click.echo('Extracted to %s' % extracted_dir)

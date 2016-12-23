@@ -1,9 +1,9 @@
 # ----------------------------------------------------------------------------
-# Copyright (c) 2016--, QIIME 2 development team.
+# Copyright (c) 2016-2017, QIIME 2 development team.
 #
 # Distributed under the terms of the Modified BSD License.
 #
-# The full license is in the file COPYING.txt, distributed with this software.
+# The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 
 import click
@@ -26,10 +26,10 @@ def dev():
               help='Directory in which to create plugin package.',
               default='.')
 def plugin_init(ctx, output_dir):
-    import qiime.plugin
+    import qiime2.plugin
 
     try:
-        path = qiime.plugin.plugin_init(output_dir=output_dir)
+        path = qiime2.plugin.plugin_init(output_dir=output_dir)
     except FileExistsError as e:
         click.secho("Plugin package directory name already exists under %s"
                     % (output_dir if output_dir != '.' else

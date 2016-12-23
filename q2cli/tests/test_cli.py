@@ -1,9 +1,9 @@
 # ----------------------------------------------------------------------------
-# Copyright (c) 2016--, QIIME 2 development team.
+# Copyright (c) 2016-2017, QIIME 2 development team.
 #
 # Distributed under the terms of the Modified BSD License.
 #
-# The full license is in the file COPYING.txt, distributed with this software.
+# The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 
 import os.path
@@ -12,9 +12,9 @@ import tempfile
 import shutil
 
 from click.testing import CliRunner
-from qiime import Artifact, Visualization
-from qiime.core.testing.type import IntSequence1
-from qiime.core.archive import ImportProvenanceCapture
+from qiime2 import Artifact, Visualization
+from qiime2.core.testing.type import IntSequence1
+from qiime2.core.archive import ImportProvenanceCapture
 
 
 from q2cli.info import info
