@@ -322,7 +322,8 @@ class MetadataCategoryHandler(Handler):
     def __init__(self, name, default=NoDefault, description=None):
         import q2cli.util
 
-        super().__init__(name, prefix='m_', default=default)
+        super().__init__(name, prefix='m_', default=default, 
+                         description=description)
         self.name = name
         self.click_names = ['m_%s_file' % name, 'm_%s_category' % name]
         self.cli_names = [
