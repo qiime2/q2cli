@@ -273,17 +273,19 @@ class DeploymentCache:
         # little differently because they require an AST representation.
         for group in 'inputs', 'outputs':
             for name, spec in getattr(action.signature, group).items():
-                state['signature'][group].append({
-                    'name': name,
-                    'repr': repr(spec.qiime_type)
-                })
+                data = {'name': name, 'repr': repr(spec.qiime_type)}
+                data['description'] = spec.description if \
+                    spec.has_description() else None
+
+                state['signature'][group].append(data)
 
         for name, spec in action.signature.parameters.items():
-            state['signature']['parameters'].append({
-                'name': name,
-                'repr': repr(spec.qiime_type),
-                'ast': spec.qiime_type.to_ast()
-            })
+            data = {'name': name, 'repr': repr(spec.qiime_type),
+                    'ast': spec.qiime_type.to_ast()}
+            data['description'] = spec.description if \
+                spec.has_description() else None
+
+            state['signature']['parameters'].append(data)
 
         return state
 
