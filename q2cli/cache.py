@@ -193,15 +193,6 @@ class DeploymentCache:
             "once per deployment.", fg='yellow', err=True)
 
         cache_dir = self._cache_dir
-
-        path = os.path.join(cache_dir, 'requirements.txt')
-        with open(path, 'w') as fh:
-            for req in requirements:
-                # `str(Requirement)` is the recommended way to format a
-                # `Requirement` that can be read with `Requirement.parse`.
-                fh.write(str(req))
-                fh.write('\n')
-
         state = self._get_current_state()
 
         path = os.path.join(cache_dir, 'state.json')
@@ -210,6 +201,20 @@ class DeploymentCache:
 
         q2cli.completion.write_bash_completion_script(
             state['plugins'], q2cli.util.get_completion_path())
+
+        # Write requirements file last because the above steps may raise errors
+        # (e.g. a plugin can't be loaded in `_get_current_state`). If any part
+        # of the cache writing fails, it needs to be refreshed the next time
+        # the cache is accessed. The absence of a requirements file will
+        # trigger this cache refresh, avoiding this bug:
+        #     https://github.com/qiime2/q2cli/issues/88
+        path = os.path.join(cache_dir, 'requirements.txt')
+        with open(path, 'w') as fh:
+            for req in requirements:
+                # `str(Requirement)` is the recommended way to format a
+                # `Requirement` that can be read with `Requirement.parse`.
+                fh.write(str(req))
+                fh.write('\n')
 
         self._refreshed = True
 
