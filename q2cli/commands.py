@@ -211,12 +211,35 @@ class ActionCommand(click.Command):
             stdout = None
             stderr = None
 
-        with qiime2.util.redirected_stdio(stdout=stdout, stderr=stderr):
-            results = action(**arguments)
+        try:
+            with qiime2.util.redirected_stdio(stdout=stdout,
+                                              stderr=stderr):
+                results = action(**arguments)
+        except Exception as e:
+            if verbose:
+                import traceback
+                import sys
+                traceback.print_exc(file=sys.stderr)
+                click.echo(err=True)
+                self._echo_plugin_error(e, 'See above for debug info.')
+            else:
+                self._echo_plugin_error(
+                    e, 'Re-run with --verbose to see debug info.')
+            click.get_current_context().exit(1)
 
         for result, output in zip(results, outputs):
             click.secho('Saved %s to: %s' % (result.type,
                                              result.save(output)), fg='green')
+
+    def _echo_plugin_error(self, exception, tail):
+        import textwrap
+
+        exception = textwrap.indent(
+            '\n'.join(textwrap.wrap(str(exception))), '  ')
+        click.secho(
+            'Plugin error from %s:\n\n%s\n\n%s'
+            % (q2cli.util.to_cli_name(self.plugin['name']), exception, tail),
+            fg='red', bold=True, err=True)
 
     def handle_in_params(self, kwargs):
         import itertools
