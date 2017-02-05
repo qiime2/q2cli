@@ -10,7 +10,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='q2cli',
-    version='2017.2.0.dev0',
+    version='2017.2.0',
     license='BSD-3-Clause',
     url='https://qiime2.org',
     packages=find_packages(),
