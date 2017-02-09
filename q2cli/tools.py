@@ -92,8 +92,9 @@ def peek(path):
               help='The extension of the index file that should be opened. '
                    '[default: html]')
 def view(visualization_path, index_extension):
-    # Guard headless envs from having to import anything
-    if not os.getenv("DISPLAY"):
+    # Guard headless envs from having to import anything large
+    import sys
+    if not os.getenv("DISPLAY") and sys.platform != "darwin":
         raise click.UsageError(
             'Visualization viewing is currently not supported in headless '
             'environments. You can view Visualizations (and Artifacts) at '
