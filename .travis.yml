@@ -18,4 +18,5 @@ script:
   - QIIMETEST= nosetests
   - flake8
   - python q2lint/q2lint.py
-  - source tab-qiime
+  - QIIMETEST= source tab-qiime
+  - QIIMETEST= qiime
