@@ -143,11 +143,11 @@ class DeploymentCache:
         # individual plugin names and versions in order to determine if the
         # cache is outdated.
         #
-        # TODO: this code is copied from
+        # TODO: this code is (more or less) copied from
         # `qiime2.sdk.PluginManager.iter_entry_points`. Importing QIIME is
         # currently slow, and it adds ~600-700ms to any CLI command. This makes
         # the CLI pretty unresponsive, especially when running help/informative
-        # commands. Uncomment the following lines when
+        # commands. Replace with the following lines when
         # https://github.com/qiime2/qiime2/issues/151 is fixed:
         #
         # for ep in qiime2.sdk.PluginManager.iter_entry_points():
@@ -155,8 +155,12 @@ class DeploymentCache:
         #
         for entry_point in pkg_resources.iter_entry_points(
                 group='qiime2.plugins'):
-            if entry_point.name != 'dummy-plugin' or 'QIIMETEST' in os.environ:
-                reqs.add(entry_point.dist.as_requirement())
+            if 'QIIMETEST' in os.environ:
+                if entry_point.name == 'dummy-plugin':
+                    reqs.add(entry_point.dist.as_requirement())
+            else:
+                if entry_point.name != 'dummy-plugin':
+                    reqs.add(entry_point.dist.as_requirement())
 
         return reqs
 
