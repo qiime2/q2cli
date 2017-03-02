@@ -398,13 +398,27 @@ class RegularParameterHandler(GeneratedHandler):
             'Color': str,
             'Bool': bool
         }
-        # TODO: This is a hack because we only support Str % Choices(...) at
+        # TODO: This is a hack because we only support a few predicates at
         # this point. This entire class should be revisited at some point.
         predicate = self.ast['predicate']
         if predicate:
-            if predicate['name'] != 'Choices' and self.ast['name'] != 'Str':
+            if predicate['name'] == 'Choices' and self.ast['name'] == 'Str':
+                return click.Choice(predicate['choices'])
+            elif predicate['name'] == 'Range' and self.ast['name'] == 'Int':
+                start = predicate['start']
+                end = predicate['end']
+                # click.IntRange is always inclusive
+                if start is not None and not predicate['inclusive-start']:
+                    start += 1
+                if end is not None and not predicate['inclusive-end']:
+                    end -= 1
+                return click.IntRange(start, end)
+            elif predicate['name'] == 'Range' and self.ast['name'] == 'Float':
+                # click.FloatRange will be in click 7.0, so for now the
+                # range handling will just fallback to qiime2.
+                return mapping['Float']
+            else:
                 raise NotImplementedError()
-            return click.Choice(predicate['choices'])
         return mapping[self.ast['name']]
 
     def get_click_options(self):
