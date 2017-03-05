@@ -250,6 +250,8 @@ class DeploymentCache:
             'website': plugin.website,
             'citation_text': plugin.citation_text,
             'user_support_text': plugin.user_support_text,
+            'description': plugin.description,
+            'short_description': plugin.short_description,
             'actions': {}
         }
 

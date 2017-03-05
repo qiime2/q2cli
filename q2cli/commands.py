@@ -78,14 +78,12 @@ class RootCommand(click.MultiCommand):
         except KeyError:
             return None
 
-        # TODO: pass short_help=plugin.description, pending its
-        # existence: https://github.com/qiime2/qiime2/issues/81
         support = 'Getting user support: %s' % plugin['user_support_text']
         citing = 'Citing this plugin: %s' % plugin['citation_text']
         website = 'Plugin website: %s' % plugin['website']
         help_ = '\n\n'.join([website, support, citing])
 
-        return PluginCommand(plugin, name=name, short_help='', help=help_)
+        return PluginCommand(plugin, name=name, short_help=plugin['description'], help=help_)
 
 
 class PluginCommand(click.MultiCommand):
