@@ -85,7 +85,8 @@ class RootCommand(click.MultiCommand):
         help_ = '\n\n'.join([description, website, support, citing])
 
         return PluginCommand(plugin, name=name,
-                             short_help=plugin['short_description'], help=help_)
+                             short_help=plugin['short_description'], 
+                             help=help_)
 
 
 class PluginCommand(click.MultiCommand):
