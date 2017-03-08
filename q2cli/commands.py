@@ -81,10 +81,11 @@ class RootCommand(click.MultiCommand):
         support = 'Getting user support: %s' % plugin['user_support_text']
         citing = 'Citing this plugin: %s' % plugin['citation_text']
         website = 'Plugin website: %s' % plugin['website']
-        help_ = '\n\n'.join([website, support, citing])
+        description = 'Description: %s' % plugin['description']
+        help_ = '\n\n'.join([description, website, support, citing])
 
         return PluginCommand(plugin, name=name,
-                             short_help=plugin['description'], help=help_)
+                             short_help=plugin['short_description'], help=help_)
 
 
 class PluginCommand(click.MultiCommand):
