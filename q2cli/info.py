@@ -27,8 +27,7 @@ def _echo_plugins():
     plugins = q2cli.cache.CACHE.plugins
     if plugins:
         for name, plugin in sorted(plugins.items()):
-            click.echo('%s %s\t\t%s' % (name,
-                       plugin['version']))
+            click.echo('%s %s' % (name, plugin['version']))
     else:
         click.secho('No plugins are currently installed.\nYou can browse '
                     'the official QIIME 2 plugins at https://qiime2.org')
