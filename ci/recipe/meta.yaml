@@ -8,8 +8,9 @@ source:
   path: ../..
 
 build:
-  noarch: python
   script: python setup.py install
+  entry_points:
+    - qiime=q2cli.__main__:qiime
 
 requirements:
   build:
@@ -29,7 +30,9 @@ requirements:
 test:
   imports:
     - q2cli
-    - QIIMETEST= qiime
+
+  commands:
+    - QIIMETEST= qiime --help
 
 about:
   home: https://qiime2.org
