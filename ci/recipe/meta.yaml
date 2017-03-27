@@ -1,0 +1,37 @@
+{% set data = load_setup_py_data() %}
+
+package:
+  name: q2cli
+  version: {{ data.get('version') }}
+
+source:
+  path: ../..
+
+build:
+  noarch: python
+  script: python setup.py install
+
+requirements:
+  build:
+    - python 3.5*
+    - setuptools
+    - pip
+    - click
+    - qiime2 2017.3.*
+
+  run:
+    - python 3.5*
+    - setuptools
+    - pip
+    - click
+    - qiime2 2017.3.*
+
+test:
+  imports:
+    - q2cli
+    - QIIMETEST= qiime
+
+about:
+  home: https://qiime2.org
+  license: BSD-3-Clause
+  license_family: BSD
