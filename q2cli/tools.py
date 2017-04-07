@@ -38,15 +38,10 @@ def export_data(path, output_dir):
 
 def show_importable_types(ctx, param, value):
     import qiime2.sdk
+
     PluginManager = qiime2.sdk.PluginManager()
     set_of_importable_types = PluginManager.importable_types
-    set_of_importable_types = sorted(set_of_importable_types)
-
-    # set_of_importable_types = list(set_of_importable_types)
-    # set_of_importable_types = sorted(set_of_importable_types)
-
-    # set_of_importable_types = list(set_of_importable_types)
-    # set_of_importable_types.sort()
+    set_of_importable_types = sorted([repr(t)for t in  set_of_importable_types])
 
     if not value or ctx.resilient_parsing:
         return
