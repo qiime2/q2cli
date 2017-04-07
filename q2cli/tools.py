@@ -40,10 +40,18 @@ def show_importable_types(ctx, param, value):
     import qiime2.sdk
     PluginManager = qiime2.sdk.PluginManager()
     set_of_importable_types = PluginManager.importable_types
+    set_of_importable_types = sorted(set_of_importable_types)
+
+    # set_of_importable_types = list(set_of_importable_types)
+    # set_of_importable_types = sorted(set_of_importable_types)
+
+    # set_of_importable_types = list(set_of_importable_types)
+    # set_of_importable_types.sort()
 
     if not value or ctx.resilient_parsing:
         return
-    click.echo(set_of_importable_types)
+    for name in set_of_importable_types:
+        click.echo(name)
     ctx.exit()
 
 @tools.command(name='import',
