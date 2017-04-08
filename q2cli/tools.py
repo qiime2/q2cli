@@ -36,18 +36,21 @@ def export_data(path, output_dir):
     result = qiime2.sdk.Result.load(path)
     result.export_data(output_dir)
 
+
 def show_importable_types(ctx, param, value):
     import qiime2.sdk
 
     PluginManager = qiime2.sdk.PluginManager()
     set_of_importable_types = PluginManager.importable_types
-    set_of_importable_types = sorted([repr(t)for t in  set_of_importable_types])
+    set_of_importable_types = [repr(t) for t in set_of_importable_types]
+    set_of_importable_types = sorted(set_of_importable_types)
 
     if not value or ctx.resilient_parsing:
         return
     for name in set_of_importable_types:
         click.echo(name)
     ctx.exit()
+
 
 @tools.command(name='import',
                short_help='Import data into a new QIIME 2 Artifact.',
@@ -67,10 +70,9 @@ def show_importable_types(ctx, param, value):
               help='The format of the data to be imported. If not provided, '
                    'data must be in the format expected by the semantic type '
                    'provided via --type.')
-@click.option('--show-importable-types', is_flag=True, callback=show_importable_types,
-              expose_value=False, is_eager=True)
-
-
+@click.option('--show-importable-types', is_flag=True, is_eager=True,
+              callback=show_importable_types, expose_value=False,
+              help='Show the set of importable types.')
 def import_data(type, input_path, output_path, source_format=None):
     import qiime2.sdk
 
