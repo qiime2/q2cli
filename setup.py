@@ -17,7 +17,6 @@ setup(
     url='https://qiime2.org',
     packages=find_packages(),
     include_package_data=True,
-    install_requires=['click', 'qiime2 == 2017.3.*', 'pip'],
     scripts=['bin/tab-qiime'],
     entry_points='''
         [console_scripts]
