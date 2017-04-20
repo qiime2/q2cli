@@ -1,0 +1,39 @@
+{% set data = load_setup_py_data() %}
+{% set version = data.get('version') or 'placehold' %}
+{% set release = '.'.join(version.split('.')[:2]) %}
+
+package:
+  name: q2cli
+  version: {{ version }}
+
+source:
+  path: ../..
+
+build:
+  script: python setup.py install
+  entry_points:
+    - qiime=q2cli.__main__:qiime
+
+requirements:
+  build:
+    - python 3.5*
+    - setuptools
+
+  run:
+    - python 3.5*
+    - setuptools
+    - pip
+    - click
+    - qiime2 {{ release }}.*
+
+test:
+  imports:
+    - q2cli
+
+  commands:
+    - QIIMETEST= qiime --help
+
+about:
+  home: https://qiime2.org
+  license: BSD-3-Clause
+  license_family: BSD

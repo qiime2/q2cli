@@ -7,18 +7,20 @@
 # ----------------------------------------------------------------------------
 
 from setuptools import setup, find_packages
+import versioneer
 
 setup(
     name='q2cli',
-    version='2017.3.0.dev',
+    version=versioneer.get_version(),
+    cmdclass=versioneer.get_cmdclass(),
     license='BSD-3-Clause',
     url='https://qiime2.org',
     packages=find_packages(),
     include_package_data=True,
-    install_requires=['click', 'qiime2 == 2017.3.*', 'pip'],
     scripts=['bin/tab-qiime'],
     entry_points='''
         [console_scripts]
         qiime=q2cli.__main__:qiime
     ''',
+    zip_safe=False,
 )
