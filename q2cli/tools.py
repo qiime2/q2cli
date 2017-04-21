@@ -59,7 +59,9 @@ def show_importable_types(ctx, param, value):
                     "on the file types and associated semantic types that can "
                     "be imported.")
 @click.option('--type', required=True,
-              help='The semantic type of the new artifact.')
+              help='The semantic type of the artifact that will be created upon '
+                   'importing. Use --show-importable-types to see what importable semantic '
+                   'types are available in the current deployment.')
 @click.option('--input-path', required=True,
               type=click.Path(exists=True, dir_okay=True),
               help='Path to file or directory that should be imported.')
@@ -72,7 +74,8 @@ def show_importable_types(ctx, param, value):
                    'provided via --type.')
 @click.option('--show-importable-types', is_flag=True, is_eager=True,
               callback=show_importable_types, expose_value=False,
-              help='Show the set of importable types.')
+              help='Show the semantic types that can be supplied to --type '
+                   'to import data into an artifact.')
 def import_data(type, input_path, output_path, source_format=None):
     import qiime2.sdk
 
