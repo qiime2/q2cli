@@ -66,6 +66,11 @@ class CliTests(unittest.TestCase):
         self.assertFalse('split_ints' in commands)
         self.assertFalse('mapping_viz' in commands)
 
+    def test_show_importable_types(self):
+        result = self.runner.invoke(
+            tools, ['import', '--show-importable-types'])
+        self.assertEqual(result.exit_code, 0)
+
     def test_extract(self):
         result = self.runner.invoke(
             tools, ['extract', self.artifact1_path, '--output-dir',
