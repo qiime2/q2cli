@@ -44,7 +44,8 @@ def show_importable_types(ctx, param, value):
 
     import qiime2.sdk
 
-    importable_types = sorted(qiime2.sdk.PluginManager().importable_types, key=repr)
+    importable_types = sorted(qiime2.sdk.PluginManager().importable_types,
+                              key=repr)
 
     if importable_types:
         for name in importable_types:
@@ -62,9 +63,10 @@ def show_importable_types(ctx, param, value):
                     "on the file types and associated semantic types that can "
                     "be imported.")
 @click.option('--type', required=True,
-              help='The semantic type of the artifact that will be created upon '
-                   'importing. Use --show-importable-types to see what importable semantic '
-                   'types are available in the current deployment.')
+              help='The semantic type of the artifact that will be created '
+                   'upon importing. Use --show-importable-types to see what '
+                   'importable semantic types are available in the current '
+                   'deployment.')
 @click.option('--input-path', required=True,
               type=click.Path(exists=True, dir_okay=True),
               help='Path to file or directory that should be imported.')
