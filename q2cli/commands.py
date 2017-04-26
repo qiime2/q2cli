@@ -217,15 +217,24 @@ class ActionCommand(click.Command):
                                               stderr=stderr):
                 results = action(**arguments)
         except Exception as e:
+            import traceback
             if verbose:
-                import traceback
                 import sys
                 traceback.print_exc(file=sys.stderr)
                 click.echo(err=True)
                 self._echo_plugin_error(e, 'See above for debug info.')
             else:
-                self._echo_plugin_error(
-                    e, 'Re-run with --verbose to see debug info.')
+                import tempfile
+                log_path = tempfile.NamedTemporaryFile(prefix='qiime-err-',
+                                                       suffix='.log',
+                                                       delete=False)
+                with open(log_path.name, 'w+') as fh:
+                    traceback.print_exc(file=fh)
+                click.echo(err=True)
+                self._echo_plugin_error(e,
+                                        'The full traceback has been saved to '
+                                        ' %s, for reporting to the developers.'
+                                        % log_path.name)
             click.get_current_context().exit(1)
 
         for result, output in zip(results, outputs):
