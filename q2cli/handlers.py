@@ -135,6 +135,33 @@ class VerboseHandler(Handler):
         return value
 
 
+class QuietHandler(Handler):
+    """Handler for quiet output (--quiet flag)."""
+
+    def __init__(self):
+        super().__init__('quiet', default=False)
+
+    def get_click_options(self):
+        import click
+
+        # `is_flag` will set the default to `False`, but `self._locate_value`
+        # needs to distinguish between the presence or absence of the flag
+        # provided by the user.
+        yield click.Option(
+            ['--' + self.cli_name], is_flag=True, default=None,
+            help='Silence output to stdout and/or stderr during '
+                 'execution of this action.  [default: %s]' % self.default)
+
+    def get_value(self, arguments, fallback=None):
+        value = self._locate_value(arguments, fallback)
+        # Value may have been specified in --cmd-config (or another source in
+        # the future). If we don't have a bool type yet, attempt to interpret a
+        # string representing a boolean.
+        if type(value) is not bool:
+            value = self._parse_boolean(value)
+        return value
+
+
 class OutputDirHandler(Handler):
     """Meta handler which returns a fallback function as its value."""
 

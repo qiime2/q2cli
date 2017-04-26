@@ -133,6 +133,7 @@ class ActionCommand(click.Command):
         self.action = action
         self.generated_handlers = self.build_generated_handlers()
         self.verbose_handler = q2cli.handlers.VerboseHandler()
+        self.quiet_handler = q2cli.handlers.QuietHandler()
         # Meta-Handlers:
         self.output_dir_handler = q2cli.handlers.OutputDirHandler()
         self.cmd_config_handler = q2cli.handlers.CommandConfigHandler(
@@ -176,6 +177,7 @@ class ActionCommand(click.Command):
         yield from self.cmd_config_handler.get_click_options()
 
         yield from self.verbose_handler.get_click_options()
+        yield from self.quiet_handler.get_click_options()
 
     def __call__(self, **kwargs):
         """Called when user hits return, **kwargs are Dict[click_names, Obj]"""
@@ -184,7 +186,7 @@ class ActionCommand(click.Command):
         import os
         import qiime2.util
 
-        arguments, missing_in, verbose = self.handle_in_params(kwargs)
+        arguments, missing_in, verbose, quiet = self.handle_in_params(kwargs)
         outputs, missing_out = self.handle_out_params(kwargs)
 
         if missing_in or missing_out:
@@ -238,9 +240,11 @@ class ActionCommand(click.Command):
                 log.close()
                 os.remove(log.name)
 
-        for result, output in zip(results, outputs):
-            click.secho('Saved %s to: %s' % (result.type,
-                                             result.save(output)), fg='green')
+        if not quiet:
+            for result, output in zip(results, outputs):
+                path = result.save(output)
+                click.secho('Saved %s to: %s' % (result.type, path),
+                            fg='green')
 
     def _echo_plugin_error(self, exception, tail):
         import textwrap
@@ -261,6 +265,7 @@ class ActionCommand(click.Command):
         cmd_fallback = self.cmd_config_handler.get_value(kwargs)
 
         verbose = self.verbose_handler.get_value(kwargs, fallback=cmd_fallback)
+        quiet = self.quiet_handler.get_value(kwargs, fallback=cmd_fallback)
 
         for item in itertools.chain(self.action['signature']['inputs'],
                                     self.action['signature']['parameters']):
@@ -273,7 +278,7 @@ class ActionCommand(click.Command):
             except q2cli.handlers.ValueNotFoundException:
                 missing += handler.missing
 
-        return arguments, missing, verbose
+        return arguments, missing, verbose, quiet
 
     def handle_out_params(self, kwargs):
         import q2cli.handlers
