@@ -17,6 +17,7 @@ def _echo_version():
     pyver = sys.version_info
     click.echo('Python version: %d.%d.%d' %
                (pyver.major, pyver.minor, pyver.micro))
+    click.echo('QIIME 2 release: %s' % qiime2.__release__)
     click.echo('QIIME 2 version: %s' % qiime2.__version__)
     click.echo('q2cli version: %s' % q2cli.__version__)
 
