@@ -149,8 +149,8 @@ class QuietHandler(Handler):
         # provided by the user.
         yield click.Option(
             ['--' + self.cli_name], is_flag=True, default=None,
-            help='Silence output to stdout and/or stderr during '
-                 'execution of this action.  [default: %s]' % self.default)
+            help='Silence output if execution is successful '
+                 '(silence is golden).  [default: %s]' % self.default)
 
     def get_value(self, arguments, fallback=None):
         value = self._locate_value(arguments, fallback)

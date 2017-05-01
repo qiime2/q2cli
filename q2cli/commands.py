@@ -240,9 +240,9 @@ class ActionCommand(click.Command):
                 log.close()
                 os.remove(log.name)
 
-        if not quiet:
-            for result, output in zip(results, outputs):
-                path = result.save(output)
+        for result, output in zip(results, outputs):
+            path = result.save(output)
+            if not quiet:
                 click.secho('Saved %s to: %s' % (result.type, path),
                             fg='green')
 
@@ -266,6 +266,10 @@ class ActionCommand(click.Command):
 
         verbose = self.verbose_handler.get_value(kwargs, fallback=cmd_fallback)
         quiet = self.quiet_handler.get_value(kwargs, fallback=cmd_fallback)
+
+        if verbose and quiet:
+            raise ValueError('Unsure of how to be quiet and verbose at the '
+                             'same time.')
 
         for item in itertools.chain(self.action['signature']['inputs'],
                                     self.action['signature']['parameters']):
