@@ -204,29 +204,39 @@ class ActionCommand(click.Command):
         actions_module = importlib.import_module(module_path)
         action = getattr(actions_module, self.action['id'])
 
-        stdout = os.devnull
-        stderr = os.devnull
-        if verbose:
-            # `qiime2.util.redirected_stdio` defaults to stdout/stderr when
-            # supplied `None`.
-            stdout = None
-            stderr = None
+        # `qiime2.util.redirected_stdio` defaults to stdout/stderr when
+        # supplied `None`.
+        log = None
 
+        if not verbose:
+            import tempfile
+            log = tempfile.NamedTemporaryFile(prefix='qiime2-q2cli-err-',
+                                              suffix='.log',
+                                              delete=False, mode='w')
+
+        cleanup_logfile = False
         try:
-            with qiime2.util.redirected_stdio(stdout=stdout,
-                                              stderr=stderr):
+            with qiime2.util.redirected_stdio(stdout=log, stderr=log):
                 results = action(**arguments)
         except Exception as e:
+            import traceback
             if verbose:
-                import traceback
                 import sys
                 traceback.print_exc(file=sys.stderr)
                 click.echo(err=True)
                 self._echo_plugin_error(e, 'See above for debug info.')
             else:
-                self._echo_plugin_error(
-                    e, 'Re-run with --verbose to see debug info.')
+                traceback.print_exc(file=log)
+                click.echo(err=True)
+                self._echo_plugin_error(e, 'Debug info has been saved to %s.'
+                                        % log.name)
             click.get_current_context().exit(1)
+        else:
+            cleanup_logfile = True
+        finally:
+            if log and cleanup_logfile:
+                log.close()
+                os.remove(log.name)
 
         for result, output in zip(results, outputs):
             click.secho('Saved %s to: %s' % (result.type,
