@@ -204,15 +204,19 @@ class ActionCommand(click.Command):
         actions_module = importlib.import_module(module_path)
         action = getattr(actions_module, self.action['id'])
 
-        p_read, p_write = os.pipe()
-        if verbose:
-            # `qiime2.util.redirected_stdio` defaults to stdout/stderr when
-            # supplied `None`.
-            p_write = None
+        # `qiime2.util.redirected_stdio` defaults to stdout/stderr when
+        # supplied `None`.
+        log = None
 
+        if not verbose:
+            import tempfile
+            log = tempfile.NamedTemporaryFile(prefix='qiime2-q2cli-err-',
+                                              suffix='.log',
+                                              delete=False, mode='w')
+
+        cleanup_logfile = False
         try:
-            with qiime2.util.redirected_stdio(stdout=p_write,
-                                              stderr=p_write):
+            with qiime2.util.redirected_stdio(stdout=log, stderr=log):
                 results = action(**arguments)
         except Exception as e:
             import traceback
@@ -222,20 +226,17 @@ class ActionCommand(click.Command):
                 click.echo(err=True)
                 self._echo_plugin_error(e, 'See above for debug info.')
             else:
-                import tempfile
-                with tempfile.NamedTemporaryFile(prefix='qiime2-q2cli-err-',
-                                                 suffix='.log',
-                                                 delete=False, mode='w') as fh:
-                    log_path = fh.name
-                    # Close p_write as .read() searchs for EOF, meaning it will
-                    # hang on the next line that is trying to read the pipe
-                    os.close(p_write)
-                    fh.write(os.fdopen(p_read).read())
-                    traceback.print_exc(file=fh)
+                traceback.print_exc(file=log)
                 click.echo(err=True)
                 self._echo_plugin_error(e, 'Debug info has been saved to %s.'
-                                        % log_path)
+                                        % log.name)
             click.get_current_context().exit(1)
+        else:
+            cleanup_logfile = True
+        finally:
+            if log and cleanup_logfile:
+                log.close()
+                os.remove(log.name)
 
         for result, output in zip(results, outputs):
             click.secho('Saved %s to: %s' % (result.type,
