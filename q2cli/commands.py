@@ -268,8 +268,9 @@ class ActionCommand(click.Command):
         quiet = self.quiet_handler.get_value(kwargs, fallback=cmd_fallback)
 
         if verbose and quiet:
-            raise ValueError('Unsure of how to be quiet and verbose at the '
-                             'same time.')
+            click.secho('Unsure of how to be quiet and verbose at the '
+                        'same time.', fg='red', bold=True, err=True)
+            click.get_current_context().exit(1)
 
         for item in itertools.chain(self.action['signature']['inputs'],
                                     self.action['signature']['parameters']):
