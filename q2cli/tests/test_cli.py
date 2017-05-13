@@ -70,13 +70,12 @@ class CliTests(unittest.TestCase):
         result = self.runner.invoke(
             tools, ['import', '--show-importable-types'])
         self.assertEqual(result.exit_code, 0)
-        self.assertTrue('IntSequence1' in result.output)
-        self.assertTrue('FourInts' in result.output)
-        self.assertTrue('IntSequence1' in result.output)
-        self.assertTrue('IntSequence2' in result.output)
-        self.assertTrue('Kennel[Cat]' in result.output)
-        self.assertTrue('Kennel[Dog]' in result.output)
-        self.assertTrue('Mapping' in result.output)
+
+        import qiime2.sdk
+        importable_types = sorted(qiime2.sdk.PluginManager().importable_types,
+                                key=repr)
+        for name in importable_types:
+            self.assertTrue(name in result.output)
 
     def test_extract(self):
         result = self.runner.invoke(
