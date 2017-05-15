@@ -67,14 +67,16 @@ class CliTests(unittest.TestCase):
         self.assertFalse('mapping_viz' in commands)
 
     def test_show_importable_types(self):
-        import qiime2.sdk
         result = self.runner.invoke(
             tools, ['import', '--show-importable-types'])
         self.assertEqual(result.exit_code, 0)
-        importable_types = sorted(qiime2.sdk.PluginManager().importable_types,
-                                  key=repr)
-        for item in importable_types:
-            self.assertTrue(item.name in result.output)
+        self.assertTrue('IntSequence1' in result.output)
+        self.assertTrue('FourInts' in result.output)
+        self.assertTrue('IntSequence1' in result.output)
+        self.assertTrue('IntSequence2' in result.output)
+        self.assertTrue('Kennel[Cat]' in result.output)
+        self.assertTrue('Kennel[Dog]' in result.output)
+        self.assertTrue('Mapping' in result.output)
 
     def test_extract(self):
         result = self.runner.invoke(
