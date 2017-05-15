@@ -50,7 +50,7 @@ def show_importable_types(ctx, param, value):
         for name in importable_types:
             click.echo(name)
     else:
-        print('There are no importable types in the current deployment.')
+        click.echo('There are no importable types in the current deployment.')
 
     ctx.exit()
 
