@@ -38,7 +38,6 @@ def export_data(path, output_dir):
 
 
 def show_importable_types(ctx, param, value):
-
     if not value or ctx.resilient_parsing:
         return
 
