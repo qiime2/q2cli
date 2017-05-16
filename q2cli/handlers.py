@@ -310,23 +310,20 @@ class MetadataHandler(Handler):
 
     def get_value(self, arguments, fallback=None):
         import qiime2
-        import qiime2.sdk.util
-        path = self._locate_value(arguments, fallback)
 
+        path = self._locate_value(arguments, fallback)
         if path is None:
             return None
-
         try:
             # check to see if path is an artifact
-            art = qiime2.Artifact.load(path)
+            artifact = qiime2.Artifact.load(path)
         except Exception:
             pass
         else:
-            if qiime2.sdk.util.has_metadata(art):
-                return art.view(qiime2.Metadata)
+            if artifact.has_metadata():
+                return qiime2.Metadata.from_artifact(artifact)
             else:
-                raise ValueError("Cannot load Artifact %r into Metadata"
-                                 ". No transformer found" % path)
+                raise ValueError("Artifact (%s) has no metadata." % path)
 
         return qiime2.Metadata.load(path)
 
@@ -394,15 +391,16 @@ class MetadataCategoryHandler(Handler):
         path, category = values
         try:
             # check to see if path is an artifact
-            art = qiime2.Artifact.load(path)
+            artifact = qiime2.Artifact.load(path)
         except Exception:
             pass
         else:
-            if qiime2.sdk.util.has_metadata(art):
-                return art.view(qiime2.Metadata).get_category(category)
+            if artifact.has_metadata():
+                return qiime2.MetadataCategory.from_artifact(artifact,
+                                                             category)
             else:
-                raise ValueError("Cannot load Artifact %r into Metadata"
-                                 ". No transformer found" % path)
+                raise ValueError("Artifact (%s) has no metadata." % path)
+
         return qiime2.MetadataCategory.load(*values)
 
 
