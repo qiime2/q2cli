@@ -66,6 +66,17 @@ class CliTests(unittest.TestCase):
         self.assertFalse('split_ints' in commands)
         self.assertFalse('mapping_viz' in commands)
 
+    def test_show_importable_types(self):
+        result = self.runner.invoke(
+            tools, ['import', '--show-importable-types'])
+        self.assertEqual(result.exit_code, 0)
+        self.assertTrue('FourInts' in result.output)
+        self.assertTrue('IntSequence1' in result.output)
+        self.assertTrue('IntSequence2' in result.output)
+        self.assertTrue('Kennel[Cat]' in result.output)
+        self.assertTrue('Kennel[Dog]' in result.output)
+        self.assertTrue('Mapping' in result.output)
+
     def test_extract(self):
         result = self.runner.invoke(
             tools, ['extract', self.artifact1_path, '--output-dir',

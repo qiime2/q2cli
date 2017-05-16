@@ -37,6 +37,24 @@ def export_data(path, output_dir):
     result.export_data(output_dir)
 
 
+def show_importable_types(ctx, param, value):
+    if not value or ctx.resilient_parsing:
+        return
+
+    import qiime2.sdk
+
+    importable_types = sorted(qiime2.sdk.PluginManager().importable_types,
+                              key=repr)
+
+    if importable_types:
+        for name in importable_types:
+            click.echo(name)
+    else:
+        click.echo('There are no importable types in the current deployment.')
+
+    ctx.exit()
+
+
 @tools.command(name='import',
                short_help='Import data into a new QIIME 2 Artifact.',
                help="Import data to create a new QIIME 2 Artifact. See "
@@ -44,7 +62,10 @@ def export_data(path, output_dir):
                     "on the file types and associated semantic types that can "
                     "be imported.")
 @click.option('--type', required=True,
-              help='The semantic type of the new artifact.')
+              help='The semantic type of the artifact that will be created '
+                   'upon importing. Use --show-importable-types to see what '
+                   'importable semantic types are available in the current '
+                   'deployment.')
 @click.option('--input-path', required=True,
               type=click.Path(exists=True, dir_okay=True),
               help='Path to file or directory that should be imported.')
@@ -55,6 +76,10 @@ def export_data(path, output_dir):
               help='The format of the data to be imported. If not provided, '
                    'data must be in the format expected by the semantic type '
                    'provided via --type.')
+@click.option('--show-importable-types', is_flag=True, is_eager=True,
+              callback=show_importable_types, expose_value=False,
+              help='Show the semantic types that can be supplied to --type '
+                   'to import data into an artifact.')
 def import_data(type, input_path, output_path, source_format=None):
     import qiime2.sdk
 
