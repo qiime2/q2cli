@@ -341,8 +341,18 @@ class MetadataHandler(Handler):
         path = self._locate_value(arguments, fallback)
         if path is None:
             return None
+        try:
+            # check to see if path is an artifact
+            artifact = qiime2.Artifact.load(path)
+        except Exception:
+            pass
         else:
-            return qiime2.Metadata.load(path)
+            if artifact.has_metadata():
+                return qiime2.Metadata.from_artifact(artifact)
+            else:
+                raise ValueError("Artifact (%s) has no metadata." % path)
+
+        return qiime2.Metadata.load(path)
 
 
 class MetadataCategoryHandler(Handler):
@@ -404,8 +414,21 @@ class MetadataCategoryHandler(Handler):
             raise ValueNotFoundException()
         if values == [None, None]:
             return None
+
+        path, category = values
+        try:
+            # check to see if path is an artifact
+            artifact = qiime2.Artifact.load(path)
+        except Exception:
+            pass
         else:
-            return qiime2.MetadataCategory.load(*values)
+            if artifact.has_metadata():
+                return qiime2.MetadataCategory.from_artifact(artifact,
+                                                             category)
+            else:
+                raise ValueError("Artifact (%s) has no metadata." % path)
+
+        return qiime2.MetadataCategory.load(*values)
 
 
 class RegularParameterHandler(GeneratedHandler):
