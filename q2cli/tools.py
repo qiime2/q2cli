@@ -200,3 +200,16 @@ def extract(path, output_dir):
             'Visualizations can be extracted.' % path)
     else:
         click.echo('Extracted to %s' % extracted_dir)
+
+@tools.command(short_help='foo', help='bar')
+def importable_formats():
+    import qiime2.sdk
+
+    importable_formats = sorted(qiime2.sdk.PluginManager().importable_formats,
+                              key=repr)
+
+    if importable_formats:
+        for name in importable_formats:
+            click.echo(name)
+    else:
+        click.echo('There are no importable formats in the current deployment.')
