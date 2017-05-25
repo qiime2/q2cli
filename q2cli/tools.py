@@ -201,7 +201,9 @@ def extract(path, output_dir):
     else:
         click.echo('Extracted to %s' % extracted_dir)
 
-@tools.command(short_help='foo', help='bar')
+@tools.command(short_help='Show the formats available for import.',
+               help='Show all possible source formats for import. Not all source formats listed'
+                    ' are necessarily compatible with a given plugin.')
 def importable_formats():
     import qiime2.sdk
 
