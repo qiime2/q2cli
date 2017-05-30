@@ -54,6 +54,22 @@ def show_importable_types(ctx, param, value):
 
     ctx.exit()
 
+def show_importable_formats(ctx, param, value):
+    if not value or ctx.resilient_parsing:
+          return
+          
+    import qiime2.sdk
+
+    importable_formats = sorted(qiime2.sdk.PluginManager().importable_formats,
+                              key=repr)
+
+    if importable_formats:
+        for name in importable_formats:
+            click.echo(name)
+    else:
+        click.echo('There are no importable formats in the current deployment.')
+
+    ctx.exit()
 
 @tools.command(name='import',
                short_help='Import data into a new QIIME 2 Artifact.',
@@ -80,6 +96,9 @@ def show_importable_types(ctx, param, value):
               callback=show_importable_types, expose_value=False,
               help='Show the semantic types that can be supplied to --type '
                    'to import data into an artifact.')
+@click.option('--show-importable-formats', is_flag=True, is_eager=True,
+              callback=show_importable_formats, expose_value=False,
+              help='Show all possible source formats available for import.')
 def import_data(type, input_path, output_path, source_format=None):
     import qiime2.sdk
 
@@ -200,18 +219,3 @@ def extract(path, output_dir):
             'Visualizations can be extracted.' % path)
     else:
         click.echo('Extracted to %s' % extracted_dir)
-
-@tools.command(short_help='Show the formats available for import.',
-               help='Show all possible source formats for import. Not all source formats listed'
-                    ' are necessarily compatible with a given plugin.')
-def importable_formats():
-    import qiime2.sdk
-
-    importable_formats = sorted(qiime2.sdk.PluginManager().importable_formats,
-                              key=repr)
-
-    if importable_formats:
-        for name in importable_formats:
-            click.echo(name)
-    else:
-        click.echo('There are no importable formats in the current deployment.')
