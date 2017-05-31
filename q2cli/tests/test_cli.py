@@ -26,7 +26,7 @@ class CliTests(unittest.TestCase):
 
     def setUp(self):
         self.runner = CliRunner()
-        self.tempdir = tempfile.mkdtemp(prefix='qiime2-test-temp-')
+        self.tempdir = tempfile.mkdtemp(prefix='qiime2-q2cli-test-temp-')
         self.artifact1_path = os.path.join(self.tempdir, 'a1.qza')
 
         artifact1 = Artifact._from_view(
@@ -117,6 +117,35 @@ class CliTests(unittest.TestCase):
         right = Artifact.load(right_path)
         self.assertEqual(left.view(list), [0])
         self.assertEqual(right.view(list), [42, 43])
+
+    def test_with_parameters_only(self):
+        qiime_cli = RootCommand()
+        command = qiime_cli.get_command(ctx=None, name='dummy-plugin')
+        output_path = os.path.join(self.tempdir, 'output.qza')
+
+        result = self.runner.invoke(
+            command, ['params-only-method', '--p-name', 'Peanut', '--p-age',
+                      '42', '--o-out', output_path, '--verbose'])
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertTrue(os.path.exists(output_path))
+
+        artifact = Artifact.load(output_path)
+        self.assertEqual(artifact.view(dict), {'Peanut': '42'})
+
+    def test_without_inputs_or_parameters(self):
+        qiime_cli = RootCommand()
+        command = qiime_cli.get_command(ctx=None, name='dummy-plugin')
+        output_path = os.path.join(self.tempdir, 'output.qza')
+
+        result = self.runner.invoke(
+            command, ['no-input-method', '--o-out', output_path, '--verbose'])
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertTrue(os.path.exists(output_path))
+
+        artifact = Artifact.load(output_path)
+        self.assertEqual(artifact.view(dict), {'foo': '42'})
 
     def test_qza_extension(self):
         qiime_cli = RootCommand()
