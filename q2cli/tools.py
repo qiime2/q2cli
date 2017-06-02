@@ -65,8 +65,8 @@ def show_importable_formats(ctx, param, value):
                                 key=repr)
 
     if importable_formats:
-        for name in importable_formats:
-            click.echo(name)
+        for record in importable_formats:
+            click.echo(record.format.__name__)
     else:
         click.echo('There are no importable formats '
                    'in the current deployment.')
