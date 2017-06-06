@@ -61,13 +61,11 @@ def show_importable_formats(ctx, param, value):
 
     import qiime2.sdk
 
-    importable_formats = sorted(qiime2.sdk.PluginManager().
-                                importable_formats.keys(),
-                                key=repr)
+    importable_formats = list(qiime2.sdk.PluginManager().importable_formats)
 
     if importable_formats:
-        for record in importable_formats:
-            click.echo(record)
+        for format in importable_formats:
+            click.echo(format)
     else:
         click.echo('There are no importable formats '
                    'in the current deployment.')
