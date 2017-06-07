@@ -61,7 +61,7 @@ def show_importable_formats(ctx, param, value):
 
     import qiime2.sdk
 
-    importable_formats = list(qiime2.sdk.PluginManager().importable_formats)
+    importable_formats = sorted(qiime2.sdk.PluginManager().importable_formats)
 
     if importable_formats:
         for format in importable_formats:
@@ -100,7 +100,8 @@ def show_importable_formats(ctx, param, value):
                    'to import data into an artifact.')
 @click.option('--show-importable-formats', is_flag=True, is_eager=True,
               callback=show_importable_formats, expose_value=False,
-              help='Show all possible source formats available for import.')
+              help='Show formats that can be supplied to --source-format to '
+                   'import data into an artifact.')
 def import_data(type, input_path, output_path, source_format=None):
     import qiime2.sdk
 
