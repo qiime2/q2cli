@@ -77,6 +77,19 @@ class CliTests(unittest.TestCase):
         self.assertTrue('Kennel[Dog]' in result.output)
         self.assertTrue('Mapping' in result.output)
 
+    def test_show_importable_formats(self):
+        result = self.runner.invoke(
+            tools, ['import', '--show-importable-formats'])
+        self.assertEqual(result.exit_code, 0)
+        self.assertTrue('FourIntsDirectoryFormat' in result.output)
+        self.assertTrue('IntSequenceDirectoryFormat' in result.output)
+        self.assertFalse('UnimportableFormat' in result.output)
+        self.assertFalse('UnimportableDirectoryFormat' in result.output)
+        self.assertTrue('MappingDirectoryFormat' in result.output)
+        self.assertTrue('IntSequenceFormat' in result.output)
+        self.assertTrue('IntSequenceFormatV2' in result.output)
+        self.assertTrue('IntSequenceV2DirectoryFormat' in result.output)
+
     def test_extract(self):
         result = self.runner.invoke(
             tools, ['extract', self.artifact1_path, '--output-dir',

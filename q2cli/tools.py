@@ -55,6 +55,24 @@ def show_importable_types(ctx, param, value):
     ctx.exit()
 
 
+def show_importable_formats(ctx, param, value):
+    if not value or ctx.resilient_parsing:
+        return
+
+    import qiime2.sdk
+
+    importable_formats = sorted(qiime2.sdk.PluginManager().importable_formats)
+
+    if importable_formats:
+        for format in importable_formats:
+            click.echo(format)
+    else:
+        click.echo('There are no importable formats '
+                   'in the current deployment.')
+
+    ctx.exit()
+
+
 @tools.command(name='import',
                short_help='Import data into a new QIIME 2 Artifact.',
                help="Import data to create a new QIIME 2 Artifact. See "
@@ -80,6 +98,10 @@ def show_importable_types(ctx, param, value):
               callback=show_importable_types, expose_value=False,
               help='Show the semantic types that can be supplied to --type '
                    'to import data into an artifact.')
+@click.option('--show-importable-formats', is_flag=True, is_eager=True,
+              callback=show_importable_formats, expose_value=False,
+              help='Show formats that can be supplied to --source-format to '
+                   'import data into an artifact.')
 def import_data(type, input_path, output_path, source_format=None):
     import qiime2.sdk
 
