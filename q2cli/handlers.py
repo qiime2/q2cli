@@ -115,12 +115,12 @@ class VerboseHandler(Handler):
         super().__init__('verbose', default=False)
 
     def get_click_options(self):
-        import click
+        import q2cli
 
         # `is_flag` will set the default to `False`, but `self._locate_value`
         # needs to distinguish between the presence or absence of the flag
         # provided by the user.
-        yield click.Option(
+        yield q2cli.Option(
             ['--' + self.cli_name], is_flag=True, default=None,
             help='Display verbose output to stdout and/or stderr during '
                  'execution of this action.  [default: %s]' % self.default)
@@ -142,12 +142,12 @@ class QuietHandler(Handler):
         super().__init__('quiet', default=False)
 
     def get_click_options(self):
-        import click
+        import q2cli
 
         # `is_flag` will set the default to `False`, but `self._locate_value`
         # needs to distinguish between the presence or absence of the flag
         # provided by the user.
-        yield click.Option(
+        yield q2cli.Option(
             ['--' + self.cli_name], is_flag=True, default=None,
             help='Silence output if execution is successful '
                  '(silence is golden).  [default: %s]' % self.default)
@@ -170,8 +170,9 @@ class OutputDirHandler(Handler):
 
     def get_click_options(self):
         import click
+        import q2cli
 
-        yield click.Option(
+        yield q2cli.Option(
             ['--' + self.cli_name],
             type=click.Path(exists=False, dir_okay=True, file_okay=False),
             help='Output unspecified results to a directory')
@@ -216,8 +217,9 @@ class CommandConfigHandler(Handler):
 
     def get_click_options(self):
         import click
+        import q2cli
 
-        yield click.Option(
+        yield q2cli.Option(
             ['--' + self.cli_name],
             type=click.Path(exists=True, dir_okay=False, file_okay=True,
                             readable=True),
@@ -269,8 +271,9 @@ class ArtifactHandler(GeneratedHandler):
 
     def get_click_options(self):
         import click
+        import q2cli
 
-        option = click.Option(['--' + self.cli_name],
+        option = q2cli.Option(['--' + self.cli_name],
                               type=click.Path(exists=False, dir_okay=False),
                               help="Artifact: %s  [required]" % self.repr)
         yield self._add_description(option)
@@ -287,8 +290,9 @@ class ResultHandler(GeneratedHandler):
 
     def get_click_options(self):
         import click
+        import q2cli
 
-        option = click.Option(['--' + self.cli_name],
+        option = q2cli.Option(['--' + self.cli_name],
                               type=click.Path(exists=False, dir_okay=False),
                               help="Artifact: %s  [required if not passing "
                               "--output-dir]" % self.repr)
@@ -318,6 +322,7 @@ class MetadataHandler(Handler):
 
     def get_click_options(self):
         import click
+        import q2cli
 
         name = '--' + self.cli_name
         type = click.Path(exists=True, dir_okay=False)
@@ -327,10 +332,10 @@ class MetadataHandler(Handler):
         # required.
         option = None
         if self.default is None:
-            option = click.Option([name], type=type,
+            option = q2cli.Option([name], type=type,
                                   help='%s  [optional]' % help)
         else:
-            option = click.Option([name], type=type,
+            option = q2cli.Option([name], type=type,
                                   help='%s  [required]' % help)
 
         yield self._add_description(option)
@@ -368,6 +373,7 @@ class MetadataCategoryHandler(Handler):
 
     def get_click_options(self):
         import click
+        import q2cli
 
         md_name = '--' + self.cli_names[0]
         md_help = 'Metadata mapping file'
@@ -390,8 +396,8 @@ class MetadataCategoryHandler(Handler):
             md_kwargs['help'] = '%s  [required]' % md_help
             mdc_kwargs['help'] = '%s  [required]' % mdc_help
 
-        yield click.Option([md_name], **md_kwargs)
-        yield click.Option([mdc_name], **mdc_kwargs)
+        yield q2cli.Option([md_name], **md_kwargs)
+        yield q2cli.Option([mdc_name], **mdc_kwargs)
 
     def get_value(self, arguments, fallback=None):
         import qiime2
@@ -472,7 +478,7 @@ class RegularParameterHandler(GeneratedHandler):
         return mapping[self.ast['name']]
 
     def get_click_options(self):
-        import click
+        import q2cli
         import q2cli.util
 
         type = self.get_type()  # Use the ugly lookup above
@@ -495,13 +501,13 @@ class RegularParameterHandler(GeneratedHandler):
         # value once the handlers are invoked.
         option = None
         if self.default is NoDefault:
-            option = click.Option([name], type=option_type, default=None,
+            option = q2cli.Option([name], type=option_type, default=None,
                                   show_default=False, help='[required]')
         elif self.default is None:
-            option = click.Option([name], type=option_type, default=None,
+            option = q2cli.Option([name], type=option_type, default=None,
                                   show_default=False, help='[optional]')
         else:
-            option = click.Option([name], type=option_type, default=None,
+            option = q2cli.Option([name], type=option_type, default=None,
                                   show_default=False,
                                   help='[default: %s]' % self.default)
 
