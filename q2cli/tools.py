@@ -10,6 +10,8 @@ import os
 
 import click
 
+import q2cli
+
 
 @click.group(help='Tools for working with QIIME 2 files.')
 def tools():
@@ -27,7 +29,7 @@ def tools():
                     "Visualization. Use 'qiime tools extract' to extract the "
                     "Artifact or Visualization's entire archive.")
 @click.argument('path', type=click.Path(exists=True, dir_okay=False))
-@click.option('--output-dir', required=True,
+@q2cli.option('--output-dir', required=True,
               type=click.Path(exists=False, dir_okay=True),
               help='Directory where data should be exported to')
 def export_data(path, output_dir):
@@ -79,30 +81,30 @@ def show_importable_formats(ctx, param, value):
                     "https://docs.qiime2.org/ for usage examples and details "
                     "on the file types and associated semantic types that can "
                     "be imported.")
-@click.option('--type', required=True,
+@q2cli.option('--type', required=True,
               help='The semantic type of the artifact that will be created '
                    'upon importing. Use --show-importable-types to see what '
                    'importable semantic types are available in the current '
                    'deployment.')
-@click.option('--input-path', required=True,
+@q2cli.option('--input-path', required=True,
               type=click.Path(exists=True, dir_okay=True),
               help='Path to file or directory that should be imported.')
-@click.option('--output-path', required=True,
+@q2cli.option('--output-path', required=True,
               type=click.Path(exists=False, dir_okay=False),
               help='Path where output artifact should be written.')
-@click.option('--source-format', required=False,
+@q2cli.option('--source-format', required=False,
               help='The format of the data to be imported. If not provided, '
                    'data must be in the format expected by the semantic type '
                    'provided via --type.')
-@click.option('--show-importable-types', is_flag=True, is_eager=True,
+@q2cli.option('--show-importable-types', is_flag=True, is_eager=True,
               callback=show_importable_types, expose_value=False,
               help='Show the semantic types that can be supplied to --type '
                    'to import data into an artifact.')
-@click.option('--show-importable-formats', is_flag=True, is_eager=True,
+@q2cli.option('--show-importable-formats', is_flag=True, is_eager=True,
               callback=show_importable_formats, expose_value=False,
               help='Show formats that can be supplied to --source-format to '
                    'import data into an artifact.')
-def import_data(type, input_path, output_path, source_format=None):
+def import_data(type, input_path, output_path, source_format):
     import qiime2.sdk
 
     artifact = qiime2.sdk.Artifact.import_data(type, input_path,
@@ -135,7 +137,7 @@ def peek(path):
                     "used after the command exits, use 'qiime extract'.")
 @click.argument('visualization-path',
                 type=click.Path(exists=True, dir_okay=False))
-@click.option('--index-extension', required=False, default='html',
+@q2cli.option('--index-extension', required=False, default='html',
               help='The extension of the index file that should be opened. '
                    '[default: html]')
 def view(visualization_path, index_extension):
@@ -205,7 +207,7 @@ def view(visualization_path, index_extension):
                     "the data stored in an Artifact or Visualization, with "
                     "the choice of exporting to different formats.")
 @click.argument('path', type=click.Path(exists=True, dir_okay=False))
-@click.option('--output-dir', required=False,
+@q2cli.option('--output-dir', required=False,
               type=click.Path(exists=True, dir_okay=True),
               help='Directory where archive should be extracted to '
                    '[default: current working directory]',

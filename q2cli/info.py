@@ -8,6 +8,8 @@
 
 import click
 
+import q2cli
+
 
 def _echo_version():
     import sys
@@ -65,9 +67,9 @@ def _echo_citations():
 
 
 @click.command(help='Display information about current deployment.')
-@click.option('--citations', is_flag=True,
+@q2cli.option('--citations', is_flag=True,
               help='Display citations for QIIME 2 and installed plugins.')
-@click.option('--py-packages', is_flag=True,
+@q2cli.option('--py-packages', is_flag=True,
               help='Display names and versions of all installed Python '
                    'packages.')
 def info(citations, py_packages):
