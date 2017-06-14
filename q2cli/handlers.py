@@ -45,8 +45,15 @@ class Handler:
         raise NotImplementedError()
 
     def _locate_value(self, arguments, fallback, name=None, click_name=None,
-                      cli_name=None):
+                      cli_name=None, multiple=False):
         """Default lookup procedure to find a click.Option provided by user"""
+        # TODO revisit this interaction between _locate_value, single vs.
+        # multiple options, and fallbacks. Perhaps handlers should always
+        # use tuples to store values, even for single options, in order to
+        # normalize single-vs-multiple option handling. Probably not worth
+        # revisiting until there are more unit + integration tests of q2cli
+        # since there's the potential to break things.
+
         if name is None:
             name = self.name
         if click_name is None:
@@ -56,15 +63,26 @@ class Handler:
 
         # Is it in args?
         v = arguments[click_name]
-        if v is not None:
+        missing_value = () if multiple else None
+        if v != missing_value:
             return v
 
         # Does our fallback know about it?
         if fallback is not None:
             try:
-                return fallback(name, cli_name)
+                fallback_value = fallback(name, cli_name)
             except ValueNotFoundException:
                 pass
+            else:
+                # TODO fallbacks don't know whether they're handling a single
+                # vs. multiple option, so the current expectation is that
+                # fallbacks will always return a single value. Revisit this
+                # expectation in the future; perhaps fallbacks should be aware
+                # of single-vs-multiple options, or perhaps they could always
+                # return a tuple.
+                if multiple:
+                    fallback_value = (fallback_value,)
+                return fallback_value
 
         # Do we have a default?
         if self.default is not NoDefault:
@@ -317,8 +335,6 @@ def parameter_handler_factory(name, repr, ast, default=NoDefault,
 class MetadataHandler(Handler):
     def __init__(self, name, default=NoDefault, description=None):
         if default is not NoDefault and default is not None:
-            # TODO perhaps the framework should also/instead make this
-            # guarantee?
             raise TypeError(
                 "The only supported default value for Metadata is `None`. "
                 "Found the following default value: %r" % (default,))
@@ -347,7 +363,7 @@ class MetadataHandler(Handler):
     def get_value(self, arguments, fallback=None):
         import qiime2
 
-        paths = self._locate_value(arguments, fallback)
+        paths = self._locate_value(arguments, fallback, multiple=True)
         if paths is None:
             return paths
 
@@ -364,46 +380,6 @@ class MetadataHandler(Handler):
                 else:
                     raise ValueError("Artifact (%s) has no metadata." % path)
         return metadata[0].merge(*metadata[1:])
-
-    def _locate_value(self, arguments, fallback, name=None, click_name=None,
-                      cli_name=None):
-        if name is None:
-            name = self.name
-        if click_name is None:
-            click_name = self.click_name
-        if cli_name is None:
-            cli_name = self.cli_name
-
-        # Is it in args?
-        v = arguments[click_name]
-        if v != ():
-            return v
-
-        # Does our fallback know about it?
-        if fallback is not None:
-            try:
-                fallback_value = fallback(name, cli_name)
-            except ValueNotFoundException:
-                pass
-            else:
-                # TODO fallbacks don't know whether they're handling a single
-                # vs. multiple option. Assume that if we have a tuple, the
-                # fallback collected multiple values already, and if not, the
-                # fallback found a single value. We should probably revisit the
-                # interaction between fallbacks and single vs. multiple
-                # options, but this works for now.
-                if not isinstance(fallback_value, tuple):
-                    fallback_value = (fallback_value,)
-                return fallback_value
-
-        # If we have a default it must be `None`, which
-        # is an appropriate value for the Artifact API.
-        if self.default is not NoDefault:
-            return self.default
-
-        # Give up
-        self.missing.append(cli_name)
-        raise ValueNotFoundException()
 
 
 class MetadataCategoryHandler(Handler):
