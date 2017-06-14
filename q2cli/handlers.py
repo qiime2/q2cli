@@ -316,6 +316,13 @@ def parameter_handler_factory(name, repr, ast, default=NoDefault,
 
 class MetadataHandler(Handler):
     def __init__(self, name, default=NoDefault, description=None):
+        if default is not NoDefault and default is not None:
+            # TODO perhaps the framework should also/instead make this
+            # guarantee?
+            raise TypeError(
+                "The only supported default value for Metadata is `None`. "
+                "Found the following default value: %r" % (default,))
+
         super().__init__(name, prefix='m_', default=default,
                          description=description)
         self.click_name += '_file'
@@ -328,14 +335,11 @@ class MetadataHandler(Handler):
         type = click.Path(exists=True, dir_okay=False)
         help = 'Metadata mapping file'
 
-        # Metadata currently supports a default of None. Anything else makes it
-        # required.
-        option = None
         if self.default is None:
-            option = q2cli.Option([name], type=type,
+            option = q2cli.Option([name], type=type, multiple=True,
                                   help='%s  [optional]' % help)
         else:
-            option = q2cli.Option([name], type=type,
+            option = q2cli.Option([name], type=type, multiple=True,
                                   help='%s  [required]' % help)
 
         yield self._add_description(option)
@@ -343,21 +347,63 @@ class MetadataHandler(Handler):
     def get_value(self, arguments, fallback=None):
         import qiime2
 
-        path = self._locate_value(arguments, fallback)
-        if path is None:
-            return None
-        try:
-            # check to see if path is an artifact
-            artifact = qiime2.Artifact.load(path)
-        except Exception:
-            pass
-        else:
-            if artifact.has_metadata():
-                return qiime2.Metadata.from_artifact(artifact)
-            else:
-                raise ValueError("Artifact (%s) has no metadata." % path)
+        paths = self._locate_value(arguments, fallback)
+        if paths is None:
+            return paths
 
-        return qiime2.Metadata.load(path)
+        metadata = []
+        for path in paths:
+            try:
+                # check to see if path is an artifact
+                artifact = qiime2.Artifact.load(path)
+            except Exception:
+                metadata.append(qiime2.Metadata.load(path))
+            else:
+                if artifact.has_metadata():
+                    metadata.append(qiime2.Metadata.from_artifact(artifact))
+                else:
+                    raise ValueError("Artifact (%s) has no metadata." % path)
+        return metadata[0].merge(*metadata[1:])
+
+    def _locate_value(self, arguments, fallback, name=None, click_name=None,
+                      cli_name=None):
+        if name is None:
+            name = self.name
+        if click_name is None:
+            click_name = self.click_name
+        if cli_name is None:
+            cli_name = self.cli_name
+
+        # Is it in args?
+        v = arguments[click_name]
+        if v != ():
+            return v
+
+        # Does our fallback know about it?
+        if fallback is not None:
+            try:
+                fallback_value = fallback(name, cli_name)
+            except ValueNotFoundException:
+                pass
+            else:
+                # TODO fallbacks don't know whether they're handling a single
+                # vs. multiple option. Assume that if we have a tuple, the
+                # fallback collected multiple values already, and if not, the
+                # fallback found a single value. We should probably revisit the
+                # interaction between fallbacks and single vs. multiple
+                # options, but this works for now.
+                if not isinstance(fallback_value, tuple):
+                    fallback_value = (fallback_value,)
+                return fallback_value
+
+        # If we have a default it must be `None`, which
+        # is an appropriate value for the Artifact API.
+        if self.default is not NoDefault:
+            return self.default
+
+        # Give up
+        self.missing.append(cli_name)
+        raise ValueNotFoundException()
 
 
 class MetadataCategoryHandler(Handler):
