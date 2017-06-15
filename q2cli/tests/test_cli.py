@@ -14,8 +14,8 @@ import shutil
 from click.testing import CliRunner
 from qiime2 import Artifact, Visualization
 from qiime2.core.testing.type import IntSequence1
+from qiime2.core.testing.util import get_dummy_plugin
 from qiime2.core.archive import ImportProvenanceCapture
-
 
 from q2cli.info import info
 from q2cli.tools import tools
@@ -23,8 +23,8 @@ from q2cli.commands import RootCommand
 
 
 class CliTests(unittest.TestCase):
-
     def setUp(self):
+        get_dummy_plugin()
         self.runner = CliRunner()
         self.tempdir = tempfile.mkdtemp(prefix='qiime2-q2cli-test-temp-')
         self.artifact1_path = os.path.join(self.tempdir, 'a1.qza')
@@ -203,3 +203,236 @@ class CliTests(unittest.TestCase):
         viz = Visualization.load(expected_viz_path)
         self.assertEqual(viz.get_index_paths(), {'html': 'data/index.html',
                                                  'tsv': 'data/index.tsv'})
+
+
+class MetadataTestsBase(unittest.TestCase):
+    def setUp(self):
+        get_dummy_plugin()
+        self.runner = CliRunner()
+        self.plugin_command = RootCommand().get_command(
+            ctx=None, name='dummy-plugin')
+        self.tempdir = tempfile.mkdtemp(prefix='qiime2-q2cli-test-temp-')
+
+        self.input_artifact = os.path.join(self.tempdir, 'in.qza')
+        Artifact.import_data(
+            IntSequence1, [0, 42, 43], list).save(self.input_artifact)
+        self.output_artifact = os.path.join(self.tempdir, 'out.qza')
+
+        self.metadata_file1 = os.path.join(self.tempdir, 'metadata1.tsv')
+        with open(self.metadata_file1, 'w') as f:
+            f.write('id\tcol1\n0\tfoo\nid1\tbar\n')
+
+        self.metadata_file2 = os.path.join(self.tempdir, 'metadata2.tsv')
+        with open(self.metadata_file2, 'w') as f:
+            f.write('id\tcol2\n0\tbaz\nid1\tbaa\n')
+
+        self.metadata_artifact = os.path.join(self.tempdir, 'metadata.qza')
+        Artifact.import_data(
+            'Mapping', {'a': 'dog', 'b': 'cat'}).save(self.metadata_artifact)
+
+        self.cmd_config = os.path.join(self.tempdir, 'conf.ini')
+        with open(self.cmd_config, 'w') as f:
+            f.write('[dummy-plugin.identity-with-metadata]\n'
+                    'm-metadata-file=%s\n' % self.metadata_file1)
+            f.write('[dummy-plugin.identity-with-optional-metadata]\n'
+                    'm-metadata-file=%s\n' % self.metadata_file1)
+            f.write('[dummy-plugin.identity-with-metadata-category]\n'
+                    'm-metadata-file=%s\n'
+                    'm-metadata-category=col1\n' % self.metadata_file1)
+            f.write('[dummy-plugin.identity-with-optional-metadata-category]\n'
+                    'm-metadata-file=%s\n'
+                    'm-metadata-category=col1\n' % self.metadata_file1)
+
+    def tearDown(self):
+        shutil.rmtree(self.tempdir)
+
+    def _run_command(self, *args):
+        return self.runner.invoke(self.plugin_command, args)
+
+    def _assertMetadataOutput(self, result, *, exp_tsv, exp_yaml):
+        self.assertEqual(result.exit_code, 0)
+
+        artifact = Artifact.load(self.output_artifact)
+        action_dir = artifact._archiver.provenance_dir / 'action'
+
+        if exp_tsv is None:
+            self.assertFalse((action_dir / 'metadata.tsv').exists())
+        else:
+            with (action_dir / 'metadata.tsv').open() as fh:
+                self.assertEqual(fh.read(), exp_tsv)
+
+        with (action_dir / 'action.yaml').open() as fh:
+            self.assertIn(exp_yaml, fh.read())
+
+
+class TestMetadataSupport(MetadataTestsBase):
+    def test_required_metadata_missing(self):
+        result = self._run_command(
+            'identity-with-metadata', '--i-ints', self.input_artifact,
+            '--o-out', self.output_artifact)
+
+        self.assertEqual(result.exit_code, 1)
+        self.assertTrue(result.output.startswith('Usage:'))
+        self.assertIn("Missing option: --m-metadata-file", result.output)
+
+    def test_optional_metadata_missing(self):
+        result = self._run_command(
+            'identity-with-optional-metadata', '--i-ints', self.input_artifact,
+            '--o-out', self.output_artifact, '--verbose')
+
+        self._assertMetadataOutput(result, exp_tsv=None,
+                                   exp_yaml='metadata: null')
+
+    def test_single_metadata(self):
+        for command in ('identity-with-metadata',
+                        'identity-with-optional-metadata'):
+            result = self._run_command(
+                command, '--i-ints', self.input_artifact, '--o-out',
+                self.output_artifact, '--m-metadata-file', self.metadata_file1,
+                '--verbose')
+
+            self._assertMetadataOutput(
+                result, exp_tsv='id\tcol1\n0\tfoo\nid1\tbar\n',
+                exp_yaml="metadata: !metadata 'metadata.tsv'")
+
+    def test_multiple_metadata(self):
+        for command in ('identity-with-metadata',
+                        'identity-with-optional-metadata'):
+            result = self._run_command(
+                command, '--i-ints', self.input_artifact, '--o-out',
+                self.output_artifact, '--m-metadata-file', self.metadata_file1,
+                '--m-metadata-file', self.metadata_file2, '--m-metadata-file',
+                self.metadata_artifact, '--verbose')
+
+            exp_yaml = "metadata: !metadata '%s:metadata.tsv'" % (
+                Artifact.load(self.metadata_artifact).uuid)
+            self._assertMetadataOutput(
+                result, exp_tsv='\tcol1\tcol2\ta\tb\n0\tfoo\tbaz\tdog\tcat\n',
+                exp_yaml=exp_yaml)
+
+    def test_invalid_metadata_merge(self):
+        for command in ('identity-with-metadata',
+                        'identity-with-optional-metadata'):
+            result = self._run_command(
+                command, '--i-ints', self.input_artifact, '--o-out',
+                self.output_artifact, '--m-metadata-file', self.metadata_file1,
+                '--m-metadata-file', self.metadata_file1)
+
+            self.assertEqual(result.exit_code, -1)
+            self.assertIn('overlapping categories', str(result.exception))
+
+    def test_cmd_config_metadata(self):
+        for command in ('identity-with-metadata',
+                        'identity-with-optional-metadata'):
+            result = self._run_command(
+                command, '--i-ints', self.input_artifact, '--o-out',
+                self.output_artifact, '--cmd-config', self.cmd_config,
+                '--verbose')
+
+            self._assertMetadataOutput(
+                result, exp_tsv='id\tcol1\n0\tfoo\nid1\tbar\n',
+                exp_yaml="metadata: !metadata 'metadata.tsv'")
+
+
+class TestMetadataCategorySupport(MetadataTestsBase):
+    def test_required_missing(self):
+        result = self._run_command(
+            'identity-with-metadata-category', '--i-ints', self.input_artifact,
+            '--o-out', self.output_artifact)
+
+        self.assertEqual(result.exit_code, 1)
+        self.assertTrue(result.output.startswith('Usage:'))
+        self.assertIn("Missing option: --m-metadata-file", result.output)
+        self.assertIn("Missing option: --m-metadata-category", result.output)
+
+    def test_optional_metadata_missing(self):
+        result = self._run_command(
+            'identity-with-optional-metadata-category', '--i-ints',
+            self.input_artifact, '--o-out', self.output_artifact, '--verbose')
+
+        self._assertMetadataOutput(result, exp_tsv=None,
+                                   exp_yaml='metadata: null')
+
+    def test_optional_metadata_without_category(self):
+        result = self._run_command(
+            'identity-with-optional-metadata-category', '--i-ints',
+            self.input_artifact, '--o-out', self.output_artifact,
+            '--m-metadata-file', self.metadata_file1)
+
+        self.assertEqual(result.exit_code, 1)
+        self.assertTrue(result.output.startswith('Usage:'))
+        self.assertIn("Missing option: --m-metadata-category", result.output)
+
+    def test_optional_category_without_metadata(self):
+        result = self._run_command(
+            'identity-with-optional-metadata-category', '--i-ints',
+            self.input_artifact, '--o-out', self.output_artifact,
+            '--m-metadata-category', 'col1')
+
+        self.assertEqual(result.exit_code, 1)
+        self.assertTrue(result.output.startswith('Usage:'))
+        self.assertIn("Missing option: --m-metadata-file", result.output)
+
+    def test_single_metadata(self):
+        for command in ('identity-with-metadata-category',
+                        'identity-with-optional-metadata-category'):
+            result = self._run_command(
+                command, '--i-ints', self.input_artifact, '--o-out',
+                self.output_artifact, '--m-metadata-file', self.metadata_file1,
+                '--m-metadata-category', 'col1', '--verbose')
+
+            self._assertMetadataOutput(
+                result, exp_tsv='0\tfoo\nid1\tbar\n',
+                exp_yaml="metadata: !metadata 'metadata.tsv'")
+
+    def test_multiple_metadata(self):
+        for command in ('identity-with-metadata-category',
+                        'identity-with-optional-metadata-category'):
+            result = self._run_command(
+                command, '--i-ints', self.input_artifact, '--o-out',
+                self.output_artifact, '--m-metadata-file', self.metadata_file1,
+                '--m-metadata-file', self.metadata_file2, '--m-metadata-file',
+                self.metadata_artifact, '--m-metadata-category', 'col2',
+                '--verbose')
+
+            exp_yaml = "metadata: !metadata '%s:metadata.tsv'" % (
+                Artifact.load(self.metadata_artifact).uuid)
+            self._assertMetadataOutput(result, exp_tsv='0\tbaz\n',
+                                       exp_yaml=exp_yaml)
+
+    def test_multiple_metadata_category(self):
+        result = self._run_command(
+            'identity-with-metadata-category', '--i-ints',
+            self.input_artifact, '--o-out', self.output_artifact,
+            '--m-metadata-file', self.metadata_file1, '--m-metadata-file',
+            self.metadata_file2, '--m-metadata-category', 'col1',
+            '--m-metadata-category', 'col2')
+
+        self.assertEqual(result.exit_code, 1)
+        self.assertTrue(result.output.startswith('Usage:'))
+        self.assertIn('--m-metadata-category was specified multiple times',
+                      result.output)
+
+    def test_invalid_metadata_merge(self):
+        for command in ('identity-with-metadata-category',
+                        'identity-with-optional-metadata-category'):
+            result = self._run_command(
+                command, '--i-ints', self.input_artifact, '--o-out',
+                self.output_artifact, '--m-metadata-file', self.metadata_file1,
+                '--m-metadata-file', self.metadata_file1,
+                '--m-metadata-category', 'col1')
+
+            self.assertEqual(result.exit_code, -1)
+            self.assertIn('overlapping categories', str(result.exception))
+
+    def test_cmd_config(self):
+        for command in ('identity-with-metadata-category',
+                        'identity-with-optional-metadata-category'):
+            result = self._run_command(
+                command, '--i-ints', self.input_artifact, '--o-out',
+                self.output_artifact, '--cmd-config', self.cmd_config,
+                '--verbose')
+
+            self._assertMetadataOutput(
+                result, exp_tsv='0\tfoo\nid1\tbar\n',
+                exp_yaml="metadata: !metadata 'metadata.tsv'")

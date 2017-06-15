@@ -13,6 +13,8 @@ import unittest
 
 import click
 from click.testing import CliRunner
+from qiime2 import Artifact
+from qiime2.core.testing.type import IntSequence1
 from qiime2.core.testing.util import get_dummy_plugin
 
 import q2cli
@@ -85,6 +87,33 @@ class TestOption(unittest.TestCase):
                       '--o-out', out_path])
 
         self._assertRepeatedOptionError(result, '--o-out')
+
+    def test_repeated_multiple_option(self):
+        input_path = os.path.join(self.tempdir, 'ints.qza')
+        artifact = Artifact.import_data(IntSequence1, [0, 42, 43], list)
+        artifact.save(input_path)
+
+        metadata_path1 = os.path.join(self.tempdir, 'metadata1.tsv')
+        with open(metadata_path1, 'w') as f:
+            f.write('id\tcol1\nid1\tfoo\nid2\tbar\n')
+        metadata_path2 = os.path.join(self.tempdir, 'metadata2.tsv')
+        with open(metadata_path2, 'w') as f:
+            f.write('id\tcol2\nid1\tbaz\nid2\tbaa\n')
+
+        output_path = os.path.join(self.tempdir, 'out.qza')
+
+        qiime_cli = RootCommand()
+        command = qiime_cli.get_command(ctx=None, name='dummy-plugin')
+
+        result = self.runner.invoke(
+            command, ['identity-with-metadata', '--i-ints', input_path,
+                      '--o-out', output_path, '--m-metadata-file',
+                      metadata_path1, '--m-metadata-file', metadata_path2,
+                      '--verbose'])
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertTrue(os.path.exists(output_path))
+        self.assertEqual(Artifact.load(output_path).view(list), [0, 42, 43])
 
 
 class TestOptionDecorator(unittest.TestCase):
