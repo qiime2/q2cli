@@ -44,8 +44,7 @@ class Handler:
         """Should find 1 or more arguments and convert to a single API value"""
         raise NotImplementedError()
 
-    def _locate_value(self, arguments, fallback, name=None, click_name=None,
-                      cli_name=None, multiple=False):
+    def _locate_value(self, arguments, fallback, multiple=False):
         """Default lookup procedure to find a click.Option provided by user"""
         # TODO revisit this interaction between _locate_value, single vs.
         # multiple options, and fallbacks. Perhaps handlers should always
@@ -54,15 +53,8 @@ class Handler:
         # revisiting until there are more unit + integration tests of q2cli
         # since there's the potential to break things.
 
-        if name is None:
-            name = self.name
-        if click_name is None:
-            click_name = self.click_name
-        if cli_name is None:
-            cli_name = self.cli_name
-
         # Is it in args?
-        v = arguments[click_name]
+        v = arguments[self.click_name]
         missing_value = () if multiple else None
         if v != missing_value:
             return v
@@ -70,7 +62,7 @@ class Handler:
         # Does our fallback know about it?
         if fallback is not None:
             try:
-                fallback_value = fallback(name, cli_name)
+                fallback_value = fallback(self.name, self.cli_name)
             except ValueNotFoundException:
                 pass
             else:
@@ -89,7 +81,7 @@ class Handler:
             return self.default
 
         # Give up
-        self.missing.append(cli_name)
+        self.missing.append(self.cli_name)
         raise ValueNotFoundException()
 
     def _parse_boolean(self, string):
@@ -337,7 +329,7 @@ class MetadataHandler(Handler):
         if default is not NoDefault and default is not None:
             raise TypeError(
                 "The only supported default value for Metadata is `None`. "
-                "Found the following default value: %r" % (default,))
+                "Found this default value: %r" % (default,))
 
         super().__init__(name, prefix='m_', default=default,
                          description=description)
@@ -349,15 +341,15 @@ class MetadataHandler(Handler):
 
         name = '--' + self.cli_name
         type = click.Path(exists=True, dir_okay=False)
-        help = 'Metadata mapping file'
+        help = ('Metadata mapping file or artifact viewable as metadata. This '
+                'option may be supplied multiple times to merge metadata')
 
         if self.default is None:
-            option = q2cli.Option([name], type=type, multiple=True,
-                                  help='%s  [optional]' % help)
+            help += '  [optional]'
         else:
-            option = q2cli.Option([name], type=type, multiple=True,
-                                  help='%s  [required]' % help)
+            help += '  [required]'
 
+        option = q2cli.Option([name], type=type, help=help, multiple=True)
         yield self._add_description(option)
 
     def get_value(self, arguments, fallback=None):
@@ -384,79 +376,69 @@ class MetadataHandler(Handler):
 
 class MetadataCategoryHandler(Handler):
     def __init__(self, name, default=NoDefault, description=None):
-        import q2cli.util
+        if default is not NoDefault and default is not None:
+            raise TypeError(
+                "The only supported default value for MetadataCategory is "
+                "`None`. Found this default value: %r" % (default,))
 
         super().__init__(name, prefix='m_', default=default,
                          description=description)
-        self.name = name
-        self.click_names = ['m_%s_file' % name, 'm_%s_category' % name]
-        self.cli_names = [
-            q2cli.util.to_cli_name(n) for n in self.click_names]
+        self.click_name += '_category'
+
+        # Not passing `description` to metadata handler because `description`
+        # applies to the metadata category (`self`).
+        self.metadata_handler = MetadataHandler(name, default=default)
 
     def get_click_options(self):
-        import click
         import q2cli
 
-        md_name = '--' + self.cli_names[0]
-        md_help = 'Metadata mapping file'
-        md_kwargs = {
-            'type': click.Path(exists=True, dir_okay=False)
-        }
+        name = '--' + self.cli_name
+        type = str
+        help = ('Category from metadata mapping file or artifact viewable as '
+                'metadata')
 
-        mdc_name = '--' + self.cli_names[1]
-        mdc_help = 'Category from metadata mapping file'
-        mdc_kwargs = {
-            'type': str
-        }
-
-        # Metadata currently supports a default of None. Anything else makes it
-        # required.
         if self.default is None:
-            md_kwargs['help'] = '%s  [optional]' % md_help
-            mdc_kwargs['help'] = '%s  [optional]' % mdc_help
+            help += '  [optional]'
         else:
-            md_kwargs['help'] = '%s  [required]' % md_help
-            mdc_kwargs['help'] = '%s  [required]' % mdc_help
+            help += '  [required]'
 
-        yield q2cli.Option([md_name], **md_kwargs)
-        yield q2cli.Option([mdc_name], **mdc_kwargs)
+        option = q2cli.Option([name], type=type, help=help)
+
+        yield from self.metadata_handler.get_click_options()
+        yield self._add_description(option)
 
     def get_value(self, arguments, fallback=None):
-        import qiime2
-
-        values = []
-        failed = False
-        # This is nastier looking than it really is.
-        # Just try to locate both values and handle failure.
-        # `_locate_value` automatically append to `self.missing` when it fails
-        for click_name, cli_name in zip(self.click_names, self.cli_names):
-            try:
-                value = self._locate_value(arguments, fallback,
-                                           click_name=click_name,
-                                           cli_name=cli_name)
-                values.append(value)
-            except ValueNotFoundException:
-                failed = True
-
-        if failed:
-            raise ValueNotFoundException()
-        if values == [None, None]:
-            return None
-
-        path, category = values
+        # Attempt to find all options before erroring so that all handlers'
+        # missing options can be displayed to the user.
         try:
-            # check to see if path is an artifact
-            artifact = qiime2.Artifact.load(path)
-        except Exception:
+            metadata_value = self.metadata_handler.get_value(arguments,
+                                                             fallback=fallback)
+        except ValueNotFoundException:
             pass
-        else:
-            if artifact.has_metadata():
-                return qiime2.MetadataCategory.from_artifact(artifact,
-                                                             category)
-            else:
-                raise ValueError("Artifact (%s) has no metadata." % path)
 
-        return qiime2.MetadataCategory.load(*values)
+        try:
+            category_value = self._locate_value(arguments, fallback)
+        except ValueNotFoundException:
+            pass
+
+        missing = self.metadata_handler.missing + self.missing
+        if missing:
+            self.missing = missing
+            raise ValueNotFoundException()
+
+        # If metadata category is optional, there is a chance for metadata to
+        # be provided without a metadata category, or vice versa.
+        if metadata_value is None and category_value is not None:
+            self.missing.append(self.metadata_handler.cli_name)
+            raise ValueNotFoundException()
+        elif metadata_value is not None and category_value is None:
+            self.missing.append(self.cli_name)
+            raise ValueNotFoundException()
+
+        if metadata_value is None and category_value is None:
+            return None
+        else:
+            return metadata_value.get_category(category_value)
 
 
 class RegularParameterHandler(GeneratedHandler):

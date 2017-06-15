@@ -17,7 +17,6 @@ from qiime2 import Artifact
 from qiime2.core.testing.type import IntSequence1
 from qiime2.core.testing.util import get_dummy_plugin
 
-
 import q2cli
 import q2cli.info
 import q2cli.tools
