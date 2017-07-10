@@ -13,7 +13,7 @@ import shutil
 
 from click.testing import CliRunner
 from qiime2 import Artifact, Visualization
-from qiime2.core.testing.type import IntSequence1
+from qiime2.core.testing.type import IntSequence1, IntSequence2
 from qiime2.core.testing.util import get_dummy_plugin
 from qiime2.core.archive import ImportProvenanceCapture
 
@@ -203,6 +203,73 @@ class CliTests(unittest.TestCase):
         viz = Visualization.load(expected_viz_path)
         self.assertEqual(viz.get_index_paths(), {'html': 'data/index.html',
                                                  'tsv': 'data/index.tsv'})
+
+
+class TestOptionalArtifactSupport(unittest.TestCase):
+    def setUp(self):
+        get_dummy_plugin()
+
+        self.runner = CliRunner()
+        self.plugin_command = RootCommand().get_command(
+            ctx=None, name='dummy-plugin')
+        self.tempdir = tempfile.mkdtemp(prefix='qiime2-q2cli-test-temp-')
+
+        self.ints1 = os.path.join(self.tempdir, 'ints1.qza')
+        Artifact.import_data(
+            IntSequence1, [0, 42, 43], list).save(self.ints1)
+        self.ints2 = os.path.join(self.tempdir, 'ints2.qza')
+        Artifact.import_data(
+            IntSequence1, [99, -22], list).save(self.ints2)
+        self.ints3 = os.path.join(self.tempdir, 'ints3.qza')
+        Artifact.import_data(
+            IntSequence2, [43, 43], list).save(self.ints3)
+        self.output = os.path.join(self.tempdir, 'output.qza')
+
+    def tearDown(self):
+        shutil.rmtree(self.tempdir)
+
+    def _run_command(self, *args):
+        return self.runner.invoke(self.plugin_command, args)
+
+    def test_no_optional_artifacts_provided(self):
+        result = self._run_command(
+            'optional-artifacts-method', '--i-ints', self.ints1,
+            '--p-num1', 42, '--o-output', self.output, '--verbose')
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertEqual(Artifact.load(self.output).view(list),
+                         [0, 42, 43, 42])
+
+    def test_one_optional_artifact_provided(self):
+        result = self._run_command(
+            'optional-artifacts-method', '--i-ints', self.ints1,
+            '--p-num1', 42, '--i-optional1', self.ints2,
+            '--o-output', self.output, '--verbose')
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertEqual(Artifact.load(self.output).view(list),
+                         [0, 42, 43, 42, 99, -22])
+
+    def test_all_optional_artifacts_provided(self):
+        result = self._run_command(
+            'optional-artifacts-method', '--i-ints', self.ints1,
+            '--p-num1', 42, '--i-optional1', self.ints2,
+            '--i-optional2', self.ints3, '--p-num2', 111,
+            '--o-output', self.output, '--verbose')
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertEqual(Artifact.load(self.output).view(list),
+                         [0, 42, 43, 42, 99, -22, 43, 43, 111])
+
+    def test_optional_artifact_type_mismatch(self):
+        result = self._run_command(
+            'optional-artifacts-method', '--i-ints', self.ints1,
+            '--p-num1', 42, '--i-optional1', self.ints3,
+            '--o-output', self.output, '--verbose')
+
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn("'optional1' is not a subtype of IntSequence1",
+                      str(result.output))
 
 
 class MetadataTestsBase(unittest.TestCase):
