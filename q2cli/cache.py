@@ -265,18 +265,19 @@ class DeploymentCache:
         return state
 
     def _get_action_state(self, action):
+        defaults = {name: spec.default
+                    for name, spec in action.signature.signature_order.items()
+                    if spec.has_default()}
+
         state = {
             'id': action.id,
             'name': action.name,
             'description': action.description,
             'signature': {
-                # This preserves order of inputs, parameters, and outputs,
-                # which will be necessary when `Action.signature` retains API
-                # order: https://github.com/qiime2/qiime2/issues/70
                 'inputs': [],
                 'parameters': [],
                 'outputs': [],
-                'defaults': action.signature.defaults
+                'defaults': defaults
             }
         }
 

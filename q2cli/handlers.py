@@ -8,9 +8,6 @@
 
 import collections
 
-# TODO: revisit how default values are handled when optional artifacts are
-# supported.
-
 # Sentinel to avoid the situation where `None` *is* the default value.
 NoDefault = collections.namedtuple('NoDefault', [])()
 
@@ -283,16 +280,26 @@ class ArtifactHandler(GeneratedHandler):
         import click
         import q2cli
 
+        help = "Artifact: %s" % self.repr
+
+        if self.default is None:
+            help += '  [optional]'
+        else:
+            help += '  [required]'
+
         option = q2cli.Option(['--' + self.cli_name],
                               type=click.Path(exists=False, dir_okay=False),
-                              help="Artifact: %s  [required]" % self.repr)
+                              help=help)
         yield self._add_description(option)
 
     def get_value(self, arguments, fallback=None):
         import qiime2
 
         path = self._locate_value(arguments, fallback)
-        return qiime2.Artifact.load(path)
+        if path is None:
+            return None
+        else:
+            return qiime2.Artifact.load(path)
 
 
 class ResultHandler(GeneratedHandler):
