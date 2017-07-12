@@ -348,7 +348,7 @@ class MetadataHandler(Handler):
 
         name = '--' + self.cli_name
         type = click.Path(exists=True, dir_okay=False)
-        help = ('Metadata mapping file or artifact viewable as metadata. This '
+        help = ('Metadata file or artifact viewable as metadata. This '
                 'option may be supplied multiple times to merge metadata')
 
         if self.default is None:
@@ -401,7 +401,7 @@ class MetadataCategoryHandler(Handler):
 
         name = '--' + self.cli_name
         type = str
-        help = ('Category from metadata mapping file or artifact viewable as '
+        help = ('Category from metadata file or artifact viewable as '
                 'metadata')
 
         if self.default is None:
