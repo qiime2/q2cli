@@ -230,7 +230,7 @@ class ActionCommand(click.Command):
             else:
                 traceback.print_exc(file=log)
                 click.echo(err=True)
-                self._echo_plugin_error(e, 'Debug info has been saved to %s.'
+                self._echo_plugin_error(e, 'Debug info has been saved to %s'
                                         % log.name)
             click.get_current_context().exit(1)
         else:
