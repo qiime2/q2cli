@@ -19,6 +19,6 @@ install:
   - make install
 script:
   - make lint
-  - QIIMETEST= make test-cov
+  - make test
   - QIIMETEST= source tab-qiime
-  - QIIMETEST= qiime
+  - QIIMETEST= qiime info
