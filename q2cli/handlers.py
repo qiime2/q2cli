@@ -309,10 +309,13 @@ class ResultHandler(GeneratedHandler):
         import click
         import q2cli
 
+        help_txt = self.repr
+        if help_txt != 'Visualization':
+            help_txt = 'Artifact: %s' % help_txt
         option = q2cli.Option(['--' + self.cli_name],
                               type=click.Path(exists=False, dir_okay=False),
-                              help="Artifact: %s  [required if not passing "
-                              "--output-dir]" % self.repr)
+                              help="%s [required if not passing --output-dir]"
+                                   % help_txt)
         yield self._add_description(option)
 
     def get_value(self, arguments, fallback=None):
