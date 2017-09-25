@@ -106,9 +106,13 @@ def show_importable_formats(ctx, param, value):
                    'import data into an artifact.')
 def import_data(type, input_path, output_path, source_format):
     import qiime2.sdk
+    try:
+        artifact = qiime2.sdk.Artifact.import_data(type, input_path,
+                                                   view_type=source_format)
+    except Exception as e:
+        header = 'There was a problem importing %s:' % input_path
+        q2cli.util.exit_with_error(e, header=header)
 
-    artifact = qiime2.sdk.Artifact.import_data(type, input_path,
-                                               view_type=source_format)
     artifact.save(output_path)
 
 
