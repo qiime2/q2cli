@@ -148,22 +148,18 @@ class ActionCommand(click.Command):
         import q2cli.handlers
 
         handlers = collections.OrderedDict()
-        handler_map = collections.OrderedDict([
-            ('inputs', q2cli.handlers.ArtifactHandler),
-            ('parameters', q2cli.handlers.parameter_handler_factory),
-            ('outputs', q2cli.handlers.ResultHandler)
-        ])
+        for item in self.action['signature']:
+            item = item.copy()
+            type = item.pop('type')
 
-        signature = self.action['signature']
-        defaults = signature['defaults']
+            if type == 'input':
+                handler = q2cli.handlers.ArtifactHandler
+            elif type == 'parameter':
+                handler = q2cli.handlers.parameter_handler_factory
+            else:
+                handler = q2cli.handlers.ResultHandler
 
-        for group_type, constructor in handler_map.items():
-            grp = signature[group_type]
-
-            for item in grp:
-                name = item['name']
-                default = defaults.get(name, q2cli.handlers.NoDefault)
-                handlers[name] = constructor(default=default, **item)
+            handlers[item['name']] = handler(**item)
 
         return handlers
 
@@ -257,7 +253,6 @@ class ActionCommand(click.Command):
             fg='red', bold=True, err=True)
 
     def handle_in_params(self, kwargs):
-        import itertools
         import q2cli.handlers
 
         arguments = {}
@@ -272,16 +267,16 @@ class ActionCommand(click.Command):
                         'same time.', fg='red', bold=True, err=True)
             click.get_current_context().exit(1)
 
-        for item in itertools.chain(self.action['signature']['inputs'],
-                                    self.action['signature']['parameters']):
-            name = item['name']
-            handler = self.generated_handlers[name]
-            try:
-                arguments[name] = handler.get_value(
-                    kwargs, fallback=cmd_fallback
-                )
-            except q2cli.handlers.ValueNotFoundException:
-                missing += handler.missing
+        for item in self.action['signature']:
+            if item['type'] == 'input' or item['type'] == 'parameter':
+                name = item['name']
+                handler = self.generated_handlers[name]
+                try:
+                    arguments[name] = handler.get_value(
+                        kwargs, fallback=cmd_fallback
+                    )
+                except q2cli.handlers.ValueNotFoundException:
+                    missing += handler.missing
 
         return arguments, missing, verbose, quiet
 
@@ -301,14 +296,16 @@ class ActionCommand(click.Command):
             except q2cli.handlers.ValueNotFoundException:
                 return out_fallback(*args)
 
-        for item in self.action['signature']['outputs']:
-            name = item['name']
-            handler = self.generated_handlers[name]
+        for item in self.action['signature']:
+            if item['type'] == 'output':
+                name = item['name']
+                handler = self.generated_handlers[name]
 
-            try:
-                outputs.append(handler.get_value(kwargs, fallback=fallback))
-            except q2cli.handlers.ValueNotFoundException:
-                missing += handler.missing
+                try:
+                    outputs.append(handler.get_value(kwargs,
+                                                     fallback=fallback))
+                except q2cli.handlers.ValueNotFoundException:
+                    missing += handler.missing
 
         return outputs, missing
 
