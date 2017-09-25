@@ -31,7 +31,8 @@ def to_cli_name(name):
     return name.replace('_', '-')
 
 
-def exit_with_error(e, header='An error has been encountered:', file=None):
+def exit_with_error(e, header='An error has been encountered:', file=None,
+                    suppress_footer=False):
     import sys
     import traceback
     import textwrap
@@ -46,9 +47,13 @@ def exit_with_error(e, header='An error has been encountered:', file=None):
     error = textwrap.indent(
         '\n'.join(textwrap.wrap(str(e))), '  ')
 
+    segments = [header, error]
+    if not suppress_footer:
+        segments.append(footer)
+
     traceback.print_exception(type(e), e, e.__traceback__, file=file)
-    click.echo(err=True)
-    click.secho('\n\n'.join([header, error, footer]),
-                fg='red', bold=True, err=True)
+    file.write('\n')
+
+    click.secho('\n\n'.join(segments), fg='red', bold=True, err=True)
 
     click.get_current_context().exit(1)
