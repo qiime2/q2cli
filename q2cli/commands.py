@@ -221,18 +221,9 @@ class ActionCommand(click.Command):
             with qiime2.util.redirected_stdio(stdout=log, stderr=log):
                 results = action(**arguments)
         except Exception as e:
-            import traceback
-            if verbose:
-                import sys
-                traceback.print_exc(file=sys.stderr)
-                click.echo(err=True)
-                self._echo_plugin_error(e, 'See above for debug info.')
-            else:
-                traceback.print_exc(file=log)
-                click.echo(err=True)
-                self._echo_plugin_error(e, 'Debug info has been saved to %s'
-                                        % log.name)
-            click.get_current_context().exit(1)
+            header = ('Plugin error from %s:'
+                      % q2cli.util.to_cli_name(self.plugin['name']))
+            q2cli.util.exit_with_error(e, header=header, file=log)
         else:
             cleanup_logfile = True
         finally:
@@ -245,16 +236,6 @@ class ActionCommand(click.Command):
             if not quiet:
                 click.secho('Saved %s to: %s' % (result.type, path),
                             fg='green')
-
-    def _echo_plugin_error(self, exception, tail):
-        import textwrap
-
-        exception = textwrap.indent(
-            '\n'.join(textwrap.wrap(str(exception))), '  ')
-        click.secho(
-            'Plugin error from %s:\n\n%s\n\n%s'
-            % (q2cli.util.to_cli_name(self.plugin['name']), exception, tail),
-            fg='red', bold=True, err=True)
 
     def handle_in_params(self, kwargs):
         import itertools
