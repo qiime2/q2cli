@@ -265,39 +265,35 @@ class DeploymentCache:
         return state
 
     def _get_action_state(self, action):
-        defaults = {name: spec.default
-                    for name, spec in action.signature.signature_order.items()
-                    if spec.has_default()}
+        import itertools
 
         state = {
             'id': action.id,
             'name': action.name,
             'description': action.description,
-            'signature': {
-                'inputs': [],
-                'parameters': [],
-                'outputs': [],
-                'defaults': defaults
-            }
+            'signature': []
         }
 
-        # Inputs and outputs are handled the same. Parameters must be handled a
-        # little differently because they require an AST representation.
-        for group in 'inputs', 'outputs':
-            for name, spec in getattr(action.signature, group).items():
-                data = {'name': name, 'repr': repr(spec.qiime_type)}
-                data['description'] = spec.description if \
-                    spec.has_description() else None
+        sig = action.signature
+        for name, spec in itertools.chain(sig.signature_order.items(),
+                                          sig.outputs.items()):
+            data = {'name': name, 'repr': repr(spec.qiime_type)}
 
-                state['signature'][group].append(data)
+            if name in sig.inputs:
+                type = 'input'
+            elif name in sig.parameters:
+                type = 'parameter'
+                data['ast'] = spec.qiime_type.to_ast()
+            else:
+                type = 'output'
+            data['type'] = type
 
-        for name, spec in action.signature.parameters.items():
-            data = {'name': name, 'repr': repr(spec.qiime_type),
-                    'ast': spec.qiime_type.to_ast()}
-            data['description'] = spec.description if \
-                spec.has_description() else None
+            if spec.has_description():
+                data['description'] = spec.description
+            if spec.has_default():
+                data['default'] = spec.default
 
-            state['signature']['parameters'].append(data)
+            state['signature'].append(data)
 
         return state
 
