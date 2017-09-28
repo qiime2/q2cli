@@ -363,7 +363,9 @@ class MetadataHandler(Handler):
         yield self._add_description(option)
 
     def get_value(self, arguments, fallback=None):
+        import os
         import qiime2
+        import q2cli.util
 
         paths = self._locate_value(arguments, fallback, multiple=True)
         if paths is None:
@@ -375,12 +377,25 @@ class MetadataHandler(Handler):
                 # check to see if path is an artifact
                 artifact = qiime2.Artifact.load(path)
             except Exception:
-                metadata.append(qiime2.Metadata.load(path))
+                try:
+                    metadata.append(qiime2.Metadata.load(path))
+                except Exception as e:
+                    header = ("There was an issue with loading the file %s as "
+                              "metadata:" % path)
+                    with open(os.devnull, 'w') as dev_null:
+                        q2cli.util.exit_with_error(
+                            e, header=header, file=dev_null,
+                            suppress_footer=True)
             else:
-                if artifact.has_metadata():
+                try:
                     metadata.append(qiime2.Metadata.from_artifact(artifact))
-                else:
-                    raise ValueError("Artifact (%s) has no metadata." % path)
+                except Exception as e:
+                    header = ("There was an issue with viewing the artifact "
+                              "%s as metadata:" % path)
+                    with open(os.devnull, 'w') as dev_null:
+                        q2cli.util.exit_with_error(
+                            e, header=header, file=dev_null,
+                            suppress_footer=True)
         return metadata[0].merge(*metadata[1:])
 
 
