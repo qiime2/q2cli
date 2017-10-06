@@ -233,3 +233,27 @@ def extract(path, output_dir):
             'Visualizations can be extracted.' % path)
     else:
         click.echo('Extracted to %s' % extracted_dir)
+
+
+@tools.command(short_help='Validate a QIIME 2 Artifact.',
+               help='Conduct ad hoc validation of a QIIME 2 Artifact.')
+@click.argument('path', type=click.Path(exists=True, dir_okay=False))
+@click.option('--level', required=False, type=click.Choice(['min', 'max']),
+              help='Desired level of validation.', default='max')
+def validate(path, level):
+    import qiime2.sdk
+
+    artifact = qiime2.sdk.Artifact.load(path)
+    try:
+        artifact.validate(level)
+    except qiime2.plugin.ValidationError as e:
+        header = 'There was a problem validating %s:' % path
+        with open(os.devnull, 'w') as dev_null:
+            q2cli.util.exit_with_error(e, header=header, file=dev_null,
+                                       suppress_footer=True)
+    except Exception as e:
+        header = 'An unexpected error has occured:'
+        q2cli.util.exit_with_error(e, header=header)
+    else:
+        click.secho('Artifact %s appears to be valid at level=%s.'
+                    % (path, level), fg="green")
