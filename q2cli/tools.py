@@ -116,7 +116,7 @@ def import_data(type, input_path, output_path, source_format):
             q2cli.util.exit_with_error(e, header=header, file=dev_null,
                                        suppress_footer=True)
     except Exception as e:
-        header = 'An unexpected error has occured:'
+        header = 'An unexpected error has occurred:'
         q2cli.util.exit_with_error(e, header=header)
     artifact.save(output_path)
 
@@ -252,7 +252,7 @@ def validate(path, level):
             q2cli.util.exit_with_error(e, header=header, file=dev_null,
                                        suppress_footer=True)
     except Exception as e:
-        header = 'An unexpected error has occured:'
+        header = 'An unexpected error has occurred:'
         q2cli.util.exit_with_error(e, header=header)
     else:
         click.secho('Artifact %s appears to be valid at level=%s.'
