@@ -104,6 +104,22 @@ class CliTests(unittest.TestCase):
                                    'data', 'ints.txt'))
         self.assertEqual(data_f.read(), "0\n42\n43\n")
 
+    def test_validate_min(self):
+        result = self.runner.invoke(
+            tools, ['validate', self.artifact1_path, '--level', 'min'])
+        self.assertEqual(result.exit_code, 0)
+        self.assertTrue('appears to be valid at level=min' in result.output)
+
+    def test_validate_max(self):
+        result = self.runner.invoke(
+            tools, ['validate', self.artifact1_path, '--level', 'max'])
+        self.assertEqual(result.exit_code, 0)
+        self.assertTrue('appears to be valid at level=max' in result.output)
+
+        result = self.runner.invoke(tools, ['validate', self.artifact1_path])
+        self.assertEqual(result.exit_code, 0)
+        self.assertTrue('appears to be valid at level=max' in result.output)
+
     def test_split_ints(self):
         qiime_cli = RootCommand()
         command = qiime_cli.get_command(ctx=None, name='dummy-plugin')
