@@ -235,24 +235,39 @@ def extract(path, output_dir):
         click.echo('Extracted to %s' % extracted_dir)
 
 
-@tools.command(short_help='Validate a QIIME 2 Artifact.',
-               help='Conduct ad hoc validation of a QIIME 2 Artifact.')
+@tools.command(short_help='Validate data in a QIIME 2 Artifact.',
+               help='Validate data in a QIIME 2 Artifact. QIIME 2 '
+                    'automatically performs some basic validation when '
+                    'managing your data; use this command to perform explicit '
+                    'and/or more thorough validation of your data (e.g. when '
+                    'debugging issues with your data or analyses).\n\nNote: '
+                    'validation can take some time to complete, depending on '
+                    'the size and type of your data.')
 @click.argument('path', type=click.Path(exists=True, dir_okay=False))
-@click.option('--level', required=False, type=click.Choice(['min', 'max']),
-              help='Desired level of validation.', default='max')
+@q2cli.option('--level', required=False, type=click.Choice(['min', 'max']),
+              help='Desired level of validation. "min" will perform minimal '
+                   'validation, and "max" will perform maximal validation (at '
+                   'the potential cost of runtime).', default='max')
 def validate(path, level):
     import qiime2.sdk
 
-    artifact = qiime2.sdk.Artifact.load(path)
+    try:
+        artifact = qiime2.sdk.Artifact.load(path)
+    except Exception as e:
+        header = 'There was a problem loading %s as a QIIME 2 Artifact:' % path
+        q2cli.util.exit_with_error(e, header=header)
+
     try:
         artifact.validate(level)
     except qiime2.plugin.ValidationError as e:
-        header = 'There was a problem validating %s:' % path
+        header = 'Artifact %s does not appear to be valid at level=%s:' % (
+                path, level)
         with open(os.devnull, 'w') as dev_null:
             q2cli.util.exit_with_error(e, header=header, file=dev_null,
                                        suppress_footer=True)
     except Exception as e:
-        header = 'An unexpected error has occurred:'
+        header = ('An unexpected error has occurred while attempting to '
+                  'validate artifact %s:' % path)
         q2cli.util.exit_with_error(e, header=header)
     else:
         click.secho('Artifact %s appears to be valid at level=%s.'
