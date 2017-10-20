@@ -481,7 +481,8 @@ class RegularParameterHandler(GeneratedHandler):
             'Str': str,
             'Float': float,
             'Color': str,
-            'Bool': bool
+            'Bool': bool,
+            'Set': str
         }
         # TODO: This is a hack because we only support a few predicates at
         # this point. This entire class should be revisited at some point.
@@ -528,17 +529,21 @@ class RegularParameterHandler(GeneratedHandler):
         # supplying defaults. Telling Click about the default value here makes
         # it impossible to determine whether the user supplied or omitted a
         # value once the handlers are invoked.
+        multiple = self.ast['type'] == 'collection'
         option = None
         if self.default is NoDefault:
             option = q2cli.Option([name], type=option_type, default=None,
-                                  show_default=False, help='[required]')
+                                  show_default=False, help='[required]',
+                                  multiple=multiple)
         elif self.default is None:
             option = q2cli.Option([name], type=option_type, default=None,
-                                  show_default=False, help='[optional]')
+                                  show_default=False, help='[optional]',
+                                  multiple=multiple)
         else:
             option = q2cli.Option([name], type=option_type, default=None,
                                   show_default=False,
-                                  help='[default: %s]' % self.default)
+                                  help='[default: %s]' % self.default,
+                                  multiple=multiple)
 
         yield self._add_description(option)
 
