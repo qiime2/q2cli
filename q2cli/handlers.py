@@ -7,7 +7,6 @@
 # ----------------------------------------------------------------------------
 
 import collections
-import json
 
 # Sentinel to avoid the situation where `None` *is* the default value.
 NoDefault = collections.namedtuple('NoDefault', [])()
@@ -559,7 +558,9 @@ class RegularParameterHandler(GeneratedHandler):
             if type(value) is not bool:
                 value = self._parse_boolean(value)
             return value
+        elif self.ast['name'] == 'Set':
+            return set(value)
         else:
             import qiime2.sdk
             return qiime2.sdk.parse_type(
-                self.repr, expect='primitive').decode(json.dumps(value))
+                self.repr, expect='primitive').decode(value)
