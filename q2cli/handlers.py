@@ -7,6 +7,7 @@
 # ----------------------------------------------------------------------------
 
 import collections
+import json
 
 # Sentinel to avoid the situation where `None` *is* the default value.
 NoDefault = collections.namedtuple('NoDefault', [])()
@@ -561,4 +562,4 @@ class RegularParameterHandler(GeneratedHandler):
         else:
             import qiime2.sdk
             return qiime2.sdk.parse_type(
-                self.repr, expect='primitive').decode(value)
+                self.repr, expect='primitive').decode(json.dumps(value))
