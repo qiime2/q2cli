@@ -44,8 +44,7 @@ def exit_with_error(e, header='An error has been encountered:', file=None,
     else:
         footer = 'Debug info has been saved to %s' % file.name
 
-    error = textwrap.indent(
-        '\n'.join(textwrap.wrap(str(e))), '  ')
+    error = textwrap.indent(str(e), '  ')
 
     segments = [header, error]
     if not suppress_footer:
