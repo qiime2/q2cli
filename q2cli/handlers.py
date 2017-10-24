@@ -481,7 +481,7 @@ class RegularParameterHandler(GeneratedHandler):
             'Str': str,
             'Float': float,
             'Color': str,
-            'Bool': bool,
+            'Bool': bool
         }
         # TODO: This is a hack because we only support a few predicates at
         # this point. This entire class should be revisited at some point.
