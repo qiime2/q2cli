@@ -482,7 +482,6 @@ class RegularParameterHandler(GeneratedHandler):
             'Float': float,
             'Color': str,
             'Bool': bool,
-            'Set': str
         }
         # TODO: This is a hack because we only support a few predicates at
         # this point. This entire class should be revisited at some point.
@@ -505,6 +504,11 @@ class RegularParameterHandler(GeneratedHandler):
                 return mapping['Float']
             else:
                 raise NotImplementedError()
+        # Specify 'Set'/'List' because 'Dict' will require more modifications
+        elif self.ast['name'] in ['Set', 'List']:
+            # n-`primitive`s can not be unioned, so ignore trailing values
+            field, *_ = self.ast['fields']
+            return mapping[field['name']]
         return mapping[self.ast['name']]
 
     def get_click_options(self):
