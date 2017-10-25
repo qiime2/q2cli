@@ -69,8 +69,8 @@ def convert_primitive(ast):
         'Color': str,
         'Bool': bool
     }
-    # TODO: This is a hack because we only support a few predicates at
-    # this point. This entire class should be revisited at some point.
+    # TODO: it would be a good idea to refactor this someday, but until then
+    # just handle the few predicates we now about.
     predicate = ast['predicate']
     if predicate:
         if predicate['name'] == 'Choices' and ast['name'] == 'Str':

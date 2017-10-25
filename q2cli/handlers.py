@@ -520,6 +520,9 @@ class RegularParameterHandler(GeneratedHandler):
                                   help='[default: %s]' % self.default,
                                   multiple=multiple)
 
+        if multiple:
+            option.help = 'May be supplied multiple times.  ' + option.help
+
         yield self._add_description(option)
 
     def get_value(self, arguments, fallback=None):
@@ -534,6 +537,8 @@ class RegularParameterHandler(GeneratedHandler):
                 value = self._parse_boolean(value)
             return value
         elif self.ast['name'] == 'Set':
+            if len(value) > len(set(value)):
+                self._error_with_duplicate_in_set(value)
             return set(value)
         elif self.ast['name'] == 'List':
             return list(value)
@@ -541,3 +546,17 @@ class RegularParameterHandler(GeneratedHandler):
             import qiime2.sdk
             return qiime2.sdk.parse_type(
                 self.repr, expect='primitive').decode(value)
+
+    def _error_with_duplicate_in_set(self, elements):
+        import click
+        import collections
+
+        counter = collections.Counter(elements)
+        dups = {name for name, count in counter.items() if count > 1}
+
+        ctx = click.get_current_context()
+        click.echo(ctx.get_usage() + '\n', err=True)
+        click.secho("Error: Option --%s was given these values: %r more than "
+                    "one time, values passed should be unique."
+                    % (self.cli_name, dups), err=True, fg='red', bold=True)
+        ctx.exit(1)
