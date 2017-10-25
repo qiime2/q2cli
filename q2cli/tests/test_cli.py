@@ -15,7 +15,6 @@ from click.testing import CliRunner
 from qiime2 import Artifact, Visualization
 from qiime2.core.testing.type import IntSequence1, IntSequence2
 from qiime2.core.testing.util import get_dummy_plugin
-from qiime2.core.archive import ImportProvenanceCapture
 
 from q2cli.info import info
 from q2cli.tools import tools
@@ -28,12 +27,14 @@ class CliTests(unittest.TestCase):
         self.runner = CliRunner()
         self.tempdir = tempfile.mkdtemp(prefix='qiime2-q2cli-test-temp-')
         self.artifact1_path = os.path.join(self.tempdir, 'a1.qza')
+        self.mapping_path = os.path.join(self.tempdir, 'mapping.qza')
 
-        artifact1 = Artifact._from_view(
-            IntSequence1, [0, 42, 43], list,
-            provenance_capture=ImportProvenanceCapture())
+        artifact1 = Artifact.import_data(IntSequence1, [0, 42, 43])
         artifact1.save(self.artifact1_path)
         self.artifact1_root_dir = str(artifact1.uuid)
+
+        mapping = Artifact.import_data('Mapping', {'foo': '42'})
+        mapping.save(self.mapping_path)
 
     def tearDown(self):
         shutil.rmtree(self.tempdir)
@@ -65,6 +66,27 @@ class CliTests(unittest.TestCase):
 
         self.assertFalse('split_ints' in commands)
         self.assertFalse('mapping_viz' in commands)
+
+    def test_action_parameter_types(self):
+        qiime_cli = RootCommand()
+        command = qiime_cli.get_command(ctx=None, name='dummy-plugin')
+        results = self.runner.invoke(command, ['typical-pipeline', '--help'])
+        help_text = results.output
+
+        # Check the help text to make sure the types are displayed correctly
+        # boolean primitive
+        self.assertIn('--p-do-extra-thing / --p-no-do-extra-thing', help_text)
+        # int primitive
+        self.assertIn('--p-add INTEGER', help_text)
+
+        # Run it to make sure the types are converted correctly, the framework
+        # will error if it recieves the wrong type from the interface.
+        output_dir = os.path.join(self.tempdir, 'output-test')
+        result = self.runner.invoke(command, [
+            'typical-pipeline', '--i-int-sequence', self.artifact1_path,
+            '--i-mapping', self.mapping_path, '--p-do-extra-thing', '--p-add',
+            '10', '--output-dir', output_dir, '--verbose'])
+        self.assertEqual(result.exit_code, 0)
 
     def test_show_importable_types(self):
         result = self.runner.invoke(

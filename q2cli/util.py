@@ -89,3 +89,5 @@ def convert_primitive(ast):
             return mapping['Float']
         else:
             raise NotImplementedError()
+    else:
+        return mapping[ast['name']]
