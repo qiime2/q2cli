@@ -474,37 +474,13 @@ class RegularParameterHandler(GeneratedHandler):
         self.ast = ast
 
     def get_type(self):
-        import click
-
-        mapping = {
-            'Int': int,
-            'Str': str,
-            'Float': float,
-            'Color': str,
-            'Bool': bool
-        }
-        # TODO: This is a hack because we only support a few predicates at
-        # this point. This entire class should be revisited at some point.
-        predicate = self.ast['predicate']
-        if predicate:
-            if predicate['name'] == 'Choices' and self.ast['name'] == 'Str':
-                return click.Choice(predicate['choices'])
-            elif predicate['name'] == 'Range' and self.ast['name'] == 'Int':
-                start = predicate['start']
-                end = predicate['end']
-                # click.IntRange is always inclusive
-                if start is not None and not predicate['inclusive-start']:
-                    start += 1
-                if end is not None and not predicate['inclusive-end']:
-                    end -= 1
-                return click.IntRange(start, end)
-            elif predicate['name'] == 'Range' and self.ast['name'] == 'Float':
-                # click.FloatRange will be in click 7.0, so for now the
-                # range handling will just fallback to qiime2.
-                return mapping['Float']
-            else:
-                raise NotImplementedError()
-        return mapping[self.ast['name']]
+        import q2cli.util
+        # Specify 'Set'/'List' instead of 'type' == 'collection', because
+        # 'Dict' will require more modifications (i.e. keys, values)
+        if self.ast['name'] in ['Set', 'List']:
+            field, = self.ast['fields']
+            return q2cli.util.convert_primitive(field)
+        return q2cli.util.convert_primitive(self.ast)
 
     def get_click_options(self):
         import q2cli
@@ -528,17 +504,24 @@ class RegularParameterHandler(GeneratedHandler):
         # supplying defaults. Telling Click about the default value here makes
         # it impossible to determine whether the user supplied or omitted a
         # value once the handlers are invoked.
+        multiple = self.ast['type'] == 'collection'
         option = None
         if self.default is NoDefault:
             option = q2cli.Option([name], type=option_type, default=None,
-                                  show_default=False, help='[required]')
+                                  show_default=False, help='[required]',
+                                  multiple=multiple)
         elif self.default is None:
             option = q2cli.Option([name], type=option_type, default=None,
-                                  show_default=False, help='[optional]')
+                                  show_default=False, help='[optional]',
+                                  multiple=multiple)
         else:
             option = q2cli.Option([name], type=option_type, default=None,
                                   show_default=False,
-                                  help='[default: %s]' % self.default)
+                                  help='[default: %s]' % self.default,
+                                  multiple=multiple)
+
+        if multiple:
+            option.help = 'May be supplied multiple times.  ' + option.help
 
         yield self._add_description(option)
 
@@ -553,7 +536,27 @@ class RegularParameterHandler(GeneratedHandler):
             if type(value) is not bool:
                 value = self._parse_boolean(value)
             return value
+        elif self.ast['name'] == 'Set':
+            if len(value) > len(set(value)):
+                self._error_with_duplicate_in_set(value)
+            return set(value)
+        elif self.ast['name'] == 'List':
+            return list(value)
         else:
             import qiime2.sdk
             return qiime2.sdk.parse_type(
                 self.repr, expect='primitive').decode(value)
+
+    def _error_with_duplicate_in_set(self, elements):
+        import click
+        import collections
+
+        counter = collections.Counter(elements)
+        dups = {name for name, count in counter.items() if count > 1}
+
+        ctx = click.get_current_context()
+        click.echo(ctx.get_usage() + '\n', err=True)
+        click.secho("Error: Option --%s was given these values: %r more than "
+                    "one time, values passed should be unique."
+                    % (self.cli_name, dups), err=True, fg='red', bold=True)
+        ctx.exit(1)
