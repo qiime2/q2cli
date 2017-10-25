@@ -70,7 +70,7 @@ def convert_primitive(ast):
         'Bool': bool
     }
     # TODO: it would be a good idea to refactor this someday, but until then
-    # just handle the few predicates we now about.
+    # just handle the few predicates we know about.
     predicate = ast['predicate']
     if predicate:
         if predicate['name'] == 'Choices' and ast['name'] == 'Str':
