@@ -15,7 +15,6 @@ from click.testing import CliRunner
 from qiime2 import Artifact, Visualization
 from qiime2.core.testing.type import IntSequence1, IntSequence2
 from qiime2.core.testing.util import get_dummy_plugin
-from qiime2.core.archive import ImportProvenanceCapture
 
 from q2cli.info import info
 from q2cli.tools import tools
@@ -36,7 +35,6 @@ class CliTests(unittest.TestCase):
 
         mapping = Artifact.import_data('Mapping', {'foo': '42'})
         mapping.save(self.mapping_path)
-
 
     def tearDown(self):
         shutil.rmtree(self.tempdir)
@@ -83,10 +81,12 @@ class CliTests(unittest.TestCase):
 
         # Run it to make sure the types are converted correctly, the framework
         # will error if it recieves the wrong type from the interface.
-        self.runner.invoke(command, [
+        output_dir = os.path.join(self.tempdir, 'output-test')
+        result = self.runner.invoke(command, [
             'typical-pipeline', '--i-int-sequence', self.artifact1_path,
             '--i-mapping', self.mapping_path, '--p-do-extra-thing', '--p-add',
-            '10', '--output-dir', os.path.join(self.tempdir, 'output-test')])
+            '10', '--output-dir', output_dir, '--verbose'])
+        self.assertEqual(result.exit_code, 0)
 
     def test_show_importable_types(self):
         result = self.runner.invoke(
