@@ -474,42 +474,13 @@ class RegularParameterHandler(GeneratedHandler):
         self.ast = ast
 
     def get_type(self):
-        import click
-
-        mapping = {
-            'Int': int,
-            'Str': str,
-            'Float': float,
-            'Color': str,
-            'Bool': bool
-        }
-        # TODO: This is a hack because we only support a few predicates at
-        # this point. This entire class should be revisited at some point.
-        predicate = self.ast['predicate']
-        if predicate:
-            if predicate['name'] == 'Choices' and self.ast['name'] == 'Str':
-                return click.Choice(predicate['choices'])
-            elif predicate['name'] == 'Range' and self.ast['name'] == 'Int':
-                start = predicate['start']
-                end = predicate['end']
-                # click.IntRange is always inclusive
-                if start is not None and not predicate['inclusive-start']:
-                    start += 1
-                if end is not None and not predicate['inclusive-end']:
-                    end -= 1
-                return click.IntRange(start, end)
-            elif predicate['name'] == 'Range' and self.ast['name'] == 'Float':
-                # click.FloatRange will be in click 7.0, so for now the
-                # range handling will just fallback to qiime2.
-                return mapping['Float']
-            else:
-                raise NotImplementedError()
-        # Specify 'Set'/'List' because 'Dict' will require more modifications
-        elif self.ast['name'] in ['Set', 'List']:
-            # n-`primitive`s can not be unioned, so ignore trailing values
-            field, *_ = self.ast['fields']
-            return mapping[field['name']]
-        return mapping[self.ast['name']]
+        import q2cli.util
+        # Specify 'Set'/'List' instead of 'type' == 'collection', because
+        # 'Dict' will require more modifications (i.e. keys, values)
+        if self.ast['name'] in ['Set', 'List']:
+            field, = self.ast['fields']
+            return q2cli.util.convert_primitive(field)
+        return q2cli.util.convert_primitive(self.ast)
 
     def get_click_options(self):
         import q2cli
@@ -564,6 +535,8 @@ class RegularParameterHandler(GeneratedHandler):
             return value
         elif self.ast['name'] == 'Set':
             return set(value)
+        elif self.ast['name'] == 'List':
+            return list(value)
         else:
             import qiime2.sdk
             return qiime2.sdk.parse_type(

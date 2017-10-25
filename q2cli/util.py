@@ -57,3 +57,36 @@ def exit_with_error(e, header='An error has been encountered:', file=None,
     click.secho('\n\n'.join(segments), fg='red', bold=True, err=True)
 
     click.get_current_context().exit(1)
+
+
+def convert_primitive(ast):
+    import click
+
+    mapping = {
+        'Int': int,
+        'Str': str,
+        'Float': float,
+        'Color': str,
+        'Bool': bool
+    }
+    # TODO: This is a hack because we only support a few predicates at
+    # this point. This entire class should be revisited at some point.
+    predicate = ast['predicate']
+    if predicate:
+        if predicate['name'] == 'Choices' and ast['name'] == 'Str':
+            return click.Choice(predicate['choices'])
+        elif predicate['name'] == 'Range' and ast['name'] == 'Int':
+            start = predicate['start']
+            end = predicate['end']
+            # click.IntRange is always inclusive
+            if start is not None and not predicate['inclusive-start']:
+                start += 1
+            if end is not None and not predicate['inclusive-end']:
+                end -= 1
+            return click.IntRange(start, end)
+        elif predicate['name'] == 'Range' and ast['name'] == 'Float':
+            # click.FloatRange will be in click 7.0, so for now the
+            # range handling will just fallback to qiime2.
+            return mapping['Float']
+        else:
+            raise NotImplementedError()
