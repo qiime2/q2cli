@@ -526,7 +526,8 @@ class RegularParameterHandler(GeneratedHandler):
         yield self._add_description(option)
 
     def get_value(self, arguments, fallback=None):
-        value = self._locate_value(arguments, fallback)
+        value = self._locate_value(arguments, fallback,
+                                   multiple=self.ast['type'] == 'collection')
         if value is None:
             return None
         elif self.get_type() is bool:
