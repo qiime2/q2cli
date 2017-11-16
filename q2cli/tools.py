@@ -28,9 +28,11 @@ def tools():
                     "the format it is stored within the Artifact or "
                     "Visualization. Use 'qiime tools extract' to extract the "
                     "Artifact or Visualization's entire archive.")
-@click.argument('path', type=click.Path(exists=True, dir_okay=False))
+@click.argument('path', type=click.Path(exists=True, file_okay=True,
+                                        dir_okay=False, readable=True))
 @q2cli.option('--output-dir', required=True,
-              type=click.Path(exists=False, dir_okay=True),
+              type=click.Path(exists=False, file_okay=False, dir_okay=True,
+                              writable=True),
               help='Directory where data should be exported to')
 def export_data(path, output_dir):
     import qiime2.sdk
@@ -87,10 +89,12 @@ def show_importable_formats(ctx, param, value):
                    'importable semantic types are available in the current '
                    'deployment.')
 @q2cli.option('--input-path', required=True,
-              type=click.Path(exists=True, dir_okay=True),
+              type=click.Path(exists=True, file_okay=True, dir_okay=True,
+                              readable=True),
               help='Path to file or directory that should be imported.')
 @q2cli.option('--output-path', required=True,
-              type=click.Path(exists=False, dir_okay=False),
+              type=click.Path(exists=False, file_okay=True, dir_okay=False,
+                              writable=True),
               help='Path where output artifact should be written.')
 @q2cli.option('--source-format', required=False,
               help='The format of the data to be imported. If not provided, '
@@ -125,7 +129,8 @@ def import_data(type, input_path, output_path, source_format):
                           'Visualization.',
                help="Display basic information about a QIIME 2 Artifact or "
                     "Visualization, including its UUID and type.")
-@click.argument('path', type=click.Path(exists=True, dir_okay=False))
+@click.argument('path', type=click.Path(exists=True, file_okay=True,
+                                        dir_okay=False, readable=True))
 def peek(path):
     import qiime2.sdk
 
@@ -145,7 +150,8 @@ def peek(path):
                     "exits. To open a QIIME 2 Visualization so it can be "
                     "used after the command exits, use 'qiime extract'.")
 @click.argument('visualization-path',
-                type=click.Path(exists=True, dir_okay=False))
+                type=click.Path(exists=True, file_okay=True, dir_okay=False,
+                                readable=True))
 @q2cli.option('--index-extension', required=False, default='html',
               help='The extension of the index file that should be opened. '
                    '[default: html]')
@@ -215,9 +221,11 @@ def view(visualization_path, index_extension):
                     "and actual data. Use 'qiime tools export' to export only "
                     "the data stored in an Artifact or Visualization, with "
                     "the choice of exporting to different formats.")
-@click.argument('path', type=click.Path(exists=True, dir_okay=False))
+@click.argument('path', type=click.Path(exists=True, file_okay=True,
+                                        dir_okay=False, readable=True))
 @q2cli.option('--output-dir', required=False,
-              type=click.Path(exists=True, dir_okay=True),
+              type=click.Path(exists=True, file_okay=False, dir_okay=True,
+                              writable=True),
               help='Directory where archive should be extracted to '
                    '[default: current working directory]',
               default=os.getcwd())
@@ -243,11 +251,13 @@ def extract(path, output_dir):
                     'debugging issues with your data or analyses).\n\nNote: '
                     'validation can take some time to complete, depending on '
                     'the size and type of your data.')
-@click.argument('path', type=click.Path(exists=True, dir_okay=False))
+@click.argument('path', type=click.Path(exists=True, file_okay=True,
+                                        dir_okay=False, readable=True))
 @q2cli.option('--level', required=False, type=click.Choice(['min', 'max']),
               help='Desired level of validation. "min" will perform minimal '
                    'validation, and "max" will perform maximal validation (at '
-                   'the potential cost of runtime).', default='max')
+                   'the potential cost of runtime).',
+              default='max', show_default=True)
 def validate(path, level):
     import qiime2.sdk
 

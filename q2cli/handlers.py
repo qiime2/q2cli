@@ -181,7 +181,8 @@ class OutputDirHandler(Handler):
 
         yield q2cli.Option(
             ['--' + self.cli_name],
-            type=click.Path(exists=False, dir_okay=True, file_okay=False),
+            type=click.Path(exists=False, dir_okay=True, file_okay=False,
+                            writable=True),
             help='Output unspecified results to a directory')
 
     def get_value(self, arguments, fallback=None):
@@ -288,7 +289,8 @@ class ArtifactHandler(GeneratedHandler):
             help += '  [required]'
 
         option = q2cli.Option(['--' + self.cli_name],
-                              type=click.Path(exists=False, dir_okay=False),
+                              type=click.Path(exists=True, file_okay=True,
+                                              dir_okay=False, readable=True),
                               help=help)
         yield self._add_description(option)
 
@@ -313,7 +315,8 @@ class ResultHandler(GeneratedHandler):
         if help_txt != 'Visualization':
             help_txt = 'Artifact: %s' % help_txt
         option = q2cli.Option(['--' + self.cli_name],
-                              type=click.Path(exists=False, dir_okay=False),
+                              type=click.Path(exists=False, file_okay=True,
+                                              dir_okay=False, writable=True),
                               help="%s [required if not passing --output-dir]"
                                    % help_txt)
         yield self._add_description(option)
@@ -350,7 +353,8 @@ class MetadataHandler(Handler):
         import q2cli
 
         name = '--' + self.cli_name
-        type = click.Path(exists=True, dir_okay=False)
+        type = click.Path(exists=True, file_okay=True, dir_okay=False,
+                          readable=True)
         help = ('Metadata file or artifact viewable as metadata. This '
                 'option may be supplied multiple times to merge metadata')
 
