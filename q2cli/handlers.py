@@ -109,9 +109,13 @@ class Handler:
             ctx = click.get_current_context()
             ctx.exit(1)
 
-    def _add_description(self, option):
+    def _add_description(self, option, requirement):
         if self.description:
-            option.help += '\n%s' % self.description
+            option.help += '%s  %s' % (self.description, requirement)
+        elif option.help:
+            option.help += '  ' + requirement
+        else:
+            option.help = requirement
         return option
 
 
@@ -268,31 +272,95 @@ class CommandConfigHandler(Handler):
 
 
 class GeneratedHandler(Handler):
-    def __init__(self, name, repr, default=NoDefault, description=None):
+    def __init__(self, name, repr, ast, default=NoDefault, description=None):
         super().__init__(name, prefix=self.prefix, default=default,
                          description=description)
         self.repr = repr
+        self.ast = ast
+
+
+class CollectionHandler(GeneratedHandler):
+    view_map = {
+        'List': list,
+        'Set': set
+    }
+
+    def __init__(self, inner_handler, **kwargs):
+        self.inner_handler = inner_handler
+        # inner_handler needs to be set first so the prefix lookup works
+        super().__init__(**kwargs)
+        self.view_type = self.view_map[self.ast['name']]
+
+    @property
+    def prefix(self):
+        return self.inner_handler.prefix
+
+    def get_click_options(self):
+        import q2cli.core
+        for option in self.inner_handler.get_click_options():
+            option.multiple = True
+            # validation happens on a callback for q2cli.core.Option, so unset
+            # it because we need standard click behavior for multi-options
+            # without this, the result of not-passing a value is `None` instead
+            # of `()` which confuses ._locate_value
+            option.callback = None
+            option.type = q2cli.core.MultipleType(option.type)
+            yield option
+
+    def get_value(self, arguments, fallback=None):
+        args = self._locate_value(arguments, fallback, multiple=True)
+        if args is None:
+            return None
+
+        decoded_values = []
+        for arg in args:
+            # Use an empty dict because we don't need the inner handler to
+            # look for anything; that's our job. We just need it to decode
+            # whatever it was we found.
+            empty = collections.defaultdict(lambda: None)
+            decoded = self.inner_handler.get_value(empty,
+                                                   fallback=lambda *_: arg)
+            decoded_values.append(decoded)
+
+        value = self.view_type(decoded_values)
+
+        if len(value) != len(decoded_values):
+            self._error_with_duplicate_in_set(decoded_values)
+
+        return value
+
+    def _error_with_duplicate_in_set(self, elements):
+        import click
+        import collections
+
+        counter = collections.Counter(elements)
+        dups = {name for name, count in counter.items() if count > 1}
+
+        ctx = click.get_current_context()
+        click.echo(ctx.get_usage() + '\n', err=True)
+        click.secho("Error: Option --%s was given these values: %r more than "
+                    "one time, values passed should be unique."
+                    % (self.cli_name, dups), err=True, fg='red', bold=True)
+        ctx.exit(1)
 
 
 class ArtifactHandler(GeneratedHandler):
     prefix = 'i_'
 
     def get_click_options(self):
-        import click
         import q2cli
+        import q2cli.core
 
-        help = "Artifact: %s" % self.repr
-
+        type = q2cli.core.ResultPath(repr=self.repr, exists=True,
+                                     file_okay=True, dir_okay=False,
+                                     readable=True)
         if self.default is None:
-            help += '  [optional]'
+            requirement = '[optional]'
         else:
-            help += '  [required]'
+            requirement = '[required]'
 
-        option = q2cli.Option(['--' + self.cli_name],
-                              type=click.Path(exists=True, file_okay=True,
-                                              dir_okay=False, readable=True),
-                              help=help)
-        yield self._add_description(option)
+        option = q2cli.Option(['--' + self.cli_name], type=type, help="")
+        yield self._add_description(option, requirement)
 
     def get_value(self, arguments, fallback=None):
         import qiime2
@@ -308,18 +376,13 @@ class ResultHandler(GeneratedHandler):
     prefix = 'o_'
 
     def get_click_options(self):
-        import click
         import q2cli
 
-        help_txt = self.repr
-        if help_txt != 'Visualization':
-            help_txt = 'Artifact: %s' % help_txt
-        option = q2cli.Option(['--' + self.cli_name],
-                              type=click.Path(exists=False, file_okay=True,
-                                              dir_okay=False, writable=True),
-                              help="%s [required if not passing --output-dir]"
-                                   % help_txt)
-        yield self._add_description(option)
+        type = q2cli.core.ResultPath(self.repr, exists=False, file_okay=True,
+                                     dir_okay=False, writable=True)
+        option = q2cli.Option(['--' + self.cli_name], type=type, help="")
+        yield self._add_description(
+            option, '[required if not passing --output-dir]')
 
     def get_value(self, arguments, fallback=None):
         return self._locate_value(arguments, fallback)
@@ -351,20 +414,22 @@ class MetadataHandler(Handler):
     def get_click_options(self):
         import click
         import q2cli
+        import q2cli.core
 
         name = '--' + self.cli_name
         type = click.Path(exists=True, file_okay=True, dir_okay=False,
                           readable=True)
+        type = q2cli.core.MultipleType(type)
         help = ('Metadata file or artifact viewable as metadata. This '
-                'option may be supplied multiple times to merge metadata')
+                'option may be supplied multiple times to merge metadata.')
 
         if self.default is None:
-            help += '  [optional]'
+            requirement = '[optional]'
         else:
-            help += '  [required]'
+            requirement = '[required]'
 
         option = q2cli.Option([name], type=type, help=help, multiple=True)
-        yield self._add_description(option)
+        yield self._add_description(option, requirement)
 
     def get_value(self, arguments, fallback=None):
         import os
@@ -424,17 +489,17 @@ class MetadataCategoryHandler(Handler):
         name = '--' + self.cli_name
         type = str
         help = ('Category from metadata file or artifact viewable as '
-                'metadata')
+                'metadata.')
 
         if self.default is None:
-            help += '  [optional]'
+            requirement = '[optional]'
         else:
-            help += '  [required]'
+            requirement = '[required]'
 
         option = q2cli.Option([name], type=type, help=help)
 
         yield from self.metadata_handler.get_click_options()
-        yield self._add_description(option)
+        yield self._add_description(option, requirement)
 
     def get_value(self, arguments, fallback=None):
         # Attempt to find all options before erroring so that all handlers'
@@ -474,24 +539,20 @@ class RegularParameterHandler(GeneratedHandler):
     prefix = 'p_'
 
     def __init__(self, name, repr, ast, default=NoDefault, description=None):
-        super().__init__(name, repr, default=default, description=description)
-        self.ast = ast
-
-    def get_type(self):
         import q2cli.util
-        # Specify 'Set'/'List' instead of 'type' == 'collection', because
-        # 'Dict' will require more modifications (i.e. keys, values)
-        if self.ast['name'] in ['Set', 'List']:
-            field, = self.ast['fields']
-            return q2cli.util.convert_primitive(field)
-        return q2cli.util.convert_primitive(self.ast)
+
+        super().__init__(name, repr, ast, default=default,
+                         description=description)
+        # TODO: just create custom click.ParamType to avoid this silliness
+        if ast['type'] == 'collection':
+            ast, = ast['fields']
+        self.type = q2cli.util.convert_primitive(ast)
 
     def get_click_options(self):
         import q2cli
         import q2cli.util
 
-        type = self.get_type()  # Use the ugly lookup above
-        if type is bool:
+        if self.type is bool:
             no_name = self.prefix + 'no_' + self.name
             cli_no_name = q2cli.util.to_cli_name(no_name)
             name = '--' + self.cli_name + '/--' + cli_no_name
@@ -501,67 +562,45 @@ class RegularParameterHandler(GeneratedHandler):
             option_type = None
         else:
             name = '--' + self.cli_name
-            option_type = type
+            option_type = self.type
+
+        if self.default is NoDefault:
+            requirement = '[required]'
+        elif self.default is None:
+            requirement = '[optional]'
+        else:
+            requirement = '[default: %s]' % self.default
 
         # Pass `default=None` and `show_default=False` to `click.Option`
         # because the handlers are responsible for resolving missing values and
         # supplying defaults. Telling Click about the default value here makes
         # it impossible to determine whether the user supplied or omitted a
         # value once the handlers are invoked.
-        multiple = self.ast['type'] == 'collection'
-        option = None
-        if self.default is NoDefault:
-            option = q2cli.Option([name], type=option_type, default=None,
-                                  show_default=False, help='[required]',
-                                  multiple=multiple)
-        elif self.default is None:
-            option = q2cli.Option([name], type=option_type, default=None,
-                                  show_default=False, help='[optional]',
-                                  multiple=multiple)
-        else:
-            option = q2cli.Option([name], type=option_type, default=None,
-                                  show_default=False,
-                                  help='[default: %s]' % self.default,
-                                  multiple=multiple)
+        option = q2cli.Option([name], type=option_type, default=None,
+                              show_default=False, help='')
 
-        if multiple:
-            option.help = 'May be supplied multiple times.  ' + option.help
-
-        yield self._add_description(option)
+        yield self._add_description(option, requirement)
 
     def get_value(self, arguments, fallback=None):
-        value = self._locate_value(arguments, fallback,
-                                   multiple=self.ast['type'] == 'collection')
+        value = self._locate_value(arguments, fallback)
         if value is None:
             return None
-        elif self.get_type() is bool:
-            # Value may have been specified in --cmd-config (or another source
-            # in the future). If we don't have a bool type yet, attempt to
-            # interpret a string representing a boolean.
+
+        elif self.type is bool:
+            # TODO: should we defer to the Bool primitive? It only allows
+            # 'true' and 'false'.
             if type(value) is not bool:
                 value = self._parse_boolean(value)
             return value
-        elif self.ast['name'] == 'Set':
-            if len(value) > len(set(value)):
-                self._error_with_duplicate_in_set(value)
-            return set(value)
-        elif self.ast['name'] == 'List':
-            return list(value)
         else:
             import qiime2.sdk
-            return qiime2.sdk.parse_type(
-                self.repr, expect='primitive').decode(value)
+            primitive = qiime2.sdk.parse_type(self.repr, expect='primitive')
+            # TODO/HACK: the repr is the primitive used, but since there's a
+            # collection handler managing the set/list this get_value should
+            # handle only the pieces. This is super gross, but would be
+            # unecessary if click.ParamTypes were implemented for each
+            # kind of QIIME 2 input.
+            if self.ast['type'] == 'collection':
+                primitive, = primitive.fields
 
-    def _error_with_duplicate_in_set(self, elements):
-        import click
-        import collections
-
-        counter = collections.Counter(elements)
-        dups = {name for name, count in counter.items() if count > 1}
-
-        ctx = click.get_current_context()
-        click.echo(ctx.get_usage() + '\n', err=True)
-        click.secho("Error: Option --%s was given these values: %r more than "
-                    "one time, values passed should be unique."
-                    % (self.cli_name, dups), err=True, fg='red', bold=True)
-        ctx.exit(1)
+            return primitive.decode(value)

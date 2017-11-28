@@ -147,19 +147,25 @@ class ActionCommand(click.Command):
     def build_generated_handlers(self):
         import q2cli.handlers
 
+        handler_map = {
+            'input': q2cli.handlers.ArtifactHandler,
+            'parameter': q2cli.handlers.parameter_handler_factory,
+            'output': q2cli.handlers.ResultHandler
+        }
+
         handlers = collections.OrderedDict()
         for item in self.action['signature']:
             item = item.copy()
             type = item.pop('type')
 
-            if type == 'input':
-                handler = q2cli.handlers.ArtifactHandler
-            elif type == 'parameter':
-                handler = q2cli.handlers.parameter_handler_factory
+            if item['ast']['type'] == 'collection':
+                inner_handler = handler_map[type](**item)
+                handler = q2cli.handlers.CollectionHandler(inner_handler,
+                                                           **item)
             else:
-                handler = q2cli.handlers.ResultHandler
+                handler = handler_map[type](**item)
 
-            handlers[item['name']] = handler(**item)
+            handlers[item['name']] = handler
 
         return handlers
 
