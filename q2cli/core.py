@@ -106,3 +106,40 @@ def option(*param_decls, **attrs):
         return click.option(*param_decls, **attrs)(f)
 
     return decorator
+
+
+class MultipleType(click.ParamType):
+    """This is just a wrapper, it doesn't do anything on its own"""
+    def __init__(self, param_type):
+        self.param_type = param_type
+
+    @property
+    def name(self):
+        return "MULTIPLE " + self.param_type.name
+
+    def convert(self, value, param, ctx):
+        # Don't convert anything yet.
+        return value
+
+    def fail(self, *args, **kwargs):
+        return self.param_type.fail(*args, **kwargs)
+
+    def get_missing_message(self, *args, **kwargs):
+        return self.param_type.get_missing_message(*args, **kwargs)
+
+    def get_metavar(self, *args, **kwargs):
+        metavar = self.param_type.get_metavar(*args, **kwargs)
+        if metavar is None:
+            return None
+        return "MULTIPLE " + metavar
+
+
+class ResultPath(click.Path):
+    def __init__(self, repr, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.repr = repr
+
+    def get_metavar(self, param):
+        if self.repr != 'Visualization':
+            return "ARTIFACT PATH " + self.repr
+        return "VISUALIZATION PATH"

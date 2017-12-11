@@ -277,13 +277,13 @@ class DeploymentCache:
         sig = action.signature
         for name, spec in itertools.chain(sig.signature_order.items(),
                                           sig.outputs.items()):
-            data = {'name': name, 'repr': repr(spec.qiime_type)}
+            data = {'name': name, 'repr': repr(spec.qiime_type),
+                    'ast': spec.qiime_type.to_ast()}
 
             if name in sig.inputs:
                 type = 'input'
             elif name in sig.parameters:
                 type = 'parameter'
-                data['ast'] = spec.qiime_type.to_ast()
             else:
                 type = 'output'
             data['type'] = type

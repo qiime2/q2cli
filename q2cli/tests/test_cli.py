@@ -169,6 +169,33 @@ class CliTests(unittest.TestCase):
         self.assertEqual(left.view(list), [0])
         self.assertEqual(right.view(list), [42, 43])
 
+    def test_variadic_inputs(self):
+        qiime_cli = RootCommand()
+        command = qiime_cli.get_command(ctx=None, name='dummy-plugin')
+        output_path = os.path.join(self.tempdir, 'output.qza')
+
+        ints1 = Artifact.import_data('IntSequence1', [1, 2, 3]).save(
+            os.path.join(self.tempdir, 'ints1.qza'))
+        ints2 = Artifact.import_data('IntSequence2', [4, 5, 6]).save(
+            os.path.join(self.tempdir, 'ints2.qza'))
+        set1 = Artifact.import_data('SingleInt', 7).save(
+            os.path.join(self.tempdir, 'set1.qza'))
+        set2 = Artifact.import_data('SingleInt', 8).save(
+            os.path.join(self.tempdir, 'set2.qza'))
+
+        result = self.runner.invoke(
+            command,
+            ['variadic-input-method', '--i-ints', ints1, '--i-ints', ints2,
+             '--i-int-set', set1, '--i-int-set', set2, '--p-nums', '9',
+             '--p-nums', '10', '--p-opt-nums', '11', '--p-opt-nums', '12',
+             '--p-opt-nums', '13', '--o-output', output_path, '--verbose'])
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertTrue(os.path.exists(output_path))
+
+        output = Artifact.load(output_path)
+        self.assertEqual(output.view(list), list(range(1, 14)))
+
     def test_with_parameters_only(self):
         qiime_cli = RootCommand()
         command = qiime_cli.get_command(ctx=None, name='dummy-plugin')
