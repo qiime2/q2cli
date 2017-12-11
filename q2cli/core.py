@@ -141,5 +141,5 @@ class ResultPath(click.Path):
 
     def get_metavar(self, param):
         if self.repr != 'Visualization':
-            return "PATH ARTIFACT " + self.repr
-        return "PATH VISUALIZATION"
+            return "ARTIFACT PATH " + self.repr
+        return "VISUALIZATION PATH"

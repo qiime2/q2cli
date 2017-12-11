@@ -110,12 +110,15 @@ class Handler:
             ctx.exit(1)
 
     def _add_description(self, option, requirement):
+        def pretty_cat(a, b, space=1):
+            if a:
+                return a + (' ' * space) + b
+            return b
+
         if self.description:
-            option.help += '%s  %s' % (self.description, requirement)
-        elif option.help:
-            option.help += '  ' + requirement
-        else:
-            option.help = requirement
+            option.help = pretty_cat(option.help, self.description)
+        option.help = pretty_cat(option.help, requirement, space=2)
+
         return option
 
 
