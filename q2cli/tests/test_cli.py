@@ -358,6 +358,11 @@ class MetadataTestsBase(unittest.TestCase):
         with open(self.metadata_file2, 'w') as f:
             f.write('id\tcol2\n0\tbaz\nid1\tbaa\n')
 
+        self.metadata_file_mixed_types = os.path.join(
+                self.tempdir, 'metadata-mixed-types.tsv')
+        with open(self.metadata_file_mixed_types, 'w') as f:
+            f.write('id\tnumbers\tstrings\nid1\t42\tabc\nid2\t-1.5\tdef\n')
+
         self.metadata_artifact = os.path.join(self.tempdir, 'metadata.qza')
         Artifact.import_data(
             'Mapping', {'a': 'dog', 'b': 'cat'}).save(self.metadata_artifact)
@@ -368,12 +373,12 @@ class MetadataTestsBase(unittest.TestCase):
                     'm-metadata-file=%s\n' % self.metadata_file1)
             f.write('[dummy-plugin.identity-with-optional-metadata]\n'
                     'm-metadata-file=%s\n' % self.metadata_file1)
-            f.write('[dummy-plugin.identity-with-metadata-category]\n'
+            f.write('[dummy-plugin.identity-with-metadata-column]\n'
                     'm-metadata-file=%s\n'
-                    'm-metadata-category=col1\n' % self.metadata_file1)
-            f.write('[dummy-plugin.identity-with-optional-metadata-category]\n'
+                    'm-metadata-column=col1\n' % self.metadata_file1)
+            f.write('[dummy-plugin.identity-with-optional-metadata-column]\n'
                     'm-metadata-file=%s\n'
-                    'm-metadata-category=col1\n' % self.metadata_file1)
+                    'm-metadata-column=col1\n' % self.metadata_file1)
 
     def tearDown(self):
         shutil.rmtree(self.tempdir)
@@ -423,8 +428,9 @@ class TestMetadataSupport(MetadataTestsBase):
                 self.output_artifact, '--m-metadata-file', self.metadata_file1,
                 '--verbose')
 
+            exp_tsv = 'id\tcol1\n#q2:types\tcategorical\n0\tfoo\nid1\tbar\n'
             self._assertMetadataOutput(
-                result, exp_tsv='id\tcol1\n0\tfoo\nid1\tbar\n',
+                result, exp_tsv=exp_tsv,
                 exp_yaml="metadata: !metadata 'metadata.tsv'")
 
     def test_multiple_metadata(self):
@@ -436,11 +442,15 @@ class TestMetadataSupport(MetadataTestsBase):
                 '--m-metadata-file', self.metadata_file2, '--m-metadata-file',
                 self.metadata_artifact, '--verbose')
 
+            exp_tsv = (
+                'id\tcol1\tcol2\ta\tb\n'
+                '#q2:types\tcategorical\tcategorical\tcategorical\tcategorical'
+                '\n0\tfoo\tbaz\tdog\tcat\n'
+            )
             exp_yaml = "metadata: !metadata '%s:metadata.tsv'" % (
                 Artifact.load(self.metadata_artifact).uuid)
-            self._assertMetadataOutput(
-                result, exp_tsv='\tcol1\tcol2\ta\tb\n0\tfoo\tbaz\tdog\tcat\n',
-                exp_yaml=exp_yaml)
+            self._assertMetadataOutput(result, exp_tsv=exp_tsv,
+                                       exp_yaml=exp_yaml)
 
     def test_invalid_metadata_merge(self):
         for command in ('identity-with-metadata',
@@ -451,7 +461,7 @@ class TestMetadataSupport(MetadataTestsBase):
                 '--m-metadata-file', self.metadata_file1)
 
             self.assertEqual(result.exit_code, -1)
-            self.assertIn('overlapping categories', str(result.exception))
+            self.assertIn('overlapping columns', str(result.exception))
 
     def test_cmd_config_metadata(self):
         for command in ('identity-with-metadata',
@@ -461,110 +471,179 @@ class TestMetadataSupport(MetadataTestsBase):
                 self.output_artifact, '--cmd-config', self.cmd_config,
                 '--verbose')
 
+            exp_tsv = 'id\tcol1\n#q2:types\tcategorical\n0\tfoo\nid1\tbar\n'
             self._assertMetadataOutput(
-                result, exp_tsv='id\tcol1\n0\tfoo\nid1\tbar\n',
+                result, exp_tsv=exp_tsv,
                 exp_yaml="metadata: !metadata 'metadata.tsv'")
 
 
-class TestMetadataCategorySupport(MetadataTestsBase):
+class TestMetadataColumnSupport(MetadataTestsBase):
     def test_required_missing(self):
         result = self._run_command(
-            'identity-with-metadata-category', '--i-ints', self.input_artifact,
+            'identity-with-metadata-column', '--i-ints', self.input_artifact,
             '--o-out', self.output_artifact)
 
         self.assertEqual(result.exit_code, 1)
         self.assertTrue(result.output.startswith('Usage:'))
         self.assertIn("Missing option: --m-metadata-file", result.output)
-        self.assertIn("Missing option: --m-metadata-category", result.output)
+        self.assertIn("Missing option: --m-metadata-column", result.output)
 
     def test_optional_metadata_missing(self):
         result = self._run_command(
-            'identity-with-optional-metadata-category', '--i-ints',
+            'identity-with-optional-metadata-column', '--i-ints',
             self.input_artifact, '--o-out', self.output_artifact, '--verbose')
 
         self._assertMetadataOutput(result, exp_tsv=None,
                                    exp_yaml='metadata: null')
 
-    def test_optional_metadata_without_category(self):
+    def test_optional_metadata_without_column(self):
         result = self._run_command(
-            'identity-with-optional-metadata-category', '--i-ints',
+            'identity-with-optional-metadata-column', '--i-ints',
             self.input_artifact, '--o-out', self.output_artifact,
             '--m-metadata-file', self.metadata_file1)
 
         self.assertEqual(result.exit_code, 1)
         self.assertTrue(result.output.startswith('Usage:'))
-        self.assertIn("Missing option: --m-metadata-category", result.output)
+        self.assertIn("Missing option: --m-metadata-column", result.output)
 
-    def test_optional_category_without_metadata(self):
+    def test_optional_column_without_metadata(self):
         result = self._run_command(
-            'identity-with-optional-metadata-category', '--i-ints',
+            'identity-with-optional-metadata-column', '--i-ints',
             self.input_artifact, '--o-out', self.output_artifact,
-            '--m-metadata-category', 'col1')
+            '--m-metadata-column', 'col1')
 
         self.assertEqual(result.exit_code, 1)
         self.assertTrue(result.output.startswith('Usage:'))
         self.assertIn("Missing option: --m-metadata-file", result.output)
 
     def test_single_metadata(self):
-        for command in ('identity-with-metadata-category',
-                        'identity-with-optional-metadata-category'):
+        for command in ('identity-with-metadata-column',
+                        'identity-with-optional-metadata-column'):
             result = self._run_command(
                 command, '--i-ints', self.input_artifact, '--o-out',
                 self.output_artifact, '--m-metadata-file', self.metadata_file1,
-                '--m-metadata-category', 'col1', '--verbose')
+                '--m-metadata-column', 'col1', '--verbose')
 
+            exp_tsv = 'id\tcol1\n#q2:types\tcategorical\n0\tfoo\nid1\tbar\n'
             self._assertMetadataOutput(
-                result, exp_tsv='0\tfoo\nid1\tbar\n',
+                result, exp_tsv=exp_tsv,
                 exp_yaml="metadata: !metadata 'metadata.tsv'")
 
     def test_multiple_metadata(self):
-        for command in ('identity-with-metadata-category',
-                        'identity-with-optional-metadata-category'):
+        for command in ('identity-with-metadata-column',
+                        'identity-with-optional-metadata-column'):
             result = self._run_command(
                 command, '--i-ints', self.input_artifact, '--o-out',
                 self.output_artifact, '--m-metadata-file', self.metadata_file1,
                 '--m-metadata-file', self.metadata_file2, '--m-metadata-file',
-                self.metadata_artifact, '--m-metadata-category', 'col2',
+                self.metadata_artifact, '--m-metadata-column', 'col2',
                 '--verbose')
 
+            exp_tsv = 'id\tcol2\n#q2:types\tcategorical\n0\tbaz\n'
             exp_yaml = "metadata: !metadata '%s:metadata.tsv'" % (
                 Artifact.load(self.metadata_artifact).uuid)
-            self._assertMetadataOutput(result, exp_tsv='0\tbaz\n',
+            self._assertMetadataOutput(result, exp_tsv=exp_tsv,
                                        exp_yaml=exp_yaml)
 
-    def test_multiple_metadata_category(self):
+    def test_multiple_metadata_column(self):
         result = self._run_command(
-            'identity-with-metadata-category', '--i-ints',
+            'identity-with-metadata-column', '--i-ints',
             self.input_artifact, '--o-out', self.output_artifact,
             '--m-metadata-file', self.metadata_file1, '--m-metadata-file',
-            self.metadata_file2, '--m-metadata-category', 'col1',
-            '--m-metadata-category', 'col2')
+            self.metadata_file2, '--m-metadata-column', 'col1',
+            '--m-metadata-column', 'col2')
 
         self.assertEqual(result.exit_code, 1)
         self.assertTrue(result.output.startswith('Usage:'))
-        self.assertIn('--m-metadata-category was specified multiple times',
+        self.assertIn('--m-metadata-column was specified multiple times',
                       result.output)
 
     def test_invalid_metadata_merge(self):
-        for command in ('identity-with-metadata-category',
-                        'identity-with-optional-metadata-category'):
+        for command in ('identity-with-metadata-column',
+                        'identity-with-optional-metadata-column'):
             result = self._run_command(
                 command, '--i-ints', self.input_artifact, '--o-out',
                 self.output_artifact, '--m-metadata-file', self.metadata_file1,
                 '--m-metadata-file', self.metadata_file1,
-                '--m-metadata-category', 'col1')
+                '--m-metadata-column', 'col1')
 
             self.assertEqual(result.exit_code, -1)
-            self.assertIn('overlapping categories', str(result.exception))
+            self.assertIn('overlapping columns', str(result.exception))
 
     def test_cmd_config(self):
-        for command in ('identity-with-metadata-category',
-                        'identity-with-optional-metadata-category'):
+        for command in ('identity-with-metadata-column',
+                        'identity-with-optional-metadata-column'):
             result = self._run_command(
                 command, '--i-ints', self.input_artifact, '--o-out',
                 self.output_artifact, '--cmd-config', self.cmd_config,
                 '--verbose')
 
+            exp_tsv = 'id\tcol1\n#q2:types\tcategorical\n0\tfoo\nid1\tbar\n'
             self._assertMetadataOutput(
-                result, exp_tsv='0\tfoo\nid1\tbar\n',
+                result, exp_tsv=exp_tsv,
                 exp_yaml="metadata: !metadata 'metadata.tsv'")
+
+    def test_categorical_metadata_column(self):
+        result = self._run_command(
+            'identity-with-categorical-metadata-column', '--help')
+        help_text = result.output
+
+        self.assertIn('--m-metadata-column MetadataColumn[Categorical]',
+                      help_text)
+
+        result = self._run_command(
+            'identity-with-categorical-metadata-column', '--i-ints',
+            self.input_artifact, '--o-out', self.output_artifact,
+            '--m-metadata-file', self.metadata_file_mixed_types,
+            '--m-metadata-column', 'strings', '--verbose')
+
+        exp_tsv = 'id\tstrings\n#q2:types\tcategorical\nid1\tabc\nid2\tdef\n'
+        self._assertMetadataOutput(
+            result, exp_tsv=exp_tsv,
+            exp_yaml="metadata: !metadata 'metadata.tsv'")
+
+    def test_categorical_metadata_column_type_mismatch(self):
+        result = self._run_command(
+            'identity-with-categorical-metadata-column', '--i-ints',
+            self.input_artifact, '--o-out', self.output_artifact,
+            '--m-metadata-file', self.metadata_file_mixed_types,
+            '--m-metadata-column', 'numbers')
+
+        self.assertEqual(result.exit_code, 1)
+        err_msg = ("Metadata column 'numbers' is numeric. Option "
+                   "--m-metadata-column expects the column to be categorical.")
+        self.assertIn(err_msg, result.output)
+
+    def test_numeric_metadata_column(self):
+        result = self._run_command(
+            'identity-with-numeric-metadata-column', '--help')
+        help_text = result.output
+
+        self.assertIn('--m-metadata-column MetadataColumn[Numeric]', help_text)
+
+        result = self._run_command(
+            'identity-with-numeric-metadata-column', '--i-ints',
+            self.input_artifact, '--o-out', self.output_artifact,
+            '--m-metadata-file', self.metadata_file_mixed_types,
+            '--m-metadata-column', 'numbers', '--verbose')
+
+        exp_tsv = 'id\tnumbers\n#q2:types\tnumeric\nid1\t42.0\nid2\t-1.5\n'
+        self._assertMetadataOutput(
+            result, exp_tsv=exp_tsv,
+            exp_yaml="metadata: !metadata 'metadata.tsv'")
+
+    def test_numeric_metadata_column_type_mismatch(self):
+        result = self._run_command(
+            'identity-with-numeric-metadata-column', '--i-ints',
+            self.input_artifact, '--o-out', self.output_artifact,
+            '--m-metadata-file', self.metadata_file_mixed_types,
+            '--m-metadata-column', 'strings')
+
+        self.assertEqual(result.exit_code, 1)
+        err_msg = ("Metadata column 'strings' is categorical. Option "
+                   "--m-metadata-column expects the column to be numeric.")
+        self.assertIn(err_msg, result.output)
+
+
+if __name__ == "__main__":
+    unittest.main()

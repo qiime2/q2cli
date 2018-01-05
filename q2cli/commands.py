@@ -24,18 +24,40 @@ class RootCommand(click.MultiCommand):
     ])
 
     def __init__(self, *args, **kwargs):
+        import re
         import sys
-        invalid = []
+
         unicodes = ["\u2018", "\u2019", "\u201C", "\u201D", "\u2014"]
+        category_regex = re.compile(r'--m-(\S+)-category')
+
+        invalid_chars = []
+        categories = []
         for command in sys.argv:
             if any(x in command for x in unicodes):
-                invalid.append(command)
-        if invalid:
-            click.secho("Error: Detected invalid character in: %s\n"
-                        "Verify the correct quotes or dashes (ASCII) are "
-                        "being used." %
-                        ', '.join(invalid), err=True, fg='red', bold=True)
+                invalid_chars.append(command)
+
+            match = category_regex.fullmatch(command)
+            if match is not None:
+                param_name, = match.groups()
+                # Maps old-style option name to new name.
+                categories.append((command, '--m-%s-column' % param_name))
+
+        if invalid_chars or categories:
+            if invalid_chars:
+                click.secho("Error: Detected invalid character in: %s\n"
+                            "Verify the correct quotes or dashes (ASCII) are "
+                            "being used." % ', '.join(invalid_chars),
+                            err=True, fg='red', bold=True)
+            if categories:
+                old_to_new_names = '\n'.join(
+                    'Instead of %s, trying using %s' % (old, new)
+                    for old, new in categories)
+                msg = ("Error: The following options no longer exist because "
+                       "metadata *categories* are now called metadata "
+                       "*columns* in QIIME 2.\n\n%s" % old_to_new_names)
+                click.secho(msg, err=True, fg='red', bold=True)
             sys.exit(-1)
+
         super().__init__(*args, **kwargs)
 
         # Plugin state for current deployment that will be loaded from cache.
