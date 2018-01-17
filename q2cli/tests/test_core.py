@@ -120,3 +120,7 @@ class TestOptionDecorator(unittest.TestCase):
     def test_cls_override(self):
         with self.assertRaisesRegex(ValueError, 'override `cls=q2cli.Option`'):
             q2cli.option('--bar', cls=click.Option)
+
+
+if __name__ == "__main__":
+    unittest.main()

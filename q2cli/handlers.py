@@ -395,9 +395,20 @@ def parameter_handler_factory(name, repr, ast, default=NoDefault,
                               description=None):
     if ast['name'] == 'Metadata':
         return MetadataHandler(name, default=default, description=description)
-    elif ast['name'] == 'MetadataCategory':
-        return MetadataCategoryHandler(name, default=default,
-                                       description=description)
+    elif ast['name'] == 'MetadataColumn':
+        if repr == 'MetadataColumn[Categorical]':
+            column_types = ('categorical',)
+        elif repr == 'MetadataColumn[Numeric]':
+            column_types = ('numeric',)
+        elif (repr == 'MetadataColumn[Categorical | Numeric]' or
+              repr == 'MetadataColumn[Numeric | Categorical]'):
+            column_types = ('categorical', 'numeric')
+        else:
+            raise NotImplementedError(
+                "Parameter %r is type %s, which is not currently supported by "
+                "this interface." % (name, repr))
+        return MetadataColumnHandler(name, repr, column_types, default=default,
+                                     description=description)
     else:
         return RegularParameterHandler(name, repr, ast, default=default,
                                        description=description)
@@ -471,19 +482,24 @@ class MetadataHandler(Handler):
         return metadata[0].merge(*metadata[1:])
 
 
-class MetadataCategoryHandler(Handler):
-    def __init__(self, name, default=NoDefault, description=None):
+class MetadataColumnHandler(Handler):
+    def __init__(self, name, repr, column_types, default=NoDefault,
+                 description=None):
         if default is not NoDefault and default is not None:
             raise TypeError(
-                "The only supported default value for MetadataCategory is "
-                "`None`. Found this default value: %r" % (default,))
+                "The only supported default value for MetadataColumn "
+                "subclasses is `None`. Found this default value: %r"
+                % (default,))
 
         super().__init__(name, prefix='m_', default=default,
                          description=description)
-        self.click_name += '_category'
+        self.click_name += '_column'
+
+        self.repr = repr
+        self.column_types = column_types
 
         # Not passing `description` to metadata handler because `description`
-        # applies to the metadata category (`self`).
+        # applies to the metadata column (`self`).
         self.metadata_handler = MetadataHandler(name, default=default)
 
     def get_click_options(self):
@@ -491,20 +507,22 @@ class MetadataCategoryHandler(Handler):
 
         name = '--' + self.cli_name
         type = str
-        help = ('Category from metadata file or artifact viewable as '
-                'metadata.')
+        help = 'Column from metadata file or artifact viewable as metadata.'
 
         if self.default is None:
             requirement = '[optional]'
         else:
             requirement = '[required]'
 
-        option = q2cli.Option([name], type=type, help=help)
+        option = q2cli.Option([name], type=type, help=help, metavar=self.repr)
 
         yield from self.metadata_handler.get_click_options()
         yield self._add_description(option, requirement)
 
     def get_value(self, arguments, fallback=None):
+        import os
+        import q2cli.util
+
         # Attempt to find all options before erroring so that all handlers'
         # missing options can be displayed to the user.
         try:
@@ -514,7 +532,7 @@ class MetadataCategoryHandler(Handler):
             pass
 
         try:
-            category_value = self._locate_value(arguments, fallback)
+            column_value = self._locate_value(arguments, fallback)
         except ValueNotFoundException:
             pass
 
@@ -523,19 +541,42 @@ class MetadataCategoryHandler(Handler):
             self.missing = missing
             raise ValueNotFoundException()
 
-        # If metadata category is optional, there is a chance for metadata to
-        # be provided without a metadata category, or vice versa.
-        if metadata_value is None and category_value is not None:
+        # If metadata column is optional, there is a chance for metadata to be
+        # provided without a metadata column, or vice versa.
+        if metadata_value is None and column_value is not None:
             self.missing.append(self.metadata_handler.cli_name)
             raise ValueNotFoundException()
-        elif metadata_value is not None and category_value is None:
+        elif metadata_value is not None and column_value is None:
             self.missing.append(self.cli_name)
             raise ValueNotFoundException()
 
-        if metadata_value is None and category_value is None:
+        if metadata_value is None and column_value is None:
             return None
         else:
-            return metadata_value.get_category(category_value)
+            try:
+                metadata_column = metadata_value.get_column(column_value)
+                if metadata_column.type not in self.column_types:
+                    # This exception, and any exceptions raised by
+                    # `.get_column()` above, will be handled below in the
+                    # `except` block.
+                    if len(self.column_types) == 1:
+                        suffix = '%s.' % self.column_types[0]
+                    else:
+                        suffix = ('one of the following types: %s' %
+                                  ', '.join(self.column_types))
+                    raise TypeError(
+                        "Metadata column %r is %s. Option --%s expects the "
+                        "column to be %s" %
+                        (column_value, metadata_column.type, self.cli_name,
+                         suffix))
+            except Exception as e:
+                header = ("There was an issue with retrieving column %r from "
+                          "the metadata:" % column_value)
+                with open(os.devnull, 'w') as dev_null:
+                    q2cli.util.exit_with_error(
+                        e, header=header, file=dev_null,
+                        suppress_footer=True)
+            return metadata_column
 
 
 class RegularParameterHandler(GeneratedHandler):
