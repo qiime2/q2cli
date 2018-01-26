@@ -471,10 +471,10 @@ class MetadataHandler(Handler):
                             suppress_footer=True)
             else:
                 try:
-                    metadata.append(qiime2.Metadata.from_artifact(artifact))
+                    metadata.append(artifact.view(qiime2.Metadata))
                 except Exception as e:
                     header = ("There was an issue with viewing the artifact "
-                              "%s as metadata:" % path)
+                              "%s as QIIME 2 Metadata:" % path)
                     with open(os.devnull, 'w') as dev_null:
                         q2cli.util.exit_with_error(
                             e, header=header, file=dev_null,
