@@ -479,7 +479,10 @@ class MetadataHandler(Handler):
                         q2cli.util.exit_with_error(
                             e, header=header, file=dev_null,
                             suppress_footer=True)
-        return metadata[0].merge(*metadata[1:])
+        if len(metadata) == 1:
+            return metadata[0]
+        else:
+            return metadata[0].merge(*metadata[1:])
 
 
 class MetadataColumnHandler(Handler):

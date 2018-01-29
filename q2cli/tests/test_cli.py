@@ -354,6 +354,11 @@ class MetadataTestsBase(unittest.TestCase):
         with open(self.metadata_file1, 'w') as f:
             f.write('id\tcol1\n0\tfoo\nid1\tbar\n')
 
+        self.metadata_file_alt_id_header = os.path.join(
+                self.tempdir, 'metadata-alt-id-header.tsv')
+        with open(self.metadata_file_alt_id_header, 'w') as f:
+            f.write('#SampleID\tcol1\n0\tfoo\nid1\tbar\n')
+
         self.metadata_file2 = os.path.join(self.tempdir, 'metadata2.tsv')
         with open(self.metadata_file2, 'w') as f:
             f.write('id\tcol2\n0\tbaz\nid1\tbaa\n')
@@ -433,13 +438,35 @@ class TestMetadataSupport(MetadataTestsBase):
                 result, exp_tsv=exp_tsv,
                 exp_yaml="metadata: !metadata 'metadata.tsv'")
 
+    def test_single_metadata_alt_id_header(self):
+        # Test that the Metadata ID header is preserved, and not normalized to
+        # 'id' (this used to be a bug). ID header normalization should only
+        # happen when 2+ Metadata are being merged.
+        for command in ('identity-with-metadata',
+                        'identity-with-optional-metadata'):
+            result = self._run_command(
+                command, '--i-ints', self.input_artifact, '--o-out',
+                self.output_artifact, '--m-metadata-file',
+                self.metadata_file_alt_id_header, '--verbose')
+
+            exp_tsv = (
+                '#SampleID\tcol1\n'
+                '#q2:types\tcategorical\n'
+                '0\tfoo\n'
+                'id1\tbar\n'
+            )
+            self._assertMetadataOutput(
+                result, exp_tsv=exp_tsv,
+                exp_yaml="metadata: !metadata 'metadata.tsv'")
+
     def test_multiple_metadata(self):
         for command in ('identity-with-metadata',
                         'identity-with-optional-metadata'):
             result = self._run_command(
                 command, '--i-ints', self.input_artifact, '--o-out',
-                self.output_artifact, '--m-metadata-file', self.metadata_file1,
-                '--m-metadata-file', self.metadata_file2, '--m-metadata-file',
+                self.output_artifact, '--m-metadata-file',
+                self.metadata_file_alt_id_header, '--m-metadata-file',
+                self.metadata_file2, '--m-metadata-file',
                 self.metadata_artifact, '--verbose')
 
             exp_tsv = (
