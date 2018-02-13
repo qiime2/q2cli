@@ -94,7 +94,7 @@ class TestInspectMetadata(unittest.TestCase):
 
         self.assertEqual(result.exit_code, 1)
         print(result.output)
-        self.assertIn("Invalid header: ['wrong'", result.output)
+        self.assertIn("'wrong'", result.output)
 
     def test_tsv(self):
         result = self.runner.invoke(tools, [
