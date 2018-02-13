@@ -116,9 +116,7 @@ def import_data(type, input_path, output_path, source_format):
                                                    view_type=source_format)
     except qiime2.plugin.ValidationError as e:
         header = 'There was a problem importing %s:' % input_path
-        with open(os.devnull, 'w') as dev_null:
-            q2cli.util.exit_with_error(e, header=header, file=dev_null,
-                                       suppress_footer=True)
+        q2cli.util.exit_with_error(e, header=header, traceback=None)
     except Exception as e:
         header = 'An unexpected error has occurred:'
         q2cli.util.exit_with_error(e, header=header)
@@ -143,6 +141,62 @@ def peek(path):
     if metadata.format is not None:
         click.secho("Data format: ", fg="green", nl=False)
         click.secho(metadata.format)
+
+
+@tools.command('inspect-metadata',
+               short_help='Inpect columns available in metadata.')
+@q2cli.option('--tsv/--no-tsv', default=False)
+@click.argument('path', type=click.Path(exists=True, file_okay=True,
+                                        dir_okay=False, readable=True))
+@q2cli.util.pretty_failure(traceback=None)
+def inspect_metadata(path, tsv, failure):
+    import qiime2
+    import qiime2.sdk
+
+    try:
+        artifact = qiime2.sdk.Result.load(path)
+    except Exception:
+        metadata = qiime2.Metadata.load(path)
+    else:
+        if isinstance(artifact, qiime2.Visualization):
+            raise Exception("Visualizations do not have metadata.")
+        elif artifact.has_metadata():
+            metadata = artifact.view(qiime2.Metadata)
+        else:
+            raise Exception("Artifact of %r does not have metadata."
+                            % artifact.type)
+
+    # we aren't expecting errors below this point, so set traceback to default
+    failure.traceback = 'stderr'
+    failure.header = "An unexpected error has occurred:"
+
+    COLUMN_NAME = "COLUMN NAME"
+    COLUMN_TYPE = "TYPE"
+    max_name_len = max([len(n) for n in metadata.columns]
+                       + [len(COLUMN_NAME)])
+    max_type_len = max([len(p.type) for p in metadata.columns.values()]
+                       + [len(COLUMN_TYPE)])
+
+    if tsv:
+        import csv
+        import io
+
+        def formatter(*row):
+            # This is gross, but less gross than robust TSV writing.
+            with io.StringIO() as fh:
+                writer = csv.writer(fh, dialect='excel-tab', lineterminator='')
+                writer.writerow(row)
+                return fh.getvalue()
+    else:
+        formatter = ("{0:>%d}  {1:%d}" % (max_name_len, max_type_len)).format
+
+    click.secho(formatter(COLUMN_NAME, COLUMN_TYPE), bold=True)
+    if not tsv:
+        click.secho(formatter("=" * max_name_len, "=" * max_type_len),
+                    bold=True)
+
+    for name, props in metadata.columns.items():
+        click.echo(formatter(name, props.type))
 
 
 @tools.command(short_help='View a QIIME 2 Visualization.',
@@ -272,9 +326,7 @@ def validate(path, level):
     except qiime2.plugin.ValidationError as e:
         header = 'Artifact %s does not appear to be valid at level=%s:' % (
                 path, level)
-        with open(os.devnull, 'w') as dev_null:
-            q2cli.util.exit_with_error(e, header=header, file=dev_null,
-                                       suppress_footer=True)
+        q2cli.util.exit_with_error(e, header=header, traceback=None)
     except Exception as e:
         header = ('An unexpected error has occurred while attempting to '
                   'validate artifact %s:' % path)
