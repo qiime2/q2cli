@@ -654,7 +654,7 @@ class TestMetadataColumnSupport(MetadataTestsBase):
             '--m-metadata-file', self.metadata_file_mixed_types,
             '--m-metadata-column', 'numbers', '--verbose')
 
-        exp_tsv = 'id\tnumbers\n#q2:types\tnumeric\nid1\t42.0\nid2\t-1.5\n'
+        exp_tsv = 'id\tnumbers\n#q2:types\tnumeric\nid1\t42\nid2\t-1.5\n'
         self._assertMetadataOutput(
             result, exp_tsv=exp_tsv,
             exp_yaml="metadata: !metadata 'metadata.tsv'")
