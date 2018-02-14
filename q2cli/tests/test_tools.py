@@ -131,7 +131,5 @@ class TestInspectMetadata(unittest.TestCase):
         self.assertIn("COLUMNS:  4", result.output)
 
 
-
-
 if __name__ == "__main__":
     unittest.main()

@@ -195,9 +195,11 @@ def inspect_metadata(paths, tsv, failure):
     if not tsv:
         click.secho(formatter("=" * max_name_len, "=" * max_type_len),
                     bold=True)
-        click.secho(("{0:>%d}  " % max_name_len).format("IDS:"), bold=True, nl=False)
+        click.secho(("{0:>%d}  " % max_name_len).format("IDS:"),
+                    bold=True, nl=False)
         click.echo(metadata.id_count)
-        click.secho(("{0:>%d}  " % max_name_len).format("COLUMNS:"), bold=True, nl=False)
+        click.secho(("{0:>%d}  " % max_name_len).format("COLUMNS:"),
+                    bold=True, nl=False)
         click.echo(metadata.column_count)
 
 
