@@ -29,7 +29,7 @@ class TestInspectMetadata(unittest.TestCase):
         self.metadata_file_mixed_types = os.path.join(
                 self.tempdir, 'metadata-mixed-types.tsv')
         with open(self.metadata_file_mixed_types, 'w') as f:
-            f.write('id\tnumbers\tstrings\nid1\t42\tabc\nid2\t-1.5\tdef\n')
+            f.write('id\tnumbers\tstrings\n0\t42\tabc\n1\t-1.5\tdef\n')
 
         self.bad_metadata_file = os.path.join(
                 self.tempdir, 'bad-metadata.tsv')
@@ -56,12 +56,15 @@ class TestInspectMetadata(unittest.TestCase):
         self.assertIn("===========  ===========", result.output)
         self.assertIn("a  categorical", result.output)
         self.assertIn("b  categorical", result.output)
+        self.assertIn("IDS:  1", result.output)
+        self.assertIn("COLUMNS:  2", result.output)
 
     def test_artifact_no_metadata(self):
         result = self.runner.invoke(tools, ['inspect-metadata', self.ints1])
 
         self.assertEqual(result.exit_code, 1)
-        self.assertIn("IntSequence1 does not have metadata", result.output)
+        self.assertIn("IntSequence1 cannot be viewed as QIIME 2 metadata",
+                      result.output)
 
     def test_visualization(self):
         # make a viz first:
@@ -76,7 +79,8 @@ class TestInspectMetadata(unittest.TestCase):
         result = self.runner.invoke(tools, ['inspect-metadata', viz_path])
 
         self.assertEqual(result.exit_code, 1)
-        self.assertIn("Visualizations do not have metadata", result.output)
+        self.assertIn("Visualizations cannot be viewed as QIIME 2 metadata",
+                      result.output)
 
     def test_metadata_file(self):
         result = self.runner.invoke(
@@ -87,13 +91,14 @@ class TestInspectMetadata(unittest.TestCase):
         self.assertIn("===========  ===========", result.output)
         self.assertIn("numbers  numeric", result.output)
         self.assertIn("strings  categorical", result.output)
+        self.assertIn("IDS:  2", result.output)
+        self.assertIn("COLUMNS:  2", result.output)
 
     def test_bad_metadata_file(self):
         result = self.runner.invoke(
             tools, ['inspect-metadata', self.bad_metadata_file])
 
         self.assertEqual(result.exit_code, 1)
-        print(result.output)
         self.assertIn("'wrong'", result.output)
 
     def test_tsv(self):
@@ -106,6 +111,26 @@ class TestInspectMetadata(unittest.TestCase):
         self.assertIn("strings\tcategorical", result.output)
 
         self.assertNotIn("=", result.output)
+        self.assertNotIn("IDS:", result.output)
+        self.assertNotIn("COLUMNS:", result.output)
+
+    def test_merged_metadata(self):
+        result = self.runner.invoke(tools, [
+            'inspect-metadata',
+            self.metadata_artifact,
+            self.metadata_file_mixed_types])
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertIn('COLUMN NAME  TYPE', result.output)
+        self.assertIn("===========  ===========", result.output)
+        self.assertIn("a  categorical", result.output)
+        self.assertIn("b  categorical", result.output)
+        self.assertIn("numbers  numeric", result.output)
+        self.assertIn("strings  categorical", result.output)
+        self.assertIn("IDS:  1", result.output)  # only 1 ID is shared
+        self.assertIn("COLUMNS:  4", result.output)
+
+
 
 
 if __name__ == "__main__":
