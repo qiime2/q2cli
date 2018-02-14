@@ -366,13 +366,23 @@ class ArtifactHandler(GeneratedHandler):
         yield self._add_description(option, requirement)
 
     def get_value(self, arguments, fallback=None):
-        import qiime2
+        import qiime2.sdk
 
         path = self._locate_value(arguments, fallback)
         if path is None:
             return None
         else:
-            return qiime2.Artifact.load(path)
+            artifact = qiime2.sdk.Result.load(path)
+            if isinstance(artifact, qiime2.sdk.Visualization):
+                import click
+                ctx = click.get_current_context()
+                click.echo(ctx.get_usage() + '\n', err=True)
+                click.secho("Error: Option --%s was given a visualization "
+                            "(.qzv), expected an artifact (.qza)."
+                            % self.cli_name, err=True, fg='red', bold=True)
+                ctx.exit(1)
+            else:
+                return artifact
 
 
 class ResultHandler(GeneratedHandler):
@@ -446,7 +456,6 @@ class MetadataHandler(Handler):
         yield self._add_description(option, requirement)
 
     def get_value(self, arguments, fallback=None):
-        import os
         import qiime2
         import q2cli.util
 
@@ -465,20 +474,16 @@ class MetadataHandler(Handler):
                 except Exception as e:
                     header = ("There was an issue with loading the file %s as "
                               "metadata:" % path)
-                    with open(os.devnull, 'w') as dev_null:
-                        q2cli.util.exit_with_error(
-                            e, header=header, file=dev_null,
-                            suppress_footer=True)
+                    q2cli.util.exit_with_error(e, header=header,
+                                               traceback=None)
             else:
                 try:
                     metadata.append(artifact.view(qiime2.Metadata))
                 except Exception as e:
                     header = ("There was an issue with viewing the artifact "
                               "%s as QIIME 2 Metadata:" % path)
-                    with open(os.devnull, 'w') as dev_null:
-                        q2cli.util.exit_with_error(
-                            e, header=header, file=dev_null,
-                            suppress_footer=True)
+                    q2cli.util.exit_with_error(e, header=header,
+                                               traceback=None)
         if len(metadata) == 1:
             return metadata[0]
         else:
@@ -523,7 +528,6 @@ class MetadataColumnHandler(Handler):
         yield self._add_description(option, requirement)
 
     def get_value(self, arguments, fallback=None):
-        import os
         import q2cli.util
 
         # Attempt to find all options before erroring so that all handlers'
@@ -575,10 +579,7 @@ class MetadataColumnHandler(Handler):
             except Exception as e:
                 header = ("There was an issue with retrieving column %r from "
                           "the metadata:" % column_value)
-                with open(os.devnull, 'w') as dev_null:
-                    q2cli.util.exit_with_error(
-                        e, header=header, file=dev_null,
-                        suppress_footer=True)
+                q2cli.util.exit_with_error(e, header=header, traceback=None)
             return metadata_column
 
 

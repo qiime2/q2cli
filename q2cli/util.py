@@ -31,31 +31,61 @@ def to_cli_name(name):
     return name.replace('_', '-')
 
 
-def exit_with_error(e, header='An error has been encountered:', file=None,
-                    suppress_footer=False):
+def exit_with_error(e, header='An error has been encountered:',
+                    traceback='stderr', status=1):
     import sys
-    import traceback
+    import traceback as tb
     import textwrap
     import click
 
-    if file is None:
-        file = sys.stderr
-        footer = 'See above for debug info.'
-    else:
-        footer = 'Debug info has been saved to %s' % file.name
+    footer = []  # footer only exists if traceback is set
+    tb_file = None
+    if traceback == 'stderr':
+        tb_file = sys.stderr
+        footer = ['See above for debug info.']
+    elif traceback is not None:
+        tb_file = traceback
+        footer = ['Debug info has been saved to %s' % tb_file.name]
 
     error = textwrap.indent(str(e), '  ')
+    segments = [header, error] + footer
 
-    segments = [header, error]
-    if not suppress_footer:
-        segments.append(footer)
-
-    traceback.print_exception(type(e), e, e.__traceback__, file=file)
-    file.write('\n')
+    if traceback is not None:
+        tb.print_exception(type(e), e, e.__traceback__, file=tb_file)
+        tb_file.write('\n')
 
     click.secho('\n\n'.join(segments), fg='red', bold=True, err=True)
 
-    click.get_current_context().exit(1)
+    if not footer:
+        click.echo(err=True)  # extra newline to look normal
+
+    click.get_current_context().exit(status)
+
+
+class pretty_failure:
+    def __init__(self, header='An error has been encountered:',
+                 traceback='stderr', status=1):
+        self.header = header
+        self.traceback = traceback
+        self.status = status
+
+    def __call__(self, function):
+        def wrapped(*args, **kwargs):
+            with self:
+                return function(*args, **kwargs, failure=self)
+        # not using functools.wraps to keep import overhead low
+        # click only seems to need the __name__
+        wrapped.__name__ = function.__name__
+        return wrapped
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_val is not None:
+            exit_with_error(exc_val, self.header, self.traceback, self.status)
+
+        return True
 
 
 def convert_primitive(ast):

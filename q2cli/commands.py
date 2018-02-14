@@ -247,11 +247,15 @@ class ActionCommand(click.Command):
         except Exception as e:
             header = ('Plugin error from %s:'
                       % q2cli.util.to_cli_name(self.plugin['name']))
-            q2cli.util.exit_with_error(e, header=header, file=log)
+            q2cli.util.exit_with_error(e, header=header, traceback=log)
         else:
             cleanup_logfile = True
         finally:
-            if log and cleanup_logfile:
+            # OS X will reap temporary files that haven't been touched in
+            # 36 hours, double check that the log is still on the filesystem
+            # before trying to delete. Otherwise this will fail and the
+            # output won't be written.
+            if log and cleanup_logfile and os.path.exists(log.name):
                 log.close()
                 os.remove(log.name)
 
