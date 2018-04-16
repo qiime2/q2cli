@@ -100,28 +100,64 @@ class RootCommand(click.MultiCommand):
         except KeyError:
             return None
 
-        support = 'Getting user support: %s' % plugin['user_support_text']
-        citing = 'Citing this plugin: %s' % plugin['citation_text']
-        website = 'Plugin website: %s' % plugin['website']
-        description = 'Description: %s' % plugin['description']
-        help_ = '\n\n'.join([description, website, support, citing])
-
-        return PluginCommand(plugin, name=name,
-                             short_help=plugin['short_description'],
-                             help=help_)
+        return PluginCommand(plugin, name)
 
 
 class PluginCommand(click.MultiCommand):
     """Provides ActionCommands based on available Actions"""
-    def __init__(self, plugin, *args, **kwargs):
+    def __init__(self, plugin, name, *args, **kwargs):
         import q2cli.util
 
-        super().__init__(*args, **kwargs)
         # the cli currently doesn't differentiate between methods
         # and visualizers, it treats them generically as Actions
         self._plugin = plugin
         self._action_lookup = {q2cli.util.to_cli_name(id): a for id, a in
                                plugin['actions'].items()}
+
+        support = 'Getting user support: %s' % plugin['user_support_text']
+        website = 'Plugin website: %s' % plugin['website']
+        description = 'Description: %s' % plugin['description']
+        help_ = '\n\n'.join([description, website, support])
+
+        params = [
+            click.Option(('--version',), is_flag=True, expose_value=False,
+                         is_eager=True, callback=self._get_version,
+                         help='Show the version and exit.'),
+
+            click.Option(('--citations',), is_flag=True, expose_value=False,
+                         is_eager=True, callback=self._get_citations,
+                         help='Show citations and exit.')
+        ]
+
+        super().__init__(name, *args, short_help=plugin['short_description'],
+                         help=help_, params=params, **kwargs)
+
+    def _get_version(self, ctx, param, value):
+        if not value or ctx.resilient_parsing:
+            return
+
+        click.echo('%s version %s' % (self._plugin['name'],
+                                      self._plugin['version']))
+        ctx.exit()
+
+    def _get_citations(self, ctx, param, value):
+        if not value or ctx.resilient_parsing:
+            return
+
+        import qiime2.sdk
+        import io
+
+        pm = qiime2.sdk.PluginManager()
+        plugin = pm.plugins[self._plugin['name']]
+        if plugin.citations:
+            with io.StringIO() as fh:
+                plugin.citations.save(fh)
+                click.echo(fh.getvalue(), nl=False)
+            ctx.exit()
+        else:
+            click.secho('No citations found.', fg='yellow')
+            ctx.exit(1)
+
 
     def list_commands(self, ctx):
         return sorted(self._action_lookup)
