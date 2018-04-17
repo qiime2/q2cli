@@ -123,10 +123,7 @@ class PluginCommand(click.MultiCommand):
             click.Option(('--version',), is_flag=True, expose_value=False,
                          is_eager=True, callback=self._get_version,
                          help='Show the version and exit.'),
-
-            click.Option(('--citations',), is_flag=True, expose_value=False,
-                         is_eager=True, callback=self._get_citations,
-                         help='Show citations and exit.')
+            q2cli.util.citations_option(self._get_citation_records)
         ]
 
         super().__init__(name, *args, short_help=plugin['short_description'],
@@ -140,24 +137,10 @@ class PluginCommand(click.MultiCommand):
                                       self._plugin['version']))
         ctx.exit()
 
-    def _get_citations(self, ctx, param, value):
-        if not value or ctx.resilient_parsing:
-            return
-
+    def _get_citation_records(self):
         import qiime2.sdk
-        import io
-
         pm = qiime2.sdk.PluginManager()
-        plugin = pm.plugins[self._plugin['name']]
-        if plugin.citations:
-            with io.StringIO() as fh:
-                plugin.citations.save(fh)
-                click.echo(fh.getvalue(), nl=False)
-            ctx.exit()
-        else:
-            click.secho('No citations found.', fg='yellow')
-            ctx.exit(1)
-
+        return pm.plugins[self._plugin['name']].citations
 
     def list_commands(self, ctx):
         return sorted(self._action_lookup)
@@ -228,6 +211,8 @@ class ActionCommand(click.Command):
         return handlers
 
     def get_click_parameters(self):
+        import q2cli.util
+
         # Handlers may provide more than one click.Option
         for handler in self.generated_handlers.values():
             yield from handler.get_click_options()
@@ -239,9 +224,19 @@ class ActionCommand(click.Command):
         yield from self.verbose_handler.get_click_options()
         yield from self.quiet_handler.get_click_options()
 
+        yield q2cli.util.citations_option(self._get_citation_records)
+
+    def _get_citation_records(self):
+        return self._get_action().citations
+
+    def _get_action(self):
+        import qiime2.sdk
+        pm = qiime2.sdk.PluginManager()
+        plugin = pm.plugins[self.plugin['name']]
+        return plugin.actions[self.action['id']]
+
     def __call__(self, **kwargs):
         """Called when user hits return, **kwargs are Dict[click_names, Obj]"""
-        import importlib
         import itertools
         import os
         import qiime2.util
@@ -262,10 +257,7 @@ class ActionCommand(click.Command):
                 click.echo(_OUTPUT_OPTION_ERR_MSG, err=True)
             ctx.exit(1)
 
-        module_path = 'qiime2.plugins.%s.actions' % self.plugin['id']
-        actions_module = importlib.import_module(module_path)
-        action = getattr(actions_module, self.action['id'])
-
+        action = self._get_action()
         # `qiime2.util.redirected_stdio` defaults to stdout/stderr when
         # supplied `None`.
         log = None
