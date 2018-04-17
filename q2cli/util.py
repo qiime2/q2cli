@@ -144,7 +144,7 @@ def citations_option(get_citation_records):
                 click.echo(fh.getvalue(), nl=False)
             ctx.exit()
         else:
-            click.secho('No citations found.', fg='yellow')
+            click.secho('No citations found.', fg='yellow', err=True)
             ctx.exit(1)
 
     return click.Option(('--citations',), is_flag=True, expose_value=False,
