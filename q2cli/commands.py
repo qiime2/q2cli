@@ -275,6 +275,9 @@ class ActionCommand(click.Command):
         except Exception as e:
             header = ('Plugin error from %s:'
                       % q2cli.util.to_cli_name(self.plugin['name']))
+            if verbose:
+                # log is not a file
+                log = 'stderr'
             q2cli.util.exit_with_error(e, header=header, traceback=log)
         else:
             cleanup_logfile = True
@@ -313,9 +316,14 @@ class ActionCommand(click.Command):
                 name = item['name']
                 handler = self.generated_handlers[name]
                 try:
-                    arguments[name] = handler.get_value(
-                        kwargs, fallback=cmd_fallback
-                    )
+                    if isinstance(handler,
+                                  (q2cli.handlers.MetadataHandler,
+                                   q2cli.handlers.MetadataColumnHandler)):
+                        arguments[name] = handler.get_value(
+                            verbose, kwargs, fallback=cmd_fallback)
+                    else:
+                        arguments[name] = handler.get_value(
+                            kwargs, fallback=cmd_fallback)
                 except q2cli.handlers.ValueNotFoundException:
                     missing += handler.missing
 

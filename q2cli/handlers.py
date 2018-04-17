@@ -455,7 +455,7 @@ class MetadataHandler(Handler):
         option = q2cli.Option([name], type=type, help=help, multiple=True)
         yield self._add_description(option, requirement)
 
-    def get_value(self, arguments, fallback=None):
+    def get_value(self, verbose, arguments, fallback=None):
         import qiime2
         import q2cli.util
 
@@ -474,16 +474,18 @@ class MetadataHandler(Handler):
                 except Exception as e:
                     header = ("There was an issue with loading the file %s as "
                               "metadata:" % path)
+                    tb = 'stderr' if verbose else None
                     q2cli.util.exit_with_error(e, header=header,
-                                               traceback=None)
+                                               traceback=tb)
             else:
                 try:
                     metadata.append(artifact.view(qiime2.Metadata))
                 except Exception as e:
                     header = ("There was an issue with viewing the artifact "
                               "%s as QIIME 2 Metadata:" % path)
+                    tb = 'stderr' if verbose else None
                     q2cli.util.exit_with_error(e, header=header,
-                                               traceback=None)
+                                               traceback=tb)
         if len(metadata) == 1:
             return metadata[0]
         else:
@@ -527,14 +529,14 @@ class MetadataColumnHandler(Handler):
         yield from self.metadata_handler.get_click_options()
         yield self._add_description(option, requirement)
 
-    def get_value(self, arguments, fallback=None):
+    def get_value(self, verbose, arguments, fallback=None):
         import q2cli.util
 
         # Attempt to find all options before erroring so that all handlers'
         # missing options can be displayed to the user.
         try:
-            metadata_value = self.metadata_handler.get_value(arguments,
-                                                             fallback=fallback)
+            metadata_value = self.metadata_handler.get_value(
+                verbose, arguments, fallback=fallback)
         except ValueNotFoundException:
             pass
 

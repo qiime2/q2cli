@@ -269,6 +269,19 @@ class CliTests(unittest.TestCase):
         self.assertEqual(viz.get_index_paths(), {'html': 'data/index.html',
                                                  'tsv': 'data/index.tsv'})
 
+    def test_verbose_shows_stacktrace(self):
+        qiime_cli = RootCommand()
+        command = qiime_cli.get_command(ctx=None, name='dummy-plugin')
+        output = os.path.join(self.tempdir, 'never-happens.qza')
+
+        result = self.runner.invoke(
+            command,
+            ['failing-pipeline', '--i-int-sequence', self.artifact1_path,
+             '--o-mapping', output, '--p-break-from', 'internal', '--verbose'])
+
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn('Traceback (most recent call last)', result.output)
+
 
 class TestOptionalArtifactSupport(unittest.TestCase):
     def setUp(self):
