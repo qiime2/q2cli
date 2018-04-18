@@ -360,3 +360,30 @@ def validate(path, level):
     else:
         click.secho('Artifact %s appears to be valid at level=%s.'
                     % (path, level), fg="green")
+
+
+@tools.command(short_help='Print citations for a QIIME 2 result.',
+               help='Print citations as a BibTex file (.bib) for a QIIME 2'
+                    ' result.')
+@click.argument('path', type=click.Path(exists=True, file_okay=True,
+                                        dir_okay=False, readable=True))
+def citations(path):
+    import qiime2.sdk
+    import io
+    ctx = click.get_current_context()
+
+    try:
+        result = qiime2.sdk.Result.load(path)
+    except Exception as e:
+        header = 'There was a problem loading %s as a QIIME 2 result:' % path
+        q2cli.util.exit_with_error(e, header=header)
+
+    if result.citations:
+        with io.StringIO() as fh:
+            result.citations.save(fh)
+            click.echo(fh.getvalue(), nl=False)
+        ctx.exit(0)
+    else:
+        click.secho('No citations found.', fg='yellow', err=True)
+        ctx.exit(1)
+

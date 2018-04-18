@@ -121,3 +121,32 @@ def convert_primitive(ast):
             raise NotImplementedError()
     else:
         return mapping[ast['name']]
+
+
+def citations_option(get_citation_records):
+    import click
+
+    def callback(ctx, param, value):
+        if not value or ctx.resilient_parsing:
+            return
+
+        records = get_citation_records()
+        if records:
+            import io
+            import qiime2.sdk
+
+            citations = qiime2.sdk.Citations(
+                [('key%d' % i, r) for i, r in enumerate(records)])
+            with io.StringIO() as fh:
+                fh.write('% use `qiime tools citations` on a QIIME 2 result'
+                         ' for complete list\n\n')
+                citations.save(fh)
+                click.echo(fh.getvalue(), nl=False)
+            ctx.exit()
+        else:
+            click.secho('No citations found.', fg='yellow', err=True)
+            ctx.exit(1)
+
+    return click.Option(('--citations',), is_flag=True, expose_value=False,
+                        is_eager=True, callback=callback,
+                        help='Show citations and exit.')
