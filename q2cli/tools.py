@@ -370,6 +370,7 @@ def validate(path, level):
 def citations(path):
     import qiime2.sdk
     import io
+    ctx = click.get_current_context()
 
     try:
         result = qiime2.sdk.Result.load(path)
@@ -377,6 +378,12 @@ def citations(path):
         header = 'There was a problem loading %s as a QIIME 2 result:' % path
         q2cli.util.exit_with_error(e, header=header)
 
-    with io.StringIO() as fh:
-        result.citations.save(fh)
-        click.echo(fh.getvalue(), nl=False)
+    if result.citations:
+        with io.StringIO() as fh:
+            result.citations.save(fh)
+            click.echo(fh.getvalue(), nl=False)
+        ctx.exit(0)
+    else:
+        click.secho('No citations found.', fg='yellow', err=True)
+        ctx.exit(1)
+
