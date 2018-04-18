@@ -386,4 +386,3 @@ def citations(path):
     else:
         click.secho('No citations found.', fg='yellow', err=True)
         ctx.exit(1)
-
