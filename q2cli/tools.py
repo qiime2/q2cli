@@ -144,7 +144,7 @@ def peek(path):
 
 
 @tools.command('inspect-metadata',
-               short_help='Inpect columns available in metadata.',
+               short_help='Inspect columns available in metadata.',
                help='Inspect metadata files or artifacts viewable as metadata.'
                     ' Providing multiple file paths to this command will merge'
                     ' the metadata.')
