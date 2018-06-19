@@ -162,14 +162,15 @@ class TestInspectMetadata(unittest.TestCase):
             '--output-format', 'IntSequenceFormatV2'
             ])
 
-        file = open(output_path, 'r').read()
+        with open(output_path, 'r') as f:
+            file = f.read()
         self.assertEqual(result.exit_code, 0)
         self.assertIn('0', file)
         self.assertIn('42', file)
         self.assertIn('43', file)
 
     def test_export_visualization_to_dir(self):
-        output_path = os.path.join(self.tempdir, 'output/viz.qza')
+        output_path = os.path.join(self.tempdir, 'output')
         self.runner.invoke(tools, [
             'export', '--input-path', self.viz, '--output-path', output_path
         ])
@@ -190,14 +191,16 @@ class TestInspectMetadata(unittest.TestCase):
         self.assertIn('--output-format', result.output)
 
     def test_export_path_file_is_replaced(self):
-        output_path = os.path.join(self.tempdir, 'helloWorld')
-        os.mkdir(output_path)
+        output_path = os.path.join(self.tempdir, 'output')
+        with open(output_path, 'w') as file:
+            file.write('HelloWorld')
         self.runner.invoke(tools, [
             'export', '--input-path', self.ints1, '--output-path', output_path,
-            '--output-format', 'IntSequence1'
+            '--output-format', 'IntSequenceFormatV2'
         ])
-
-        self.assertNotIn('helloWorld', os.listdir(output_path))
+        with open(output_path, 'r') as f:
+            file = f.read()
+        self.assertNotIn('HelloWorld', file)
 
 
 if __name__ == "__main__":
