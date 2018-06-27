@@ -19,26 +19,49 @@ def tools():
 
 
 @tools.command(name='export',
-               short_help='Export data from a QIIME 2 Artifact or '
-                          'Visualization.',
-               help="Export data from a QIIME 2 Artifact or Visualization. "
-                    "Exporting extracts the data stored in an Artifact or "
-                    "Visualization and will support exporting to multiple "
-                    "formats in the future. For now, the data is exported in "
-                    "the format it is stored within the Artifact or "
-                    "Visualization. Use 'qiime tools extract' to extract the "
-                    "Artifact or Visualization's entire archive.")
-@click.argument('path', type=click.Path(exists=True, file_okay=True,
-                                        dir_okay=False, readable=True))
-@q2cli.option('--output-dir', required=True,
-              type=click.Path(exists=False, file_okay=False, dir_okay=True,
+               short_help='Export data from a QIIME 2 Artifact'
+               'or a Visualization',
+               help='Exporting extracts (and optionally transforms) data'
+               'stored inside an Artifact or Visualization. Note that'
+               'Visualizations cannot be transformed with --output-format'
+               )
+@q2cli.option('--input-path', required=True,
+              type=click.Path(exists=True, file_okay=True,
+                              dir_okay=False, readable=True))
+@q2cli.option('--output-path', required=True,
+              type=click.Path(exists=False, file_okay=True, dir_okay=True,
                               writable=True),
               help='Directory where data should be exported to')
-def export_data(path, output_dir):
+@q2cli.option('--output-format', required=False,
+              help='Format which the data should be exported as. '
+              '--output-format cannot be used with Visualizations')
+def export_data(input_path, output_path, output_format):
     import qiime2.sdk
-
-    result = qiime2.sdk.Result.load(path)
-    result.export_data(output_dir)
+    import distutils
+    result = qiime2.sdk.Result.load(input_path)
+    if output_format is None:
+        result.export_data(output_path)
+        success = 'Exported %s to: %s' % (input_path, output_path)
+        click.secho(success, fg='green')
+    else:
+        if isinstance(result, qiime2.sdk.Visualization):
+            error = '--output-format cannot be used with visualizations'
+            click.secho(error, fg='red', bold=True, err=True)
+            click.get_current_context().exit(1)
+        else:
+            source = result.view(qiime2.sdk.parse_format(output_format))
+            if os.path.isfile(str(source)):
+                os.renames(str(source), output_path)
+                success = 'Exported %s in %s to: %s' % (input_path,
+                                                        output_format,
+                                                        output_path)
+                click.secho(success, fg='green')
+            else:
+                distutils.dir_util.copy_tree(str(source), output_path)
+                success = 'Exported %s in %s to: %s' % (input_path,
+                                                        output_format,
+                                                        output_path)
+                click.secho(success, fg='green')
 
 
 def show_importable_types(ctx, param, value):
