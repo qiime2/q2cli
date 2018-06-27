@@ -21,7 +21,7 @@ from q2cli.commands import RootCommand
 
 class TestInspectMetadata(unittest.TestCase):
     def setUp(self):
-        get_dummy_plugin()
+        dummy_plugin = get_dummy_plugin()
 
         self.runner = CliRunner()
         self.tempdir = tempfile.mkdtemp(prefix='qiime2-q2cli-test-temp-')
@@ -41,8 +41,13 @@ class TestInspectMetadata(unittest.TestCase):
             'Mapping', {'a': 'dog', 'b': 'cat'}).save(self.metadata_artifact)
 
         self.ints1 = os.path.join(self.tempdir, 'ints1.qza')
-        Artifact.import_data(
-            'IntSequence1', [0, 42, 43], list).save(self.ints1)
+        ints1 = Artifact.import_data(
+            'IntSequence1', [0, 42, 43], list)
+        ints1.save(self.ints1)
+
+        self.viz = os.path.join(self.tempdir, 'viz.qzv')
+        most_common_viz = dummy_plugin.actions['most_common_viz']
+        self.viz = most_common_viz(ints1).visualization.save(self.viz)
 
     def tearDown(self):
         shutil.rmtree(self.tempdir)
@@ -129,6 +134,73 @@ class TestInspectMetadata(unittest.TestCase):
         self.assertIn("strings  categorical", result.output)
         self.assertIn("IDS:  1", result.output)  # only 1 ID is shared
         self.assertIn("COLUMNS:  4", result.output)
+
+    def test_export_to_dir_w_format(self):
+        output_path = os.path.join(self.tempdir, 'output')
+        result = self.runner.invoke(tools, [
+            'export', '--input-path', self.ints1, '--output-path', output_path,
+            '--output-format', 'IntSequenceDirectoryFormat'
+        ])
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertTrue(os.path.isdir(output_path))
+
+    def test_export_to_dir_no_format(self):
+        output_path = os.path.join(self.tempdir, 'output')
+        self.runner.invoke(tools, [
+            'export', '--input-path', self.viz, '--output-path', output_path
+        ])
+
+        self.assertTrue(os.path.isdir(output_path))
+        self.assertIn('index.html', os.listdir(output_path))
+        self.assertIn('index.tsv', os.listdir(output_path))
+
+    def test_export_to_file(self):
+        output_path = os.path.join(self.tempdir, 'output')
+        result = self.runner.invoke(tools, [
+            'export', '--input-path', self.ints1, '--output-path', output_path,
+            '--output-format', 'IntSequenceFormatV2'
+            ])
+
+        with open(output_path, 'r') as f:
+            file = f.read()
+        self.assertEqual(result.exit_code, 0)
+        self.assertIn('0', file)
+        self.assertIn('42', file)
+        self.assertIn('43', file)
+
+    def test_export_visualization_to_dir(self):
+        output_path = os.path.join(self.tempdir, 'output')
+        self.runner.invoke(tools, [
+            'export', '--input-path', self.viz, '--output-path', output_path
+        ])
+
+        self.assertIn('index.html', os.listdir(output_path))
+        self.assertIn('index.tsv', os.listdir(output_path))
+        self.assertTrue(os.path.isdir(output_path))
+
+    def test_export_visualization_w_format(self):
+        output_path = os.path.join(self.tempdir, 'output')
+        result = self.runner.invoke(tools, [
+            'export', '--input-path', self.viz, '--output-path', output_path,
+            '--output-format', 'IntSequenceDirectoryFormat'
+        ])
+
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn('visualization', result.output)
+        self.assertIn('--output-format', result.output)
+
+    def test_export_path_file_is_replaced(self):
+        output_path = os.path.join(self.tempdir, 'output')
+        with open(output_path, 'w') as file:
+            file.write('HelloWorld')
+        self.runner.invoke(tools, [
+            'export', '--input-path', self.ints1, '--output-path', output_path,
+            '--output-format', 'IntSequenceFormatV2'
+        ])
+        with open(output_path, 'r') as f:
+            file = f.read()
+        self.assertNotIn('HelloWorld', file)
 
 
 if __name__ == "__main__":
