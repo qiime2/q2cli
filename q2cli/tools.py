@@ -19,8 +19,13 @@ def tools():
 
 
 @tools.command(name='export',
+<<<<<<< HEAD
                short_help='Export data from a QIIME 2 Artifact '
                'or Visualization',
+=======
+               short_help='Export data from a QIIME 2 Artifact'
+               'or a Visualization',
+>>>>>>> upstream/master
                help='Exporting extracts (and optionally transforms) data'
                'stored inside an Artifact or Visualization. Note that'
                'Visualizations cannot be transformed with --output-format'
@@ -40,7 +45,10 @@ def export_data(input_path, output_path, output_format):
     import distutils
     result = qiime2.sdk.Result.load(input_path)
     if output_format is None:
+<<<<<<< HEAD
         output_format = result.format.__name__
+=======
+>>>>>>> upstream/master
         result.export_data(output_path)
     else:
         if isinstance(result, qiime2.sdk.Visualization):
@@ -53,11 +61,14 @@ def export_data(input_path, output_path, output_format):
                 os.renames(str(source), output_path)
             else:
                 distutils.dir_util.copy_tree(str(source), output_path)
+<<<<<<< HEAD
 
     output_type = 'file' if os.path.isfile(output_path) else 'directory'
     success = 'Exported %s as %s to %s %s' % (input_path, output_format,
                                               output_type, output_path)
     click.secho(success, fg='green')
+=======
+>>>>>>> upstream/master
 
 
 def show_importable_types(ctx, param, value):
