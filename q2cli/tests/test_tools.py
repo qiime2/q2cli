@@ -202,6 +202,9 @@ class TestInspectMetadata(unittest.TestCase):
             file = f.read()
         self.assertNotIn('HelloWorld', file)
 
+    def test_export_to_file_success_message(self):
+        self.assertTrue(False)
+
 
 if __name__ == "__main__":
     unittest.main()
