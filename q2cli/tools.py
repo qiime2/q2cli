@@ -19,8 +19,8 @@ def tools():
 
 
 @tools.command(name='export',
-               short_help='Export data from a QIIME 2 Artifact '
-               'or Visualization',
+               short_help='Export data from a QIIME 2 Artifact'
+               'or a Visualization',
                help='Exporting extracts (and optionally transforms) data'
                'stored inside an Artifact or Visualization. Note that'
                'Visualizations cannot be transformed with --output-format'
