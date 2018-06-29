@@ -114,8 +114,8 @@ class CliTests(unittest.TestCase):
 
     def test_extract(self):
         result = self.runner.invoke(
-            tools, ['extract', self.artifact1_path, '--output-dir',
-                    self.tempdir])
+            tools, ['extract', '--input-path', self.artifact1_path,
+                    '--output-path', self.tempdir])
         # command completes sucessfully and creates the correct
         # output directory
         self.assertEqual(result.exit_code, 0)
