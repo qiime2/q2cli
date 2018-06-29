@@ -203,7 +203,6 @@ class TestInspectMetadata(unittest.TestCase):
         ])
         with open(output_path, 'r') as f:
             file = f.read()
-
         self.assertNotIn('HelloWorld', file)
 
     def test_export_to_file_with_format_success_message(self):
@@ -232,7 +231,6 @@ class TestInspectMetadata(unittest.TestCase):
         ])
         success = 'Exported %s as Visualization to '\
                   'directory %s\n' % (self.viz, output_path)
-
         self.assertEqual(success, result.output)
 
     def test_extract_to_dir_success_message(self):
@@ -242,7 +240,7 @@ class TestInspectMetadata(unittest.TestCase):
         success = 'Extracted %s to directory %s' % (self.ints1, self.tempdir)
         self.assertIn(success, result.output)
 
-    def test_import_from_file_success_message(self):
+    def test_import_from_directory_without_format_success_message(self):
         output_path = os.path.join(self.tempdir, 'output.qza')
         result = self.runner.invoke(tools, [
             'import', '--input-path', self.ints2, '--type', 'IntSequence1',
@@ -250,7 +248,6 @@ class TestInspectMetadata(unittest.TestCase):
             ])
         success = 'Imported %s as IntSequenceDirectoryFormat to '\
                   '%s\n' % (self.ints2, output_path)
-
         self.assertEqual(success, result.output)
 
     def test_import_from_file_with_format_success_message(self):
@@ -261,10 +258,8 @@ class TestInspectMetadata(unittest.TestCase):
             '--output-path', output_path,
             '--source-format', 'IntSequenceFormat'
         ])
-
         success = 'Imported %s as IntSequenceFormat to '\
                   '%s\n' % (os.path.join(self.ints2, 'ints.txt'), output_path)
-
         self.assertEqual(success, result.output)
 
 

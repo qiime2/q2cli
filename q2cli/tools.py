@@ -42,10 +42,9 @@ def export_data(input_path, output_path, output_format):
     if output_format is None:
         if isinstance(result, qiime2.sdk.Artifact):
             output_format = result.format.__name__
-            result.export_data(output_path)
         else:
             output_format = 'Visualization'
-            result.export_data(output_path)
+        result.export_data(output_path)
     else:
         if isinstance(result, qiime2.sdk.Visualization):
             error = '--output-format cannot be used with visualizations'
@@ -134,7 +133,6 @@ def show_importable_formats(ctx, param, value):
 def import_data(type, input_path, output_path, source_format):
     import qiime2.sdk
     import qiime2.plugin
-
     try:
         artifact = qiime2.sdk.Artifact.import_data(type, input_path,
                                                    view_type=source_format)
