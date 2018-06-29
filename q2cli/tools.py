@@ -40,6 +40,10 @@ def export_data(input_path, output_path, output_format):
     import distutils
     result = qiime2.sdk.Result.load(input_path)
     if output_format is None:
+        if isinstance(result, qiime2.sdk.Artifact):
+            output_format = result.format.__name__
+        else:
+            output_format = 'Visualization'
         result.export_data(output_path)
     else:
         if isinstance(result, qiime2.sdk.Visualization):
@@ -52,6 +56,11 @@ def export_data(input_path, output_path, output_format):
                 os.renames(str(source), output_path)
             else:
                 distutils.dir_util.copy_tree(str(source), output_path)
+
+    output_type = 'file' if os.path.isfile(output_path) else 'directory'
+    success = 'Exported %s as %s to %s %s' % (input_path, output_format,
+                                              output_type, output_path)
+    click.secho(success, fg='green')
 
 
 def show_importable_types(ctx, param, value):
@@ -134,6 +143,13 @@ def import_data(type, input_path, output_path, source_format):
         header = 'An unexpected error has occurred:'
         q2cli.util.exit_with_error(e, header=header)
     artifact.save(output_path)
+    if source_format is None:
+        source_format = artifact.format.__name__
+
+    success = 'Imported %s as %s to %s' % (input_path,
+                                           source_format,
+                                           output_path)
+    click.secho(success, fg='green')
 
 
 @tools.command(short_help='Take a peek at a QIIME 2 Artifact or '
@@ -333,7 +349,7 @@ def extract(path, output_dir):
             '%s is not a valid QIIME 2 Result. Only QIIME 2 Artifacts and '
             'Visualizations can be extracted.' % path)
     else:
-        click.echo('Extracted to %s' % extracted_dir)
+        click.echo('Extracted %s to directory %s' % (path, extracted_dir))
 
 
 @tools.command(short_help='Validate data in a QIIME 2 Artifact.',

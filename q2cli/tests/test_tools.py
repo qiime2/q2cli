@@ -45,6 +45,9 @@ class TestInspectMetadata(unittest.TestCase):
             'IntSequence1', [0, 42, 43], list)
         ints1.save(self.ints1)
 
+        self.ints2 = os.path.join(self.tempdir, 'ints')
+        ints1.export_data(self.ints2)
+
         self.viz = os.path.join(self.tempdir, 'viz.qzv')
         most_common_viz = dummy_plugin.actions['most_common_viz']
         self.viz = most_common_viz(ints1).visualization.save(self.viz)
@@ -201,6 +204,63 @@ class TestInspectMetadata(unittest.TestCase):
         with open(output_path, 'r') as f:
             file = f.read()
         self.assertNotIn('HelloWorld', file)
+
+    def test_export_to_file_with_format_success_message(self):
+        output_path = os.path.join(self.tempdir, 'output.int')
+        result = self.runner.invoke(tools, [
+            'export', '--input-path', self.ints1, '--output-path', output_path,
+            '--output-format', 'IntSequenceFormatV2'
+            ])
+        success = 'Exported %s as IntSequenceFormatV2 to file %s\n' % (
+                   self.ints1, output_path)
+        self.assertEqual(success, result.output)
+
+    def test_export_to_dir_without_format_success_message(self):
+        output_path = os.path.join(self.tempdir, 'output')
+        result = self.runner.invoke(tools, [
+            'export', '--input-path', self.ints1, '--output-path', output_path
+            ])
+        success = 'Exported %s as IntSequenceDirectoryFormat to '\
+                  'directory %s\n' % (self.ints1, output_path)
+        self.assertEqual(success, result.output)
+
+    def test_export_visualization_to_dir_success_message(self):
+        output_path = os.path.join(self.tempdir, 'output')
+        result = self.runner.invoke(tools, [
+            'export', '--input-path', self.viz, '--output-path', output_path
+        ])
+        success = 'Exported %s as Visualization to '\
+                  'directory %s\n' % (self.viz, output_path)
+        self.assertEqual(success, result.output)
+
+    def test_extract_to_dir_success_message(self):
+        result = self.runner.invoke(tools, [
+            'extract', self.ints1, '--output-dir', self.tempdir
+            ])
+        success = 'Extracted %s to directory %s' % (self.ints1, self.tempdir)
+        self.assertIn(success, result.output)
+
+    def test_import_from_directory_without_format_success_message(self):
+        output_path = os.path.join(self.tempdir, 'output.qza')
+        result = self.runner.invoke(tools, [
+            'import', '--input-path', self.ints2, '--type', 'IntSequence1',
+            '--output-path', output_path
+            ])
+        success = 'Imported %s as IntSequenceDirectoryFormat to '\
+                  '%s\n' % (self.ints2, output_path)
+        self.assertEqual(success, result.output)
+
+    def test_import_from_file_with_format_success_message(self):
+        output_path = os.path.join(self.tempdir, 'output.qza')
+        result = self.runner.invoke(tools, [
+            'import', '--input-path', os.path.join(self.ints2, 'ints.txt'),
+            '--type', 'IntSequence1',
+            '--output-path', output_path,
+            '--source-format', 'IntSequenceFormat'
+        ])
+        success = 'Imported %s as IntSequenceFormat to '\
+                  '%s\n' % (os.path.join(self.ints2, 'ints.txt'), output_path)
+        self.assertEqual(success, result.output)
 
 
 if __name__ == "__main__":
