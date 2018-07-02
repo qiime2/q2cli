@@ -27,13 +27,15 @@ def tools():
                )
 @q2cli.option('--input-path', required=True,
               type=click.Path(exists=True, file_okay=True,
-                              dir_okay=False, readable=True))
+                              dir_okay=False, readable=True),
+              help='Path to file that should be exported')
 @q2cli.option('--output-path', required=True,
               type=click.Path(exists=False, file_okay=True, dir_okay=True,
                               writable=True),
-              help='Directory where data should be exported to')
+              help='Path to file or directory where '
+              'data should be exported to')
 @q2cli.option('--output-format', required=False,
-              help='Format which the data should be exported as. '
+              help='Format which the data should be exported as. \n'
               '--output-format cannot be used with Visualizations')
 def export_data(input_path, output_path, output_format):
     import qiime2.sdk
@@ -333,7 +335,7 @@ def view(visualization_path, index_extension):
 @q2cli.option('--input-path', required=True,
               type=click.Path(exists=True, file_okay=True, dir_okay=False,
                               readable=True),
-              help='Directory where archive should be extracted from')
+              help='Path to file that should be extracted')
 @q2cli.option('--output-path', required=False,
               type=click.Path(exists=False, file_okay=False, dir_okay=True,
                               writable=True),
