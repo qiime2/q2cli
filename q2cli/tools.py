@@ -35,8 +35,8 @@ def tools():
               help='Path to file or directory where '
               'data should be exported to')
 @q2cli.option('--output-format', required=False,
-              help='Format which the data should be exported as. \n'
-              '--output-format cannot be used with Visualizations')
+              help='Format which the data should be exported as. '
+              'This option cannot be used with Visualizations')
 def export_data(input_path, output_path, output_format):
     import qiime2.sdk
     import distutils
