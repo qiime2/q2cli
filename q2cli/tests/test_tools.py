@@ -235,7 +235,8 @@ class TestInspectMetadata(unittest.TestCase):
 
     def test_extract_to_dir_success_message(self):
         result = self.runner.invoke(tools, [
-            'extract', self.ints1, '--output-dir', self.tempdir
+            'extract', '--input-path', self.ints1,
+            '--output-path', self.tempdir
             ])
         success = 'Extracted %s to directory %s' % (self.ints1, self.tempdir)
         self.assertIn(success, result.output)
@@ -256,7 +257,7 @@ class TestInspectMetadata(unittest.TestCase):
             'import', '--input-path', os.path.join(self.ints2, 'ints.txt'),
             '--type', 'IntSequence1',
             '--output-path', output_path,
-            '--source-format', 'IntSequenceFormat'
+            '--input-format', 'IntSequenceFormat'
         ])
         success = 'Imported %s as IntSequenceFormat to '\
                   '%s\n' % (os.path.join(self.ints2, 'ints.txt'), output_path)
