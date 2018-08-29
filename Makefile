@@ -10,7 +10,9 @@ test: all
 	QIIMETEST= nosetests
 
 install: all
-	python setup.py install
+	python setup.py install && \
+	mkdir -p $(CONDA_PREFIX)/etc/conda/activate.d && \
+	cp hooks/activate_q2cli_tab_completion.sh $(CONDA_PREFIX)/etc/conda/activate.d/
 
 dev: all
 	pip install -e .
