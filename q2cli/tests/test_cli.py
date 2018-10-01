@@ -500,7 +500,7 @@ class TestMetadataSupport(MetadataTestsBase):
                 self.output_artifact, '--m-metadata-file', self.metadata_file1,
                 '--m-metadata-file', self.metadata_file1)
 
-            self.assertEqual(result.exit_code, -1)
+            self.assertNotEqual(result.exit_code, 0)
             self.assertIn('overlapping columns', str(result.exception))
 
     def test_cmd_config_metadata(self):
@@ -607,7 +607,7 @@ class TestMetadataColumnSupport(MetadataTestsBase):
                 '--m-metadata-file', self.metadata_file1,
                 '--m-metadata-column', 'col1')
 
-            self.assertEqual(result.exit_code, -1)
+            self.assertNotEqual(result.exit_code, 0)
             self.assertIn('overlapping columns', str(result.exception))
 
     def test_cmd_config(self):
