@@ -376,23 +376,23 @@ def validate(path, level):
     import qiime2.sdk
 
     try:
-        artifact = qiime2.sdk.Artifact.load(path)
+        result = qiime2.sdk.Result.load(path)
     except Exception as e:
-        header = 'There was a problem loading %s as a QIIME 2 Artifact:' % path
+        header = 'There was a problem loading %s as a QIIME 2 Result:' % path
         q2cli.util.exit_with_error(e, header=header)
 
     try:
-        artifact.validate(level)
+        result.validate(level)
     except qiime2.plugin.ValidationError as e:
-        header = 'Artifact %s does not appear to be valid at level=%s:' % (
+        header = 'Result %s does not appear to be valid at level=%s:' % (
                 path, level)
         q2cli.util.exit_with_error(e, header=header, traceback=None)
     except Exception as e:
         header = ('An unexpected error has occurred while attempting to '
-                  'validate artifact %s:' % path)
+                  'validate result %s:' % path)
         q2cli.util.exit_with_error(e, header=header)
     else:
-        click.secho('Artifact %s appears to be valid at level=%s.'
+        click.secho('Result %s appears to be valid at level=%s.'
                     % (path, level), fg="green")
 
 
