@@ -346,8 +346,8 @@ class TestOptionalArtifactSupport(unittest.TestCase):
             '--o-output', self.output, '--verbose')
 
         self.assertEqual(result.exit_code, 1)
-        self.assertIn("'optional1' is not a subtype of IntSequence1",
-                      str(result.output))
+        self.assertRegex(str(result.output),
+                         'type IntSequence2.*subtype IntSequence1')
 
 
 class MetadataTestsBase(unittest.TestCase):
