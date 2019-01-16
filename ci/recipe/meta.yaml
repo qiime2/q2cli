@@ -15,13 +15,12 @@ build:
     - qiime=q2cli.__main__:qiime
 
 requirements:
-  build:
-    - python 3.5*
+  host:
+    - python  {{ python }}
     - setuptools
 
   run:
-    - python 3.5*
-    - setuptools
+    - python  {{ python }}
     - pip
     - click
     - qiime2 {{ release }}.*
