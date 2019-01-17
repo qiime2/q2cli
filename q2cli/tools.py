@@ -38,6 +38,7 @@ def tools():
               help='Format which the data should be exported as. '
               'This option cannot be used with Visualizations')
 def export_data(input_path, output_path, output_format):
+    import qiime2.util
     import qiime2.sdk
     import distutils
     result = qiime2.sdk.Result.load(input_path)
@@ -55,7 +56,7 @@ def export_data(input_path, output_path, output_format):
         else:
             source = result.view(qiime2.sdk.parse_format(output_format))
             if os.path.isfile(str(source)):
-                os.renames(str(source), output_path)
+                qiime2.util.duplicate(str(source), output_path)
             else:
                 distutils.dir_util.copy_tree(str(source), output_path)
 
