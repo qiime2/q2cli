@@ -7,10 +7,8 @@
 # ----------------------------------------------------------------------------
 
 import os
-import errno
 import shutil
 import unittest
-import unittest.mock as mock
 import tempfile
 
 from click.testing import CliRunner
@@ -19,8 +17,6 @@ from qiime2.core.testing.util import get_dummy_plugin
 
 from q2cli.tools import tools
 from q2cli.commands import RootCommand
-
-EXDEV = OSError(errno.EXDEV, "Invalid cross-device link")
 
 
 class TestInspectMetadata(unittest.TestCase):
@@ -189,7 +185,6 @@ class TestInspectMetadata(unittest.TestCase):
         self.assertIn('0', file)
         self.assertIn('42', file)
         self.assertIn('43', file)
-
 
     def test_export_visualization_to_dir(self):
         output_path = os.path.join(self.tempdir, 'output')
