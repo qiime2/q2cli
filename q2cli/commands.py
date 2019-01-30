@@ -133,8 +133,21 @@ class PluginCommand(click.MultiCommand):
         if not value or ctx.resilient_parsing:
             return
 
-        click.echo('%s version %s' % (self._plugin['name'],
-                                      self._plugin['version']))
+        import qiime2.sdk
+        for entrypoint in qiime2.sdk.PluginManager.iter_entry_points():
+            plugin = entrypoint.load()
+            if (self._plugin['name'] == plugin.name):
+                pkg_name = entrypoint.dist.project_name
+                pkg_version = entrypoint.dist.version
+                break
+        else:
+            pkg_name = pkg_version = "[UNKNOWN]"
+
+        click.echo(
+            "QIIME 2 Plugin '%s' version %s (from package '%s' version %s)"
+            % (self._plugin['name'], self._plugin['version'],
+               pkg_name, pkg_version)
+        )
         ctx.exit()
 
     def _get_citation_records(self):
