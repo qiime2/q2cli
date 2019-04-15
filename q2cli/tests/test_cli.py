@@ -347,7 +347,7 @@ class TestOptionalArtifactSupport(unittest.TestCase):
 
         self.assertEqual(result.exit_code, 1)
         self.assertRegex(str(result.output),
-                         'type IntSequence2.*subtype IntSequence1')
+                         'optional1.*IntSequence1.*IntSequence2.*passed')
 
 
 class MetadataTestsBase(unittest.TestCase):
