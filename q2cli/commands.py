@@ -13,9 +13,11 @@ import click
 import q2cli.dev
 import q2cli.info
 import q2cli.tools
+import q2cli.util
+from q2cli.click.command import BaseCommandMixin
 
 
-class RootCommand(click.MultiCommand):
+class RootCommand(BaseCommandMixin, click.MultiCommand):
     """This class defers to either the PluginCommand or the builtin cmds"""
     _builtin_commands = collections.OrderedDict([
         ('info', q2cli.info.info),
@@ -98,12 +100,25 @@ class RootCommand(click.MultiCommand):
         try:
             plugin = self._plugin_lookup[name]
         except KeyError:
-            return None
+            from q2cli.util import get_close_matches
+
+            possibilities = get_close_matches(name, self._plugin_lookup)
+            if len(possibilities) == 1:
+                hint = '  Did you mean %r?' % possibilities[0]
+            elif possibilities:
+                hint = '  (Possible commands: %s)' % ', '.join(possibilities)
+            else:
+                hint = ''
+
+            click.secho("Error: QIIME 2 has no plugin/command named %r."
+                        % name + hint,
+                        err=True, fg='red')
+            ctx.exit(2)  # Match exit code of `return None`
 
         return PluginCommand(plugin, name)
 
 
-class PluginCommand(click.MultiCommand):
+class PluginCommand(BaseCommandMixin, click.MultiCommand):
     """Provides ActionCommands based on available Actions"""
     def __init__(self, plugin, name, *args, **kwargs):
         import q2cli.util
@@ -162,14 +177,25 @@ class PluginCommand(click.MultiCommand):
         try:
             action = self._action_lookup[name]
         except KeyError:
-            click.echo("Error: QIIME 2 plugin %r has no action %r."
-                       % (self._plugin['name'], name), err=True)
+            from q2cli.util import get_close_matches
+
+            possibilities = get_close_matches(name, self._action_lookup)
+            if len(possibilities) == 1:
+                hint = '  Did you mean %r?' % possibilities[0]
+            elif possibilities:
+                hint = '  (Possible commands: %s)' % ', '.join(possibilities)
+            else:
+                hint = ''
+
+            click.secho("Error: QIIME 2 plugin %r has no action %r."
+                        % (self._plugin['name'], name) + hint,
+                        err=True, fg='red')
             ctx.exit(2)  # Match exit code of `return None`
 
         return ActionCommand(name, self._plugin, action)
 
 
-class ActionCommand(click.Command):
+class ActionCommand(BaseCommandMixin, click.Command):
     """A click manifestation of a QIIME 2 API Action (Method/Visualizer)
 
     The ActionCommand generates Handlers which map from 1 Action API parameter
@@ -212,7 +238,7 @@ class ActionCommand(click.Command):
             item = item.copy()
             type = item.pop('type')
 
-            if item['ast']['type'] == 'collection':
+            if item['ast']['type'] == 'expression' and item['ast']['name'] in ('List', 'Set'):
                 inner_handler = handler_map[type](**item)
                 handler = q2cli.handlers.CollectionHandler(inner_handler,
                                                            **item)

@@ -11,9 +11,11 @@ import os
 import click
 
 import q2cli
+from q2cli.click.command import ToolCommand, ToolGroupCommand
 
 
-@click.group(help='Tools for working with QIIME 2 files.')
+@click.group(help='Tools for working with QIIME 2 files.',
+             cls=ToolGroupCommand)
 def tools():
     pass
 
@@ -23,8 +25,8 @@ def tools():
                'or a Visualization',
                help='Exporting extracts (and optionally transforms) data '
                'stored inside an Artifact or Visualization. Note that '
-               'Visualizations cannot be transformed with --output-format'
-               )
+               'Visualizations cannot be transformed with --output-format',
+               cls=ToolCommand)
 @q2cli.option('--input-path', required=True,
               type=click.Path(exists=True, file_okay=True,
                               dir_okay=False, readable=True),
@@ -112,7 +114,8 @@ def show_importable_formats(ctx, param, value):
                help="Import data to create a new QIIME 2 Artifact. See "
                     "https://docs.qiime2.org/ for usage examples and details "
                     "on the file types and associated semantic types that can "
-                    "be imported.")
+                    "be imported.",
+                    cls=ToolCommand)
 @q2cli.option('--type', required=True,
               help='The semantic type of the artifact that will be created '
                    'upon importing. Use --show-importable-types to see what '
@@ -163,7 +166,8 @@ def import_data(type, input_path, output_path, input_format):
 @tools.command(short_help='Take a peek at a QIIME 2 Artifact or '
                           'Visualization.',
                help="Display basic information about a QIIME 2 Artifact or "
-                    "Visualization, including its UUID and type.")
+                    "Visualization, including its UUID and type.",
+               cls=ToolCommand)
 @click.argument('path', type=click.Path(exists=True, file_okay=True,
                                         dir_okay=False, readable=True))
 def peek(path):
@@ -184,7 +188,8 @@ def peek(path):
                short_help='Inspect columns available in metadata.',
                help='Inspect metadata files or artifacts viewable as metadata.'
                     ' Providing multiple file paths to this command will merge'
-                    ' the metadata.')
+                    ' the metadata.',
+               cls=ToolCommand)
 @q2cli.option('--tsv/--no-tsv', default=False,
               help='Print as machine-readable TSV instead of text.')
 @click.argument('paths', nargs=-1, required=True,
@@ -265,7 +270,8 @@ def _load_metadata(path):
 @tools.command(short_help='View a QIIME 2 Visualization.',
                help="Displays a QIIME 2 Visualization until the command "
                     "exits. To open a QIIME 2 Visualization so it can be "
-                    "used after the command exits, use 'qiime extract'.")
+                    "used after the command exits, use 'qiime extract'.",
+               cls=ToolCommand)
 @click.argument('visualization-path',
                 type=click.Path(exists=True, file_okay=True, dir_okay=False,
                                 readable=True))
@@ -337,7 +343,8 @@ def view(visualization_path, index_extension):
                     "Visualization's archive, including provenance, metadata, "
                     "and actual data. Use 'qiime tools export' to export only "
                     "the data stored in an Artifact or Visualization, with "
-                    "the choice of exporting to different formats.")
+                    "the choice of exporting to different formats.",
+               cls=ToolCommand)
 @q2cli.option('--input-path', required=True,
               type=click.Path(exists=True, file_okay=True, dir_okay=False,
                               readable=True),
@@ -370,7 +377,8 @@ def extract(input_path, output_path):
                     'and/or more thorough validation of your data (e.g. when '
                     'debugging issues with your data or analyses).\n\nNote: '
                     'validation can take some time to complete, depending on '
-                    'the size and type of your data.')
+                    'the size and type of your data.',
+                cls=ToolCommand)
 @click.argument('path', type=click.Path(exists=True, file_okay=True,
                                         dir_okay=False, readable=True))
 @q2cli.option('--level', required=False, type=click.Choice(['min', 'max']),
@@ -404,7 +412,8 @@ def validate(path, level):
 
 @tools.command(short_help='Print citations for a QIIME 2 result.',
                help='Print citations as a BibTex file (.bib) for a QIIME 2'
-                    ' result.')
+                    ' result.',
+               cls=ToolCommand)
 @click.argument('path', type=click.Path(exists=True, file_okay=True,
                                         dir_okay=False, readable=True))
 def citations(path):

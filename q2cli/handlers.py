@@ -406,17 +406,11 @@ def parameter_handler_factory(name, repr, ast, default=NoDefault,
     if ast['name'] == 'Metadata':
         return MetadataHandler(name, default=default, description=description)
     elif ast['name'] == 'MetadataColumn':
-        if repr == 'MetadataColumn[Categorical]':
-            column_types = ('categorical',)
-        elif repr == 'MetadataColumn[Numeric]':
-            column_types = ('numeric',)
-        elif (repr == 'MetadataColumn[Categorical | Numeric]' or
-              repr == 'MetadataColumn[Numeric | Categorical]'):
-            column_types = ('categorical', 'numeric')
+        inner = ast['fields'][0]
+        if inner.type == 'union':
+            column_types = tuple(f['name'].lower() for f in inner['members'])
         else:
-            raise NotImplementedError(
-                "Parameter %r is type %s, which is not currently supported by "
-                "this interface." % (name, repr))
+            column_types = (inner['name'].lower(),)
         return MetadataColumnHandler(name, repr, column_types, default=default,
                                      description=description)
     else:
@@ -594,13 +588,19 @@ class RegularParameterHandler(GeneratedHandler):
         super().__init__(name, repr, ast, default=default,
                          description=description)
         # TODO: just create custom click.ParamType to avoid this silliness
-        if ast['type'] == 'collection':
+        if ast['type'] == 'expression' and ast['name'] in ('List', 'Set'):
             ast, = ast['fields']
         self.type = q2cli.util.convert_primitive(ast)
 
     def get_click_options(self):
         import q2cli
         import q2cli.util
+
+
+
+        if self.ast['type'] == 'union':
+            pass
+
 
         if self.type is bool:
             no_name = self.prefix + 'no_' + self.name
