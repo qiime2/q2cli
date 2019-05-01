@@ -8,7 +8,6 @@
 
 import click
 
-import q2cli
 from q2cli.click.command import ToolCommand
 
 
@@ -26,9 +25,9 @@ def _echo_version():
 
 
 def _echo_plugins():
-    import q2cli.cache
+    import q2cli.core.cache
 
-    plugins = q2cli.cache.CACHE.plugins
+    plugins = q2cli.core.cache.CACHE.plugins
     if plugins:
         for name, plugin in sorted(plugins.items()):
             click.echo('%s: %s' % (name, plugin['version']))
@@ -41,7 +40,8 @@ def _echo_plugins():
                cls=ToolCommand)
 def info():
     import q2cli.util
-    import q2cli.cache
+    # This import improves performance for repeated _echo_plugins
+    import q2cli.core.cache
 
     click.secho('System versions', fg='green')
     _echo_version()

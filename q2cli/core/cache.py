@@ -188,7 +188,7 @@ class DeploymentCache:
         import json
         import os.path
         import click
-        import q2cli.completion
+        import q2cli.core.completion
         import q2cli.util
 
         click.secho(
@@ -203,7 +203,7 @@ class DeploymentCache:
         with open(path, 'w') as fh:
             json.dump(state, fh)
 
-        q2cli.completion.write_bash_completion_script(
+        q2cli.core.completion.write_bash_completion_script(
             state['plugins'], q2cli.util.get_completion_path())
 
         # Write requirements file last because the above steps may raise errors

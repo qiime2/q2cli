@@ -10,7 +10,7 @@
 def get_app_dir():
     import os
     conda_prefix = os.environ.get('CONDA_PREFIX')
-    if conda_prefix is not None:
+    if conda_prefix is not None and os.access(conda_prefix, os.W_OK | os.X_OK):
         return os.path.join(conda_prefix, 'var', 'q2cli')
     else:
         import click
@@ -172,31 +172,6 @@ def citations_option(get_citation_records):
             click.secho('No citations found.', fg='yellow', err=True)
             ctx.exit(1)
 
-    return click.Option(('--citations',), is_flag=True, expose_value=False,
+    return click.Option(['--citations'], is_flag=True, expose_value=False,
                         is_eager=True, callback=callback,
                         help='Show citations and exit.')
-
-
-
-def find_inputs(type, dir=None):
-    import qiime2.sdk as sdk
-    import os
-
-    type = sdk.parse_type(type)
-    if dir is None:
-        for path in os.scandir(dir):
-            name = path.name
-            if path.is_dir() or not name.endswith('.qza'):
-                continue
-            t = sdk.parse_type(sdk.Artifact.peek(name).type)
-            if t <= type:
-                yield name
-    else:
-        for path in os.scandir(dir):
-            name = os.path.join(dir, path.name)
-            if path.is_dir() or not name.endswith('.qza'):
-                continue
-            t = sdk.parse_type(sdk.Artifact.peek(name).type)
-            if t <= type:
-                yield name
-

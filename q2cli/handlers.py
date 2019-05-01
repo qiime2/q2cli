@@ -25,6 +25,7 @@ class Handler:
         self.default = default
         self.description = description
         self.missing = []
+        self.multiple = False
 
     @property
     def cli_name(self):
@@ -41,7 +42,7 @@ class Handler:
         """Should find 1 or more arguments and convert to a single API value"""
         raise NotImplementedError()
 
-    def _locate_value(self, arguments, fallback, multiple=False):
+    def _locate_value(self, arguments, fallback, type):
         """Default lookup procedure to find a click.Option provided by user"""
         # TODO revisit this interaction between _locate_value, single vs.
         # multiple options, and fallbacks. Perhaps handlers should always
@@ -52,14 +53,15 @@ class Handler:
 
         # Is it in args?
         v = arguments[self.click_name]
-        missing_value = () if multiple else None
+        missing_value = () if self.multiple else None
         if v != missing_value:
             return v
 
         # Does our fallback know about it?
         if fallback is not None:
             try:
-                fallback_value = fallback(self.name, self.cli_name)
+                fallback_value = type.convert(
+                    fallback(self.name, self.cli_name))
             except ValueNotFoundException:
                 pass
             else:
@@ -69,7 +71,7 @@ class Handler:
                 # expectation in the future; perhaps fallbacks should be aware
                 # of single-vs-multiple options, or perhaps they could always
                 # return a tuple.
-                if multiple:
+                if self.multiple:
                     fallback_value = (fallback_value,)
                 return fallback_value
 
@@ -140,7 +142,7 @@ class VerboseHandler(Handler):
                  'execution of this action.  [default: %s]' % self.default)
 
     def get_value(self, arguments, fallback=None):
-        value = self._locate_value(arguments, fallback)
+        value = self._locate_value(arguments, fallback, click.Bool)
         # Value may have been specified in --cmd-config (or another source in
         # the future). If we don't have a bool type yet, attempt to interpret a
         # string representing a boolean.
@@ -280,57 +282,26 @@ class GeneratedHandler(Handler):
                          description=description)
         self.repr = repr
         self.ast = ast
+        self._multiview = q2cli.util.get_multiview(ast)
+        self.multiple = self._multiview is not None
 
+    def _get_multiview(self, ast):
+        if ast['type'] == 'union':
+            ast = ast['members'][0]  # cross Set/List unions aren't allowed
+        if ast['name'] == 'Set':
+            return set
+        elif ast['name'] == 'List':
+            return list
 
-class CollectionHandler(GeneratedHandler):
-    view_map = {
-        'List': list,
-        'Set': set
-    }
+    def finalize_type(self, args):
+        if not self.multiple:
+            return args
 
-    def __init__(self, inner_handler, **kwargs):
-        self.inner_handler = inner_handler
-        # inner_handler needs to be set first so the prefix lookup works
-        super().__init__(**kwargs)
-        self.view_type = self.view_map[self.ast['name']]
+        cast_args = self._multiview(args)
+        if len(cast_args) != len(args):
+            self._error_with_duplicate_in_set(args)
 
-    @property
-    def prefix(self):
-        return self.inner_handler.prefix
-
-    def get_click_options(self):
-        import q2cli.core
-        for option in self.inner_handler.get_click_options():
-            option.multiple = True
-            # validation happens on a callback for q2cli.core.Option, so unset
-            # it because we need standard click behavior for multi-options
-            # without this, the result of not-passing a value is `None` instead
-            # of `()` which confuses ._locate_value
-            option.callback = None
-            option.type = q2cli.core.MultipleType(option.type)
-            yield option
-
-    def get_value(self, arguments, fallback=None):
-        args = self._locate_value(arguments, fallback, multiple=True)
-        if args is None:
-            return None
-
-        decoded_values = []
-        for arg in args:
-            # Use an empty dict because we don't need the inner handler to
-            # look for anything; that's our job. We just need it to decode
-            # whatever it was we found.
-            empty = collections.defaultdict(lambda: None)
-            decoded = self.inner_handler.get_value(empty,
-                                                   fallback=lambda *_: arg)
-            decoded_values.append(decoded)
-
-        value = self.view_type(decoded_values)
-
-        if len(value) != len(decoded_values):
-            self._error_with_duplicate_in_set(decoded_values)
-
-        return value
+        return cast_args
 
     def _error_with_duplicate_in_set(self, elements):
         import click
@@ -347,12 +318,26 @@ class CollectionHandler(GeneratedHandler):
         ctx.exit(1)
 
 
+class CollectionHandler(GeneratedHandler):
+    view_map = {
+        'List': list,
+        'Set': set
+    }
+
+    def __init__(self, inner_handler, **kwargs):
+        self.inner_handler = inner_handler
+        # inner_handler needs to be set first so the prefix lookup works
+        super().__init__(**kwargs)
+        self.view_type = self.view_map[self.ast['name']]
+
+
 class ArtifactHandler(GeneratedHandler):
     prefix = 'i_'
 
     def get_click_options(self):
         import q2cli
         import q2cli.core
+
 
         type = q2cli.core.ResultPath(repr=self.repr, exists=True,
                                      file_okay=True, dir_okay=False,
@@ -368,7 +353,7 @@ class ArtifactHandler(GeneratedHandler):
     def get_value(self, arguments, fallback=None):
         import qiime2.sdk
 
-        path = self._locate_value(arguments, fallback)
+        path = self._locate_value(arguments, fallback, self.type)
         if path is None:
             return None
         else:

@@ -10,30 +10,49 @@ class Q2Option(parser.Option):
         return (super().takes_value or self.action == 'store_maybe'
                 or self.action == 'append_greedy')
 
+    def _maybe_take(self, state):
+        if not state.rargs:
+            return None
+        # In a more perfect world, we would have access to all long opts
+        # and could verify against those instead of just the prefix '--'
+        if state.rargs[0].startswith('--'):
+            return None
+        return state.rargs.pop(0)
+
     def process(self, value, state):
         # actions should update state.opts and state.order
 
         if (self.dest in state.opts
-                and self.action not in ('append', 'append_const', 'count')):
+                and self.action not in ('append', 'append_const',
+                                        'append_maybe', 'append_greedy',
+                                         'count')):
             raise exceptions.UsageError(
-                'Option %s was specified multiple times in the command.'
+                'Option %r was specified multiple times in the command.'
                 % self._get_opt_name())
         elif self.action == 'store_maybe':
             assert value == ()
-            value = state.rargs.pop(0, None)
-            # In a more perfect world, we would have access to all long opts
-            # and could verify against those instead of just the prefix '--'
-            if value is None or value.startswith('--'):
+            value = self._maybe_take(state)
+            if value is None:
                 state.opts[self.dest] = self.const
             else:
                 state.opts[self.dest] = value
             state.order.append(self.obj)  # can't forget this
+        elif self.action == 'append_maybe':
+            assert value == ()
+            value = self._maybe_take(state)
+            if value is None:
+                state.opts.setdefault(self.dest, []).append(self.const)
+            else:
+                while value is not None:
+                    state.opts.setdefault(self.dest, []).append(value)
+                    value = self._maybe_take(state)
+            state.order.append(self.obj)  # can't forget this
         elif self.action == 'append_greedy':
             assert value == ()
-            value = state.rargs.pop(0, None)
-            while valid is not None and not value.startswith('--'):
+            value = self._maybe_take(state)
+            while value is not None:
                 state.opts.setdefault(self.dest, []).append(value)
-                value = state.rargs.pop(0, None)
+                value = self._maybe_take(state)
             state.order.append(self.obj)  # can't forget this
         elif self.takes_value and value.startswith('--'):
             # Error early instead of cascading the parse error to a "missing"
@@ -44,6 +63,8 @@ class Q2Option(parser.Option):
             super().process(value, state)
 
     def _get_opt_name(self):
+        if hasattr(self.obj, 'secondary_opts'):
+            return ' / '.join(self.obj.opts + self.obj.secondary_opts)
         if hasattr(self.obj, 'get_error_hint'):
             return self.obj.get_error_hint(None)
         return ' / '.join(self._long_opts)
@@ -68,7 +89,7 @@ class Q2Parser(parser.OptionParser):
         opts = [parser.normalize_opt(opt, self.ctx) for opt in opts]
 
         # BEGIN MODIFICATIONS
-        if action == 'store_maybe':
+        if action == 'store_maybe' or action == 'append_maybe':
             # Specifically target this branch:
             # < https://github.com/pallets/click/blob/
             #   c6042bf2607c5be22b1efef2e42a94ffd281434c/click/parser.py#L341 >
@@ -77,7 +98,9 @@ class Q2Parser(parser.OptionParser):
             nargs = 0
             if const is None:
                 raise ValueError("A 'const' must be provided when action is "
-                                 "'store_maybe'")
+                                 "'store_maybe' or 'append_maybe'")
+        elif action == 'append_greedy':
+            nargs = 0
 
         option = Q2Option(opts, dest, action=action, nargs=nargs,
                           const=const, obj=obj)

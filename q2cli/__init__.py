@@ -6,9 +6,7 @@
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 
-from .core import Option, option
 from ._version import get_versions
 
-__all__ = ['Option', 'option']
 __version__ = get_versions()['version']
 del get_versions

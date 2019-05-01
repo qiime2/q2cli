@@ -27,5 +27,5 @@ def dev():
                   "will always refresh the cache when a command is run.",
             cls=ToolCommand)
 def refresh_cache():
-    import q2cli.cache
-    q2cli.cache.CACHE.refresh()
+    import q2cli.core.cache
+    q2cli.core.cache.CACHE.refresh()

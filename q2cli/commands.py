@@ -6,24 +6,22 @@
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 
-import collections
-
 import click
 
-import q2cli.dev
-import q2cli.info
-import q2cli.tools
-import q2cli.util
+import q2cli.builtin.dev
+import q2cli.builtin.info
+import q2cli.builtin.tools
+
 from q2cli.click.command import BaseCommandMixin
 
 
 class RootCommand(BaseCommandMixin, click.MultiCommand):
     """This class defers to either the PluginCommand or the builtin cmds"""
-    _builtin_commands = collections.OrderedDict([
-        ('info', q2cli.info.info),
-        ('tools', q2cli.tools.tools),
-        ('dev', q2cli.dev.dev)
-    ])
+    _builtin_commands = {
+        'info': q2cli.builtin.info.info,
+        'tools': q2cli.builtin.tools.tools,
+        'dev': q2cli.builtin.dev.dev
+    }
 
     def __init__(self, *args, **kwargs):
         import re
@@ -74,8 +72,8 @@ class RootCommand(BaseCommandMixin, click.MultiCommand):
         # `self._plugins` will not always be obtained from
         # `q2cli.cache.CACHE.plugins`.
         if self._plugins is None:
-            import q2cli.cache
-            self._plugins = q2cli.cache.CACHE.plugins
+            import q2cli.core.cache
+            self._plugins = q2cli.core.cache.CACHE.plugins
 
         name_map = {}
         for name, plugin in self._plugins.items():
@@ -208,21 +206,60 @@ class ActionCommand(BaseCommandMixin, click.Command):
     def __init__(self, name, plugin, action):
         import q2cli.handlers
         import q2cli.util
+        import q2cli.click.type
 
         self.plugin = plugin
         self.action = action
-        self.generated_handlers = self.build_generated_handlers()
-        self.verbose_handler = q2cli.handlers.VerboseHandler()
-        self.quiet_handler = q2cli.handlers.QuietHandler()
-        # Meta-Handlers:
-        self.output_dir_handler = q2cli.handlers.OutputDirHandler()
-        self.cmd_config_handler = q2cli.handlers.CommandConfigHandler(
-            q2cli.util.to_cli_name(plugin['name']),
-            q2cli.util.to_cli_name(self.action['id'])
-        )
-        super().__init__(name, params=list(self.get_click_parameters()),
-                         callback=self, short_help=action['name'],
-                         help=action['description'])
+
+        self._inputs, self._params, self._outputs = \
+            self._build_generated_options()
+
+        self._misc = [
+            click.Option(['--output-dir'],
+                         type=q2cli.click.type.OutDirType(),
+                         help='Output unspecified results to a directory'),
+            click.Option(['--verbose / --quiet'], default=None, required=False,
+                         help='Display verbose output to stdout and/or stderr '
+                              'during execution of this action. Or silence '
+                              'output if execution is successful (silence is '
+                              'golden).'),
+            q2cli.util.citations_option(self._get_citation_records)
+        ]
+
+        options = [*self._inputs, *self._params, *self._outputs, *self._misc]
+        super().__init__(name, params=options, callback=self,
+                         short_help=action['name'], help=action['description'])
+
+    def _build_generated_options(self):
+        import q2cli.click.option
+
+        inputs = []
+        params = []
+        outputs = []
+
+        for item in self.action['signature']:
+            item = item.copy()
+            type = item.pop('type')
+
+            if type == 'input':
+                storage = inputs
+            elif type == 'parameter':
+                storage = params
+            else:
+                storage = outputs
+
+            opt = q2cli.click.option.GeneratedOption(prefix=type[0], **item)
+            storage.append(opt)
+
+        return inputs, params, outputs
+
+    def get_opt_groups(self, ctx):
+        return {
+            'Inputs': self._inputs,
+            'Parameters': self._params,
+            'Outputs': self._outputs,
+            'Miscellaneous': self._misc + [self.get_help_option(ctx)]
+        }
 
     def build_generated_handlers(self):
         import q2cli.handlers
@@ -233,37 +270,14 @@ class ActionCommand(BaseCommandMixin, click.Command):
             'output': q2cli.handlers.ResultHandler
         }
 
-        handlers = collections.OrderedDict()
+        handlers = {}
         for item in self.action['signature']:
             item = item.copy()
             type = item.pop('type')
 
-            if item['ast']['type'] == 'expression' and item['ast']['name'] in ('List', 'Set'):
-                inner_handler = handler_map[type](**item)
-                handler = q2cli.handlers.CollectionHandler(inner_handler,
-                                                           **item)
-            else:
-                handler = handler_map[type](**item)
-
-            handlers[item['name']] = handler
+            handlers[item['name']] = handler_map[type](**item)
 
         return handlers
-
-    def get_click_parameters(self):
-        import q2cli.util
-
-        # Handlers may provide more than one click.Option
-        for handler in self.generated_handlers.values():
-            yield from handler.get_click_options()
-
-        # Meta-Handlers' Options:
-        yield from self.output_dir_handler.get_click_options()
-        yield from self.cmd_config_handler.get_click_options()
-
-        yield from self.verbose_handler.get_click_options()
-        yield from self.quiet_handler.get_click_options()
-
-        yield q2cli.util.citations_option(self._get_citation_records)
 
     def _get_citation_records(self):
         return self._get_action().citations
@@ -280,21 +294,32 @@ class ActionCommand(BaseCommandMixin, click.Command):
         import os
         import qiime2.util
 
-        arguments, missing_in, verbose, quiet = self.handle_in_params(kwargs)
-        outputs, missing_out = self.handle_out_params(kwargs)
+        output_dir = kwargs.pop('output_dir')
+        verbose = kwargs.pop('verbose')
+        if verbose is None:
+            verbose = False
+            quiet = False
+        elif verbose:
+            quiet = False
+        else:
+            quiet = True
 
-        if missing_in or missing_out:
-            # A new context is generated for a callback, which will result in
-            # the ctx.command_path duplicating the action, so just use the
-            # parent so we can print the help *within* a callback.
-            ctx = click.get_current_context().parent
-            click.echo(ctx.get_help()+"\n", err=True)
-            for option in itertools.chain(missing_in, missing_out):
-                click.secho("Error: Missing option: --%s" % option, err=True,
-                            fg='red', bold=True)
-            if missing_out:
-                click.echo(_OUTPUT_OPTION_ERR_MSG, err=True)
-            ctx.exit(1)
+        arguments = {}
+        init_outputs = {}
+        for key, value in kwargs.items():
+            prefix, *parts = key.split('_')
+            key = '_'.join(parts)
+
+            if prefix == 'o':
+                if value is None:
+                    value = os.path.join(output_dir, key)
+                init_outputs[key] = value
+            elif prefix == 'm':
+                arguments[key[:-len('_file')]] = value
+            else:
+                arguments[key] = value
+
+        outputs = self._order_outputs(init_outputs)
 
         action = self._get_action()
         # `qiime2.util.redirected_stdio` defaults to stdout/stderr when
@@ -335,71 +360,9 @@ class ActionCommand(BaseCommandMixin, click.Command):
                 click.secho('Saved %s to: %s' % (result.type, path),
                             fg='green')
 
-    def handle_in_params(self, kwargs):
-        import q2cli.handlers
-
-        arguments = {}
-        missing = []
-        cmd_fallback = self.cmd_config_handler.get_value(kwargs)
-
-        verbose = self.verbose_handler.get_value(kwargs, fallback=cmd_fallback)
-        quiet = self.quiet_handler.get_value(kwargs, fallback=cmd_fallback)
-
-        if verbose and quiet:
-            click.secho('Unsure of how to be quiet and verbose at the '
-                        'same time.', fg='red', bold=True, err=True)
-            click.get_current_context().exit(1)
-
-        for item in self.action['signature']:
-            if item['type'] == 'input' or item['type'] == 'parameter':
-                name = item['name']
-                handler = self.generated_handlers[name]
-                try:
-                    if isinstance(handler,
-                                  (q2cli.handlers.MetadataHandler,
-                                   q2cli.handlers.MetadataColumnHandler)):
-                        arguments[name] = handler.get_value(
-                            verbose, kwargs, fallback=cmd_fallback)
-                    else:
-                        arguments[name] = handler.get_value(
-                            kwargs, fallback=cmd_fallback)
-                except q2cli.handlers.ValueNotFoundException:
-                    missing += handler.missing
-
-        return arguments, missing, verbose, quiet
-
-    def handle_out_params(self, kwargs):
-        import q2cli.handlers
-
-        outputs = []
-        missing = []
-        cmd_fallback = self.cmd_config_handler.get_value(kwargs)
-        out_fallback = self.output_dir_handler.get_value(
-            kwargs, fallback=cmd_fallback
-        )
-
-        def fallback(*args):
-            try:
-                return cmd_fallback(*args)
-            except q2cli.handlers.ValueNotFoundException:
-                return out_fallback(*args)
-
+    def _order_outputs(self, outputs):
+        ordered = []
         for item in self.action['signature']:
             if item['type'] == 'output':
-                name = item['name']
-                handler = self.generated_handlers[name]
-
-                try:
-                    outputs.append(handler.get_value(kwargs,
-                                                     fallback=fallback))
-                except q2cli.handlers.ValueNotFoundException:
-                    missing += handler.missing
-
-        return outputs, missing
-
-
-_OUTPUT_OPTION_ERR_MSG = """\
-Note: When only providing names for a subset of the output Artifacts or
-Visualizations, you must specify an output directory through use of the
---output-dir DIRECTORY flag.\
-"""
+                ordered.append(outputs[item['name']])
+        return ordered
