@@ -196,15 +196,8 @@ class PluginCommand(BaseCommandMixin, click.MultiCommand):
 class ActionCommand(BaseCommandMixin, click.Command):
     """A click manifestation of a QIIME 2 API Action (Method/Visualizer)
 
-    The ActionCommand generates Handlers which map from 1 Action API parameter
-    to one or more Click.Options.
-
-    MetaHandlers are handlers which are not mapped to an API parameter, they
-    are handled explicitly and generally return a `fallback` function which
-    can be used to supplement value lookup in the regular handlers.
     """
     def __init__(self, name, plugin, action):
-        import q2cli.handlers
         import q2cli.util
         import q2cli.click.type
 
@@ -261,24 +254,6 @@ class ActionCommand(BaseCommandMixin, click.Command):
             'Miscellaneous': self._misc + [self.get_help_option(ctx)]
         }
 
-    def build_generated_handlers(self):
-        import q2cli.handlers
-
-        handler_map = {
-            'input': q2cli.handlers.ArtifactHandler,
-            'parameter': q2cli.handlers.parameter_handler_factory,
-            'output': q2cli.handlers.ResultHandler
-        }
-
-        handlers = {}
-        for item in self.action['signature']:
-            item = item.copy()
-            type = item.pop('type')
-
-            handlers[item['name']] = handler_map[type](**item)
-
-        return handlers
-
     def _get_citation_records(self):
         return self._get_action().citations
 
@@ -320,7 +295,6 @@ class ActionCommand(BaseCommandMixin, click.Command):
                 arguments[key] = value
 
         outputs = self._order_outputs(init_outputs)
-
         action = self._get_action()
         # `qiime2.util.redirected_stdio` defaults to stdout/stderr when
         # supplied `None`.
@@ -353,6 +327,9 @@ class ActionCommand(BaseCommandMixin, click.Command):
             if log and cleanup_logfile and os.path.exists(log.name):
                 log.close()
                 os.remove(log.name)
+
+        if output_dir is not None:
+            os.makedirs(output_dir)
 
         for result, output in zip(results, outputs):
             path = result.save(output)

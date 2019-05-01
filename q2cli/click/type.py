@@ -1,5 +1,21 @@
 import click
 
+def is_writable_dir(path):
+    import os
+
+    head = 'do-while'
+    path = os.path.normpath(os.path.abspath(path))
+    while head:
+        if os.path.exists(path):
+            if os.path.isfile(path):
+                return False
+            else:
+                return os.access(path, os.W_OK | os.X_OK)
+        path, head = os.path.split(path)
+
+    return False
+
+
 class OutDirType(click.Path):
     def convert(self, value, param, ctx):
         import os
@@ -8,12 +24,14 @@ class OutDirType(click.Path):
         if os.path.exists(value):
             if os.path.isfile(value):
                 self.fail('%r is already a file.' % (value,), param, ctx)
+            else:
+                self.fail('%r already exists, will not overwrite.' % (value,),
+                          param, ctx)
 
         if value[-1] != os.path.sep:
             value += os.path.sep
 
-        directory = os.path.abspath(os.path.dirname(value))
-        if not os.access(directory, os.W_OK | os.X_OK):
+        if not is_writable_dir(value):
             self.fail('%r is not a writable directory, cannot write output'
                       ' to it.' % (directory,), param, ctx)
         return value
@@ -59,8 +77,8 @@ class QIIME2Type(click.ParamType):
             if os.path.isdir(value):
                 self.fail('%r is already a directory.' % (value,), param, ctx)
 
-        directory = os.path.abspath(os.path.dirname(value))
-        if not os.access(directory, os.W_OK | os.X_OK):
+        directory = os.path.dirname(value)
+        if not is_writable_dir(directory):
             self.fail('%r is not a writable directory, cannot write output'
                       ' to it.' % (directory,), param, ctx)
         return value
