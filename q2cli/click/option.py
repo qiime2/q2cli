@@ -226,6 +226,7 @@ class GeneratedOption(click.Option):
                 try:
                     if self.q2_multiple is set:
                         self._check_length(value, ctx)
+                    print(value)
                     value = qiime2.sdk.util.parse_primitive(self.q2_ast, value)
                 except ValueError:
                     args = ', '.join(map(repr, value))
