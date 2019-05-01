@@ -190,7 +190,6 @@ class CliTests(unittest.TestCase):
              '--p-nums', '10', '--p-opt-nums', '11', '--p-opt-nums', '12',
              '--p-opt-nums', '13', '--o-output', output_path, '--verbose'])
 
-        print(result.output)
         self.assertEqual(result.exit_code, 0)
         self.assertTrue(os.path.exists(output_path))
 
