@@ -1,3 +1,11 @@
+# ----------------------------------------------------------------------------
+# Copyright (c) 2016-2019, QIIME 2 development team.
+#
+# Distributed under the terms of the Modified BSD License.
+#
+# The full license is in the file LICENSE, distributed with this software.
+# ----------------------------------------------------------------------------
+
 import click
 import click.core
 
@@ -50,8 +58,8 @@ class BaseCommandMixin:
             if args and not ctx.allow_extra_args and not ctx.resilient_parsing:
                 errors.append(click.UsageError(
                     'Got unexpected extra argument%s (%s)'
-                     % (len(args) != 1 and 's' or '',
-                        ' '.join(map(click.core.make_str, args)))))
+                    % (len(args) != 1 and 's' or '',
+                       ' '.join(map(click.core.make_str, args)))))
         if errors:
             click.echo(ctx.get_help()+"\n", err=True)
             click.secho(
@@ -323,14 +331,18 @@ def simple_wrap(text, target, start_col=0):
 def _style_option(text, required=False):
     return click.style(text, fg='blue', bold=True, underline=required)
 
+
 def _style_type(text):
     return click.style(text, fg='green')
+
 
 def _style_reqs(text):
     return click.style(text, fg='magenta')
 
+
 def _style_command(text):
     return _style_option(text)
+
 
 def _style_emphasis(text):
     return click.style(text, underline=True)

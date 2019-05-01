@@ -382,7 +382,7 @@ def extract(input_path, output_path):
                     'debugging issues with your data or analyses).\n\nNote: '
                     'validation can take some time to complete, depending on '
                     'the size and type of your data.',
-                cls=ToolCommand)
+               cls=ToolCommand)
 @click.argument('path', type=click.Path(exists=True, file_okay=True,
                                         dir_okay=False, readable=True),
                 metavar=_COMBO_METAVAR)

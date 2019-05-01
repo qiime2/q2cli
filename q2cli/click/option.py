@@ -1,3 +1,11 @@
+# ----------------------------------------------------------------------------
+# Copyright (c) 2016-2019, QIIME 2 development team.
+#
+# Distributed under the terms of the Modified BSD License.
+#
+# The full license is in the file LICENSE, distributed with this software.
+# ----------------------------------------------------------------------------
+
 import click
 
 from .type import QIIME2Type
@@ -56,7 +64,6 @@ class GeneratedOption(click.Option):
         self.q2_description = description
         self.q2_metadata = metadata
 
-
     @property
     def meta_help(self):
         if self.q2_metadata == 'file':
@@ -76,6 +83,7 @@ class GeneratedOption(click.Option):
 
     def _special_from_ast(self, ast):
         import qiime2.sdk.util
+        import itertools
 
         multiple = None
         greedy = False
@@ -87,7 +95,7 @@ class GeneratedOption(click.Option):
         if style.style is not None:
             multiple = style.view
             if style.style == 'simple':
-                names = {style.members.name,}
+                names = {style.members.name, }
             elif style.style == 'complex':
                 names = {m.name for m in
                          itertools.chain.from_iterable(style.members)}
@@ -111,7 +119,6 @@ class GeneratedOption(click.Option):
 
         return multiple, greedy, is_bool_flag, metadata
 
-    #Override
     def consume_value(self, ctx, opts):
         if self.q2_metadata == 'column':
             return self._consume_metadata(ctx, opts)
@@ -187,7 +194,7 @@ class GeneratedOption(click.Option):
         import qiime2.sdk.util
 
         if self.multiple:
-            if  value == () or value is None:
+            if value == () or value is None:
                 return None
             elif self.q2_prefix == 'i':
                 value = super().type_cast_value(ctx, value)
@@ -241,4 +248,3 @@ class GeneratedOption(click.Option):
             raise click.BadParameter(
                 'recieved <%s> as an argument, which contains duplicates'
                 ' of the following: <%s>' % (args, dups), ctx=ctx, param=self)
-

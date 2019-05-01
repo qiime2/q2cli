@@ -1,6 +1,15 @@
+# ----------------------------------------------------------------------------
+# Copyright (c) 2016-2019, QIIME 2 development team.
+#
+# Distributed under the terms of the Modified BSD License.
+#
+# The full license is in the file LICENSE, distributed with this software.
+# ----------------------------------------------------------------------------
+
 import click
 import click.parser as parser
 import click.exceptions as exceptions
+
 
 class Q2Option(parser.Option):
     @property
@@ -25,7 +34,7 @@ class Q2Option(parser.Option):
         if (self.dest in state.opts
                 and self.action not in ('append', 'append_const',
                                         'append_maybe', 'append_greedy',
-                                         'count')):
+                                        'count')):
             raise exceptions.UsageError(
                 'Option %r was specified multiple times in the command.'
                 % self._get_opt_name())
@@ -68,7 +77,6 @@ class Q2Option(parser.Option):
         if hasattr(self.obj, 'get_error_hint'):
             return self.obj.get_error_hint(None)
         return ' / '.join(self._long_opts)
-
 
 
 class Q2Parser(parser.OptionParser):
@@ -156,6 +164,6 @@ def _usage_show(self, file=None):
                 % (self.ctx.command_path, self.ctx.help_option_names[0]))
     if self.ctx is not None:
         color = self.ctx.color
-        click.echo(self.ctx.get_usage() + '\n%s' % hint, file=file, color=color)
+        click.echo(self.ctx.get_usage() + '\n' + hint, file=file, color=color)
     click.echo(click.style('Error: %s' % self.format_message(), fg='red'),
                file=file, color=color)

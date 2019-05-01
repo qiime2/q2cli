@@ -25,7 +25,7 @@ def dev():
                   "change each time an update is made to a package's code. "
                   "Setting the environment variable Q2CLIDEV to any value "
                   "will always refresh the cache when a command is run.",
-            cls=ToolCommand)
+             cls=ToolCommand)
 def refresh_cache():
     import q2cli.core.cache
     q2cli.core.cache.CACHE.refresh()

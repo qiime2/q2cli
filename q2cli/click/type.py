@@ -1,4 +1,13 @@
+# ----------------------------------------------------------------------------
+# Copyright (c) 2016-2019, QIIME 2 development team.
+#
+# Distributed under the terms of the Modified BSD License.
+#
+# The full license is in the file LICENSE, distributed with this software.
+# ----------------------------------------------------------------------------
+
 import click
+
 
 def is_writable_dir(path):
     import os
@@ -33,7 +42,7 @@ class OutDirType(click.Path):
 
         if not is_writable_dir(value):
             self.fail('%r is not a writable directory, cannot write output'
-                      ' to it.' % (directory,), param, ctx)
+                      ' to it.' % (value,), param, ctx)
         return value
 
 
@@ -83,7 +92,6 @@ class QIIME2Type(click.ParamType):
                       ' to it.' % (directory,), param, ctx)
         return value
 
-
     def _convert_input(self, value, param, ctx):
         import os
         import qiime2.sdk
@@ -96,7 +104,7 @@ class QIIME2Type(click.ParamType):
                       param, ctx)
 
         if isinstance(result, qiime2.sdk.Visualization):
-            maybe = value[:-1]  + 'a'
+            maybe = value[:-1] + 'a'
             hint = ''
             if os.path.exists(maybe):
                 hint = ('  (There is an artifact with the same name:'
@@ -148,16 +156,15 @@ class QIIME2Type(click.ParamType):
         else:
             try:
                 metadata_column = metadata.get_column(column)
-            except Exception as e:
+            except Exception:
                 self.fail("There was an issue with retrieving column %r from "
-                          "the metadata:" % column_value)
+                          "the metadata:" % column)
 
             if metadata_column not in self.type_expr:
                 self.fail("Metadata column is of type %r, but expected %r."
                           % (metadata_column.type, self.type_expr.fields[0]))
 
             return metadata_column
-
 
     def _convert_primitive(self, value, param, ctx):
         import qiime2.sdk.util
@@ -232,4 +239,3 @@ class QIIME2Type(click.ParamType):
     def get_missing_message(self, param):
         if self.is_output:
             return '("--output-dir" may also be used)'
-

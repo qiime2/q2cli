@@ -265,7 +265,6 @@ class ActionCommand(BaseCommandMixin, click.Command):
 
     def __call__(self, **kwargs):
         """Called when user hits return, **kwargs are Dict[click_names, Obj]"""
-        import itertools
         import os
         import qiime2.util
 
