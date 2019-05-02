@@ -9,8 +9,6 @@
 import click
 import click.core
 
-from .parser import Q2Parser
-
 
 class BaseCommandMixin:
     def get_option_names(self, ctx):
@@ -26,7 +24,8 @@ class BaseCommandMixin:
         return self.__option_names
 
     def make_parser(self, ctx):
-        """Creates the underlying option parser for this command."""
+        from .parser import Q2Parser
+
         parser = Q2Parser(ctx)
         for param in self.get_params(ctx):
             param.add_to_parser(parser, ctx)

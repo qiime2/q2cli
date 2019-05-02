@@ -15,15 +15,15 @@ NoDefault = {}
 
 
 class GeneratedOption(click.Option):
-    def __init__(self, *, prefix, name, repr, ast,
-                 default=NoDefault, description=None, **attrs):
+    def __init__(self, *, prefix, name, repr, ast, multiple, is_bool_flag,
+                 metadata, metavar, default=NoDefault, description=None,
+                 **attrs):
         import q2cli.util
-
-        multiple, greedy, is_bool_flag, metadata = \
-            self._special_from_ast(ast)
 
         if metadata is not None:
             prefix = 'm'
+        if multiple is not None:
+            multiple = list if multiple == 'list' else set
 
         if is_bool_flag:
             yes = q2cli.util.to_cli_name(name)
@@ -40,28 +40,30 @@ class GeneratedOption(click.Option):
             opt = f'--{prefix}-{cli_name}'
 
         click_type = QIIME2Type(ast, repr, is_output=prefix == 'o')
+        attrs['metavar'] = metavar
         attrs['multiple'] = multiple is not None
         attrs['param_decls'] = [opt]
-        if not is_bool_flag:
-            attrs['type'] = click_type
-        else:
-            attrs['type'] = None
         attrs['required'] = default is NoDefault
         attrs['help'] = self._add_default(description, default)
         if default is not NoDefault:
             attrs['default'] = default
 
+        # This is to evade clicks __DEBUG__ check
+        if not is_bool_flag:
+            attrs['type'] = click_type
+        else:
+            attrs['type'] = None
+
         super().__init__(**attrs)
+        # put things back the way they _should_ be after evading __DEBUG__
         self.is_bool_flag = is_bool_flag
         self.type = click_type
 
+        # attrs we will use elsewhere
         self.q2_multiple = multiple
         self.q2_prefix = prefix
-        self.q2_greedy = greedy
         self.q2_name = name
-        self.q2_repr = repr
         self.q2_ast = ast
-        self.q2_description = description
         self.q2_metadata = metadata
 
     @property
@@ -80,44 +82,6 @@ class GeneratedOption(click.Option):
             else:
                 desc += '[default: %r]' % (default,)
         return desc
-
-    def _special_from_ast(self, ast):
-        import qiime2.sdk.util
-        import itertools
-
-        multiple = None
-        greedy = False
-        is_bool_flag = False
-        metadata = None
-
-        style = qiime2.sdk.util.interrogate_collection_type(ast)
-
-        if style.style is not None:
-            multiple = style.view
-            if style.style == 'simple':
-                names = {style.members.name, }
-            elif style.style == 'complex':
-                names = {m.name for m in
-                         itertools.chain.from_iterable(style.members)}
-            else:  # composite or monomorphic
-                names = {v.name for v in style.members}
-
-            if 'Bool' in names:
-                is_bool_flag = True
-                if len(names) > 1:
-                    greedy = True
-        else:  # not collection
-            expr = style.expr
-
-            if expr.name == 'Metadata':
-                multiple = list
-                metadata = 'file'
-            elif expr.name == 'MetadataColumn':
-                metadata = 'column'
-            elif expr.name == 'Bool':
-                is_bool_flag = True
-
-        return multiple, greedy, is_bool_flag, metadata
 
     def consume_value(self, ctx, opts):
         if self.q2_metadata == 'column':

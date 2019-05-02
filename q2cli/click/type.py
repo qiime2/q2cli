@@ -175,66 +175,8 @@ class QIIME2Type(click.ParamType):
     def name(self):
         return self.get_metavar('')
 
-    def get_metavar(self, param):
-        import qiime2.sdk.util
-
-        name_to_var = {
-            'Visualization': 'VISUALIZATION',
-            'Int': 'INTEGER',
-            'Str': 'TEXT',
-            'Float': 'NUMBER',
-            'Bool': '',
-        }
-
-        style = qiime2.sdk.util.interrogate_collection_type(self.type_expr)
-
-        multiple = style.style is not None
-        if style.style == 'simple':
-            inner_type = style.members
-        elif not multiple:
-            inner_type = self.type_expr
-        else:
-            inner_type = None
-
-        if qiime2.sdk.util.is_semantic_type(self.type_expr):
-            metavar = 'ARTIFACT'
-        elif qiime2.sdk.util.is_metadata_type(self.type_expr):
-            metavar = 'METADATA'
-        elif style.style is not None and style.style != 'simple':
-            metavar = 'VALUE'
-        else:
-            metavar = name_to_var[inner_type.name]
-        if (metavar == 'NUMBER' and inner_type is not None
-                and inner_type.predicate is not None
-                and inner_type.predicate.template.start == 0
-                and inner_type.predicate.template.end == 1):
-            metavar = 'PROPORTION'
-
-        if multiple or self.type_expr.name == 'Metadata':
-            if metavar != 'TEXT' and metavar != '' and metavar != 'METADATA':
-                metavar += 'S'
-            metavar += '...'
-
-        return metavar
-
     def get_type_repr(self, param):
-        import qiime2.sdk.util
-
-        type_repr = self.type_repr
-        metavar = self.get_metavar(param)
-        style = qiime2.sdk.util.interrogate_collection_type(self.type_expr)
-
-        if not metavar.startswith('ARTIFACT'):
-            if style.style is None:
-                if style.expr.predicate is not None:
-                    type_repr = repr(style.expr.predicate)
-                elif not self.type_expr.fields:
-                    type_repr = None
-            elif style.style == 'simple':
-                if style.members.predicate is not None:
-                    type_repr = repr(style.members.predicate)
-
-        return type_repr
+        return self.type_repr
 
     def get_missing_message(self, param):
         if self.is_output:
