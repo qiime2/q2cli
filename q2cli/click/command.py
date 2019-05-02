@@ -168,7 +168,7 @@ class BaseCommandMixin:
                 rows.append((_style_command(subcommand), help))
 
             if rows:
-                with formatter.section('Commands'):
+                with formatter.section(click.style('Commands', bold=True)):
                     formatter.write_dl(rows)
 
     def write_option(self, ctx, formatter, opt, record, border, COL_SPACING=2):
