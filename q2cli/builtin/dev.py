@@ -7,9 +7,11 @@
 # ----------------------------------------------------------------------------
 
 import click
+from q2cli.click.command import ToolCommand, ToolGroupCommand
 
 
-@click.group(help='Utilities for developers and advanced users.')
+@click.group(help='Utilities for developers and advanced users.',
+             cls=ToolGroupCommand)
 def dev():
     pass
 
@@ -22,7 +24,8 @@ def dev():
                   "is necessary because package versions do not typically "
                   "change each time an update is made to a package's code. "
                   "Setting the environment variable Q2CLIDEV to any value "
-                  "will always refresh the cache when a command is run.")
+                  "will always refresh the cache when a command is run.",
+             cls=ToolCommand)
 def refresh_cache():
-    import q2cli.cache
-    q2cli.cache.CACHE.refresh()
+    import q2cli.core.cache
+    q2cli.core.cache.CACHE.refresh()

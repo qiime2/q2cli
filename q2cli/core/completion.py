@@ -73,6 +73,8 @@ def _generate_command_reply(cmd):
         if isinstance(param, click.Option):
             options.extend(param.opts)
             options.extend(param.secondary_opts)
+            if hasattr(param, 'q2_extra_opts'):
+                options.extend(param.q2_extra_opts)
 
     subcmd_names = []
     if isinstance(cmd, click.MultiCommand):

@@ -11,15 +11,14 @@ import shutil
 import tempfile
 import unittest
 
-import click
 from click.testing import CliRunner
 from qiime2 import Artifact
 from qiime2.core.testing.type import IntSequence1
 from qiime2.core.testing.util import get_dummy_plugin
 
 import q2cli
-import q2cli.info
-import q2cli.tools
+import q2cli.builtin.info
+import q2cli.builtin.tools
 from q2cli.commands import RootCommand
 
 
@@ -35,22 +34,22 @@ class TestOption(unittest.TestCase):
     def _assertRepeatedOptionError(self, result, option):
         self.assertEqual(result.exit_code, 1)
         self.assertTrue(result.output.startswith('Usage:'))
-        self.assertIn('%s was specified multiple times' % option,
-                      result.output)
+        self.assertRegex(result.output, '.*%s.* was specified multiple times'
+                         % option)
 
     def test_repeated_eager_option_with_callback(self):
         result = self.runner.invoke(
-            q2cli.tools.tools,
+            q2cli.builtin.tools.tools,
             ['import', '--show-importable-types', '--show-importable-types'])
 
         self._assertRepeatedOptionError(result, '--show-importable-types')
 
     def test_repeated_builtin_flag(self):
         result = self.runner.invoke(
-            q2cli.info.info,
-            ['info', '--py-packages', '--py-packages'])
+            q2cli.builtin.tools.tools,
+            ['import', '--input-path', 'a', '--input-path', 'b'])
 
-        self._assertRepeatedOptionError(result, '--py-packages')
+        self._assertRepeatedOptionError(result, '--input-path')
 
     def test_repeated_action_flag(self):
         qiime_cli = RootCommand()
@@ -70,7 +69,7 @@ class TestOption(unittest.TestCase):
         output_path = os.path.join(self.tempdir, 'out.qza')
 
         result = self.runner.invoke(
-            q2cli.tools.tools,
+            q2cli.builtin.tools.tools,
             ['import', '--input-path', input_path,
              '--output-path', output_path, '--type', 'IntSequence1',
              '--type', 'IntSequence1'])
@@ -114,12 +113,6 @@ class TestOption(unittest.TestCase):
         self.assertEqual(result.exit_code, 0)
         self.assertTrue(os.path.exists(output_path))
         self.assertEqual(Artifact.load(output_path).view(list), [0, 42, 43])
-
-
-class TestOptionDecorator(unittest.TestCase):
-    def test_cls_override(self):
-        with self.assertRaisesRegex(ValueError, 'override `cls=q2cli.Option`'):
-            q2cli.option('--bar', cls=click.Option)
 
 
 if __name__ == "__main__":

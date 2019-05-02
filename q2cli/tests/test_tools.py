@@ -15,7 +15,7 @@ from click.testing import CliRunner
 from qiime2 import Artifact
 from qiime2.core.testing.util import get_dummy_plugin
 
-from q2cli.tools import tools
+from q2cli.builtin.tools import tools
 from q2cli.commands import RootCommand
 
 

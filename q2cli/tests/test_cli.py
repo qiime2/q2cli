@@ -16,8 +16,8 @@ from qiime2 import Artifact, Visualization
 from qiime2.core.testing.type import IntSequence1, IntSequence2
 from qiime2.core.testing.util import get_dummy_plugin
 
-from q2cli.info import info
-from q2cli.tools import tools
+from q2cli.builtin.info import info
+from q2cli.builtin.tools import tools
 from q2cli.commands import RootCommand
 
 
@@ -312,7 +312,7 @@ class TestOptionalArtifactSupport(unittest.TestCase):
     def test_no_optional_artifacts_provided(self):
         result = self._run_command(
             'optional-artifacts-method', '--i-ints', self.ints1,
-            '--p-num1', 42, '--o-output', self.output, '--verbose')
+            '--p-num1', '42', '--o-output', self.output, '--verbose')
 
         self.assertEqual(result.exit_code, 0)
         self.assertEqual(Artifact.load(self.output).view(list),
@@ -321,7 +321,7 @@ class TestOptionalArtifactSupport(unittest.TestCase):
     def test_one_optional_artifact_provided(self):
         result = self._run_command(
             'optional-artifacts-method', '--i-ints', self.ints1,
-            '--p-num1', 42, '--i-optional1', self.ints2,
+            '--p-num1', '42', '--i-optional1', self.ints2,
             '--o-output', self.output, '--verbose')
 
         self.assertEqual(result.exit_code, 0)
@@ -331,8 +331,8 @@ class TestOptionalArtifactSupport(unittest.TestCase):
     def test_all_optional_artifacts_provided(self):
         result = self._run_command(
             'optional-artifacts-method', '--i-ints', self.ints1,
-            '--p-num1', 42, '--i-optional1', self.ints2,
-            '--i-optional2', self.ints3, '--p-num2', 111,
+            '--p-num1', '42', '--i-optional1', self.ints2,
+            '--i-optional2', self.ints3, '--p-num2', '111',
             '--o-output', self.output, '--verbose')
 
         self.assertEqual(result.exit_code, 0)
@@ -342,12 +342,12 @@ class TestOptionalArtifactSupport(unittest.TestCase):
     def test_optional_artifact_type_mismatch(self):
         result = self._run_command(
             'optional-artifacts-method', '--i-ints', self.ints1,
-            '--p-num1', 42, '--i-optional1', self.ints3,
+            '--p-num1', '42', '--i-optional1', self.ints3,
             '--o-output', self.output, '--verbose')
 
         self.assertEqual(result.exit_code, 1)
         self.assertRegex(str(result.output),
-                         'optional1.*IntSequence1.*IntSequence2.*passed')
+                         'type IntSequence1.*type IntSequence2.*')
 
 
 class MetadataTestsBase(unittest.TestCase):
@@ -385,19 +385,6 @@ class MetadataTestsBase(unittest.TestCase):
         Artifact.import_data(
             'Mapping', {'a': 'dog', 'b': 'cat'}).save(self.metadata_artifact)
 
-        self.cmd_config = os.path.join(self.tempdir, 'conf.ini')
-        with open(self.cmd_config, 'w') as f:
-            f.write('[dummy-plugin.identity-with-metadata]\n'
-                    'm-metadata-file=%s\n' % self.metadata_file1)
-            f.write('[dummy-plugin.identity-with-optional-metadata]\n'
-                    'm-metadata-file=%s\n' % self.metadata_file1)
-            f.write('[dummy-plugin.identity-with-metadata-column]\n'
-                    'm-metadata-file=%s\n'
-                    'm-metadata-column=col1\n' % self.metadata_file1)
-            f.write('[dummy-plugin.identity-with-optional-metadata-column]\n'
-                    'm-metadata-file=%s\n'
-                    'm-metadata-column=col1\n' % self.metadata_file1)
-
     def tearDown(self):
         shutil.rmtree(self.tempdir)
 
@@ -428,7 +415,7 @@ class TestMetadataSupport(MetadataTestsBase):
 
         self.assertEqual(result.exit_code, 1)
         self.assertTrue(result.output.startswith('Usage:'))
-        self.assertIn("Missing option: --m-metadata-file", result.output)
+        self.assertIn("Missing option \"--m-metadata-file\"", result.output)
 
     def test_optional_metadata_missing(self):
         result = self._run_command(
@@ -501,20 +488,7 @@ class TestMetadataSupport(MetadataTestsBase):
                 '--m-metadata-file', self.metadata_file1)
 
             self.assertNotEqual(result.exit_code, 0)
-            self.assertIn('overlapping columns', str(result.exception))
-
-    def test_cmd_config_metadata(self):
-        for command in ('identity-with-metadata',
-                        'identity-with-optional-metadata'):
-            result = self._run_command(
-                command, '--i-ints', self.input_artifact, '--o-out',
-                self.output_artifact, '--cmd-config', self.cmd_config,
-                '--verbose')
-
-            exp_tsv = 'id\tcol1\n#q2:types\tcategorical\n0\tfoo\nid1\tbar\n'
-            self._assertMetadataOutput(
-                result, exp_tsv=exp_tsv,
-                exp_yaml="metadata: !metadata 'metadata.tsv'")
+            self.assertIn('overlapping columns', result.output)
 
 
 class TestMetadataColumnSupport(MetadataTestsBase):
@@ -525,8 +499,7 @@ class TestMetadataColumnSupport(MetadataTestsBase):
 
         self.assertEqual(result.exit_code, 1)
         self.assertTrue(result.output.startswith('Usage:'))
-        self.assertIn("Missing option: --m-metadata-file", result.output)
-        self.assertIn("Missing option: --m-metadata-column", result.output)
+        self.assertIn("Missing option \"--m-metadata-file\"", result.output)
 
     def test_optional_metadata_missing(self):
         result = self._run_command(
@@ -544,7 +517,7 @@ class TestMetadataColumnSupport(MetadataTestsBase):
 
         self.assertEqual(result.exit_code, 1)
         self.assertTrue(result.output.startswith('Usage:'))
-        self.assertIn("Missing option: --m-metadata-column", result.output)
+        self.assertIn("Missing option \"--m-metadata-column\"", result.output)
 
     def test_optional_column_without_metadata(self):
         result = self._run_command(
@@ -554,7 +527,7 @@ class TestMetadataColumnSupport(MetadataTestsBase):
 
         self.assertEqual(result.exit_code, 1)
         self.assertTrue(result.output.startswith('Usage:'))
-        self.assertIn("Missing option: --m-metadata-file", result.output)
+        self.assertIn("Missing option \"--m-metadata-file\"", result.output)
 
     def test_single_metadata(self):
         for command in ('identity-with-metadata-column',
@@ -579,11 +552,9 @@ class TestMetadataColumnSupport(MetadataTestsBase):
                 self.metadata_artifact, '--m-metadata-column', 'col2',
                 '--verbose')
 
-            exp_tsv = 'id\tcol2\n#q2:types\tcategorical\n0\tbaz\n'
-            exp_yaml = "metadata: !metadata '%s:metadata.tsv'" % (
-                Artifact.load(self.metadata_artifact).uuid)
-            self._assertMetadataOutput(result, exp_tsv=exp_tsv,
-                                       exp_yaml=exp_yaml)
+            self.assertEqual(result.exit_code, 1)
+            self.assertIn('\'--m-metadata-file\' was specified multiple times',
+                          result.output)
 
     def test_multiple_metadata_column(self):
         result = self._run_command(
@@ -595,41 +566,17 @@ class TestMetadataColumnSupport(MetadataTestsBase):
 
         self.assertEqual(result.exit_code, 1)
         self.assertTrue(result.output.startswith('Usage:'))
-        self.assertIn('--m-metadata-column was specified multiple times',
+        self.assertIn('\'--m-metadata-file\' was specified multiple times',
                       result.output)
-
-    def test_invalid_metadata_merge(self):
-        for command in ('identity-with-metadata-column',
-                        'identity-with-optional-metadata-column'):
-            result = self._run_command(
-                command, '--i-ints', self.input_artifact, '--o-out',
-                self.output_artifact, '--m-metadata-file', self.metadata_file1,
-                '--m-metadata-file', self.metadata_file1,
-                '--m-metadata-column', 'col1')
-
-            self.assertNotEqual(result.exit_code, 0)
-            self.assertIn('overlapping columns', str(result.exception))
-
-    def test_cmd_config(self):
-        for command in ('identity-with-metadata-column',
-                        'identity-with-optional-metadata-column'):
-            result = self._run_command(
-                command, '--i-ints', self.input_artifact, '--o-out',
-                self.output_artifact, '--cmd-config', self.cmd_config,
-                '--verbose')
-
-            exp_tsv = 'id\tcol1\n#q2:types\tcategorical\n0\tfoo\nid1\tbar\n'
-            self._assertMetadataOutput(
-                result, exp_tsv=exp_tsv,
-                exp_yaml="metadata: !metadata 'metadata.tsv'")
 
     def test_categorical_metadata_column(self):
         result = self._run_command(
             'identity-with-categorical-metadata-column', '--help')
         help_text = result.output
 
-        self.assertIn('--m-metadata-column MetadataColumn[Categorical]',
-                      help_text)
+        self.assertIn(
+            '--m-metadata-column COLUMN  MetadataColumn[Categorical]',
+            help_text)
 
         result = self._run_command(
             'identity-with-categorical-metadata-column', '--i-ints',
@@ -650,16 +597,17 @@ class TestMetadataColumnSupport(MetadataTestsBase):
             '--m-metadata-column', 'numbers')
 
         self.assertEqual(result.exit_code, 1)
-        err_msg = ("Metadata column 'numbers' is numeric. Option "
-                   "--m-metadata-column expects the column to be categorical.")
-        self.assertIn(err_msg, result.output)
+        self.assertIn("Metadata column", result.output)
+        self.assertIn("numeric", result.output)
+        self.assertIn("expected Categorical", result.output)
 
     def test_numeric_metadata_column(self):
         result = self._run_command(
             'identity-with-numeric-metadata-column', '--help')
         help_text = result.output
 
-        self.assertIn('--m-metadata-column MetadataColumn[Numeric]', help_text)
+        self.assertIn('--m-metadata-column COLUMN  MetadataColumn[Numeric]',
+                      help_text)
 
         result = self._run_command(
             'identity-with-numeric-metadata-column', '--i-ints',
@@ -680,9 +628,9 @@ class TestMetadataColumnSupport(MetadataTestsBase):
             '--m-metadata-column', 'strings')
 
         self.assertEqual(result.exit_code, 1)
-        err_msg = ("Metadata column 'strings' is categorical. Option "
-                   "--m-metadata-column expects the column to be numeric.")
-        self.assertIn(err_msg, result.output)
+        self.assertIn("Metadata column", result.output)
+        self.assertIn("categorical", result.output)
+        self.assertIn("expected Numeric", result.output)
 
 
 if __name__ == "__main__":

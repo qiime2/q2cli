@@ -188,7 +188,7 @@ class DeploymentCache:
         import json
         import os.path
         import click
-        import q2cli.completion
+        import q2cli.core.completion
         import q2cli.util
 
         click.secho(
@@ -203,7 +203,7 @@ class DeploymentCache:
         with open(path, 'w') as fh:
             json.dump(state, fh)
 
-        q2cli.completion.write_bash_completion_script(
+        q2cli.core.completion.write_bash_completion_script(
             state['plugins'], q2cli.util.get_completion_path())
 
         # Write requirements file last because the above steps may raise errors
@@ -276,7 +276,7 @@ class DeploymentCache:
         sig = action.signature
         for name, spec in itertools.chain(sig.signature_order.items(),
                                           sig.outputs.items()):
-            data = {'name': name, 'repr': repr(spec.qiime_type),
+            data = {'name': name, 'repr': self._get_type_repr(spec.qiime_type),
                     'ast': spec.qiime_type.to_ast()}
 
             if name in sig.inputs:
@@ -292,9 +292,108 @@ class DeploymentCache:
             if spec.has_default():
                 data['default'] = spec.default
 
+            data['metavar'] = self._get_metavar(spec.qiime_type)
+            data['multiple'], data['is_bool_flag'], data['metadata'] = \
+                self._special_option_flags(spec.qiime_type)
+
             state['signature'].append(data)
 
         return state
+
+    def _special_option_flags(self, type):
+        import qiime2.sdk.util
+        import itertools
+
+        multiple = None
+        is_bool_flag = False
+        metadata = None
+
+        style = qiime2.sdk.util.interrogate_collection_type(type)
+
+        if style.style is not None:
+            multiple = style.view.__name__
+            if style.style == 'simple':
+                names = {style.members.name, }
+            elif style.style == 'complex':
+                names = {m.name for m in
+                         itertools.chain.from_iterable(style.members)}
+            else:  # composite or monomorphic
+                names = {v.name for v in style.members}
+
+            if 'Bool' in names:
+                is_bool_flag = True
+        else:  # not collection
+            expr = style.expr
+
+            if expr.name == 'Metadata':
+                multiple = 'list'
+                metadata = 'file'
+            elif expr.name == 'MetadataColumn':
+                metadata = 'column'
+            elif expr.name == 'Bool':
+                is_bool_flag = True
+
+        return multiple, is_bool_flag, metadata
+
+    def _get_type_repr(self, type):
+        import qiime2.sdk.util
+
+        type_repr = repr(type)
+        style = qiime2.sdk.util.interrogate_collection_type(type)
+
+        if not qiime2.sdk.util.is_semantic_type(type):
+            if style.style is None:
+                if style.expr.predicate is not None:
+                    type_repr = repr(style.expr.predicate)
+                elif not type.fields:
+                    type_repr = None
+            elif style.style == 'simple':
+                if style.members.predicate is not None:
+                    type_repr = repr(style.members.predicate)
+
+        return type_repr
+
+    def _get_metavar(self, type):
+        import qiime2.sdk.util
+
+        name_to_var = {
+            'Visualization': 'VISUALIZATION',
+            'Int': 'INTEGER',
+            'Str': 'TEXT',
+            'Float': 'NUMBER',
+            'Bool': '',
+        }
+
+        style = qiime2.sdk.util.interrogate_collection_type(type)
+
+        multiple = style.style is not None
+        if style.style == 'simple':
+            inner_type = style.members
+        elif not multiple:
+            inner_type = type
+        else:
+            inner_type = None
+
+        if qiime2.sdk.util.is_semantic_type(type):
+            metavar = 'ARTIFACT'
+        elif qiime2.sdk.util.is_metadata_type(type):
+            metavar = 'METADATA'
+        elif style.style is not None and style.style != 'simple':
+            metavar = 'VALUE'
+        else:
+            metavar = name_to_var[inner_type.name]
+        if (metavar == 'NUMBER' and inner_type is not None
+                and inner_type.predicate is not None
+                and inner_type.predicate.template.start == 0
+                and inner_type.predicate.template.end == 1):
+            metavar = 'PROPORTION'
+
+        if multiple or type.name == 'Metadata':
+            if metavar != 'TEXT' and metavar != '' and metavar != 'METADATA':
+                metavar += 'S'
+            metavar += '...'
+
+        return metavar
 
 
 # Singleton. Import and use this instance as necessary.

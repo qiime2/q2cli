@@ -8,8 +8,13 @@
 
 
 def get_app_dir():
-    import click
-    return click.get_app_dir('q2cli', roaming=False)
+    import os
+    conda_prefix = os.environ.get('CONDA_PREFIX')
+    if conda_prefix is not None and os.access(conda_prefix, os.W_OK | os.X_OK):
+        return os.path.join(conda_prefix, 'var', 'q2cli')
+    else:
+        import click
+        return click.get_app_dir('q2cli', roaming=False)
 
 
 # NOTE: `get_cache_dir` and `get_completion_path` live here instead of
@@ -52,6 +57,7 @@ def exit_with_error(e, header='An error has been encountered:',
 
     if traceback is not None:
         tb.print_exception(type(e), e, e.__traceback__, file=tb_file)
+
         tb_file.write('\n')
 
     click.secho('\n\n'.join(segments), fg='red', bold=True, err=True)
@@ -60,6 +66,25 @@ def exit_with_error(e, header='An error has been encountered:',
         click.echo(err=True)  # extra newline to look normal
 
     click.get_current_context().exit(status)
+
+
+def get_close_matches(name, possibilities):
+    import difflib
+
+    name = name.lower()
+    # bash completion makes an incomplete arg most likely
+    matches = [m for m in possibilities if m.startswith(name)]
+    if not matches:
+        # otherwise, it may be misspelled
+        matches = difflib.get_close_matches(name, possibilities, cutoff=0.8)
+
+    matches.sort()
+
+    if len(matches) > 5:
+        # this is probably a good time to look at --help
+        matches = matches[:4] + ['...']
+
+    return matches
 
 
 class pretty_failure:
@@ -105,12 +130,12 @@ def convert_primitive(ast):
         if predicate['name'] == 'Choices' and ast['name'] == 'Str':
             return click.Choice(predicate['choices'])
         elif predicate['name'] == 'Range' and ast['name'] == 'Int':
-            start = predicate['start']
-            end = predicate['end']
+            start = predicate['range'][0]
+            end = predicate['range'][1]
             # click.IntRange is always inclusive
-            if start is not None and not predicate['inclusive-start']:
+            if start is not None and not predicate['inclusive'][0]:
                 start += 1
-            if end is not None and not predicate['inclusive-end']:
+            if end is not None and not predicate['inclusive'][1]:
                 end -= 1
             return click.IntRange(start, end)
         elif predicate['name'] == 'Range' and ast['name'] == 'Float':
@@ -147,6 +172,6 @@ def citations_option(get_citation_records):
             click.secho('No citations found.', fg='yellow', err=True)
             ctx.exit(1)
 
-    return click.Option(('--citations',), is_flag=True, expose_value=False,
+    return click.Option(['--citations'], is_flag=True, expose_value=False,
                         is_eager=True, callback=callback,
                         help='Show citations and exit.')

@@ -8,7 +8,7 @@
 
 import click
 
-import q2cli
+from q2cli.click.command import ToolCommand
 
 
 def _echo_version():
@@ -25,9 +25,9 @@ def _echo_version():
 
 
 def _echo_plugins():
-    import q2cli.cache
+    import q2cli.core.cache
 
-    plugins = q2cli.cache.CACHE.plugins
+    plugins = q2cli.core.cache.CACHE.plugins
     if plugins:
         for name, plugin in sorted(plugins.items()):
             click.echo('%s: %s' % (name, plugin['version']))
@@ -36,32 +36,17 @@ def _echo_plugins():
                     'the official QIIME 2 plugins at https://qiime2.org')
 
 
-def _echo_installed_packages():
-    import pip
-
-    # This code was derived from an example provide here:
-    # http://stackoverflow.com/a/23885252/3424666
-    installed_packages = sorted(["%s==%s" % (i.key, i.version)
-                                for i in pip.get_installed_distributions()])
-    for e in installed_packages:
-        click.echo(e)
-
-
-@click.command(help='Display information about current deployment.')
-@q2cli.option('--py-packages', is_flag=True,
-              help='Display names and versions of all installed Python '
-                   'packages.')
-def info(py_packages):
+@click.command(help='Display information about current deployment.',
+               cls=ToolCommand)
+def info():
     import q2cli.util
-    import q2cli.cache
+    # This import improves performance for repeated _echo_plugins
+    import q2cli.core.cache
 
     click.secho('System versions', fg='green')
     _echo_version()
     click.secho('\nInstalled plugins', fg='green')
     _echo_plugins()
-    if py_packages:
-        click.secho('\nInstalled Python packages', fg='green')
-        _echo_installed_packages()
 
     click.secho('\nApplication config directory', fg='green')
     click.secho(q2cli.util.get_app_dir())
