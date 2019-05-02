@@ -328,7 +328,7 @@ def simple_wrap(text, target, start_col=0):
 
 
 def _style_option(text, required=False):
-    return click.style(text, fg='blue', bold=True, underline=required)
+    return click.style(text, fg='blue', underline=required)
 
 
 def _style_type(text):
