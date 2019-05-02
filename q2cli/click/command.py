@@ -67,9 +67,11 @@ class BaseCommandMixin:
                        ' '.join(map(click.core.make_str, args)))))
         if errors:
             click.echo(ctx.get_help()+"\n", err=True)
-            click.secho(
-                'There were some problem(s) with this command'.center(78, ' '),
-                fg='yellow', err=True)
+            if len(errors) > 1:
+                problems = 'There were some problems with the command:'
+            else:
+                problems = 'There was a problem with the command:'
+            click.secho(problems.center(78, ' '), fg='yellow', err=True)
             for idx, e in enumerate(errors, 1):
                 msg = click.formatting.wrap_text(
                     e.format_message(),
