@@ -6,7 +6,15 @@
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 
-import click
+# ----------------------------------------------------------------------------
+# Some of the source code in this file is derived from original work:
+#
+# Copyright (c) 2014 by the Pallets team.
+#
+# To see the license for the original work, see licenses/click.LICENSE.rst
+# Specific reproduction and derivation of original work is marked below.
+# ----------------------------------------------------------------------------
+
 import click.parser as parser
 import click.exceptions as exceptions
 
@@ -28,6 +36,10 @@ class Q2Option(parser.Option):
             return None
         return state.rargs.pop(0)
 
+    # Specific technique derived from original:
+    # < https://github.com/pallets/click/blob/
+    #   c6042bf2607c5be22b1efef2e42a94ffd281434c/click/core.py#L867 >
+    # Copyright (c) 2014 by the Pallets team.
     def process(self, value, state):
         # actions should update state.opts and state.order
 
@@ -80,9 +92,10 @@ class Q2Option(parser.Option):
 
 
 class Q2Parser(parser.OptionParser):
-    # Modified from original source:
+    # Modified from original:
     # < https://github.com/pallets/click/blob/
     #   ic6042bf2607c5be22b1efef2e42a94ffd281434c/click/parser.py#L228 >
+    # Copyright (c) 2014 by the Pallets team.
     def add_option(self, opts, dest, action=None, nargs=1, const=None,
                    obj=None):
         """Adds a new option named `dest` to the parser.  The destination
@@ -123,25 +136,15 @@ class Q2Parser(parser.OptionParser):
         backup = args.copy()  # args will be mutated by super()
         try:
             return super().parse_args(args)
-        except (exceptions.UsageError) as e:
+        except exceptions.UsageError:
             if '--help' in backup:
                 # all is forgiven
                 return {'help': True}, [], ['help']
-
-            # The rest of this is just to color the error red...
-
-            # disgusting I know... but e is an unbound variable otherwise
-            def _closure(e):
-                e.ctx = self.ctx
-                def show(file=None): return _usage_show(e, file=file)
-                # click.echo is super duper hardcoded into e.show, which is
-                # why we had to do this :(
-                e.show = show
-
-            _closure(e)
-
             raise
 
+    # Override of private member:
+    # < https://github.com/pallets/click/blob/
+    #   ic6042bf2607c5be22b1efef2e42a94ffd281434c/click/parser.py#L321 >
     def _match_long_opt(self, opt, explicit_value, state):
         if opt not in self._long_opt:
             from q2cli.util import get_close_matches
@@ -151,19 +154,3 @@ class Q2Parser(parser.OptionParser):
                                           ctx=self.ctx)
 
         return super()._match_long_opt(opt, explicit_value, state)
-
-
-def _usage_show(self, file=None):
-    if file is None:
-        file = exceptions.get_text_stderr()
-    color = None
-    hint = ''
-    if (self.cmd is not None and
-            self.cmd.get_help_option(self.ctx) is not None):
-        hint = ('Try "%s %s" for help.\n'
-                % (self.ctx.command_path, self.ctx.help_option_names[0]))
-    if self.ctx is not None:
-        color = self.ctx.color
-        click.echo(self.ctx.get_usage() + '\n' + hint, file=file, color=color)
-    click.echo(click.style('Error: %s' % self.format_message(), fg='red'),
-               file=file, color=color)

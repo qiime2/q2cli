@@ -6,24 +6,26 @@
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 
+# ----------------------------------------------------------------------------
+# Some of the source code in this file is derived from original work:
+#
+# Copyright (c) 2014 by the Pallets team.
+#
+# To see the license for the original work, see licenses/click.LICENSE.rst
+# Specific reproduction and derivation of original work is marked below.
+# ----------------------------------------------------------------------------
+
 import click
 import click.core
 
 
 class BaseCommandMixin:
-    def get_option_names(self, ctx):
-        if not hasattr(self, '__option_names'):
-            names = set()
-            for param in self.get_params(ctx):
-                if hasattr(param, 'q2_name'):
-                    names.add(param.q2_name)
-                else:
-                    names.add(param.name)
-            self.__option_names = names
-
-        return self.__option_names
-
+    # Modified from original:
+    # < https://github.com/pallets/click/blob/
+    #   c6042bf2607c5be22b1efef2e42a94ffd281434c/click/core.py#L867 >
+    # Copyright (c) 2014 by the Pallets team.
     def make_parser(self, ctx):
+        """Creates the underlying option parser for this command."""
         from .parser import Q2Parser
 
         parser = Q2Parser(ctx)
@@ -31,6 +33,10 @@ class BaseCommandMixin:
             param.add_to_parser(parser, ctx)
         return parser
 
+    # Modified from original:
+    # < https://github.com/pallets/click/blob/
+    #   c6042bf2607c5be22b1efef2e42a94ffd281434c/click/core.py#L934 >
+    # Copyright (c) 2014 by the Pallets team.
     def parse_args(self, ctx, args):
         if isinstance(self, click.MultiCommand):
             return super().parse_args(ctx, args)
@@ -76,15 +82,22 @@ class BaseCommandMixin:
         ctx.args = args
         return args
 
+    def get_option_names(self, ctx):
+        if not hasattr(self, '__option_names'):
+            names = set()
+            for param in self.get_params(ctx):
+                if hasattr(param, 'q2_name'):
+                    names.add(param.q2_name)
+                else:
+                    names.add(param.name)
+            self.__option_names = names
+
+        return self.__option_names
+
     def list_commands(self, ctx):
         if not hasattr(super(), 'list_commands'):
             return []
         return super().list_commands(ctx)
-
-    def format_usage(self, ctx, formatter):
-        pieces = self.collect_usage_pieces(ctx)
-        formatter.write_usage(_style_command(ctx.command_path),
-                              ' '.join(pieces))
 
     def get_opt_groups(self, ctx):
         return {'Options': list(self.get_params(ctx))}
@@ -92,6 +105,16 @@ class BaseCommandMixin:
     def format_help_text(self, ctx, formatter):
         super().format_help_text(ctx, formatter)
         formatter.write_paragraph()
+
+    # Modified from original:
+    # < https://github.com/pallets/click/blob
+    #   /c6042bf2607c5be22b1efef2e42a94ffd281434c/click/core.py#L830 >
+    # Copyright (c) 2014 by the Pallets team.
+    def format_usage(self, ctx, formatter):
+        """Writes the usage line into the formatter."""
+        pieces = self.collect_usage_pieces(ctx)
+        formatter.write_usage(_style_command(ctx.command_path),
+                              ' '.join(pieces))
 
     def format_options(self, ctx, formatter, COL_MAX=23, COL_MIN=10):
         # write options
@@ -120,7 +143,10 @@ class BaseCommandMixin:
                 self.write_option(ctx, formatter, opt, record, padded_border)
             formatter.dedent()
 
-        # write subcommands
+        # Modified from original:
+        # https://github.com/pallets/click/blob
+        # /c6042bf2607c5be22b1efef2e42a94ffd281434c/click/core.py#L1056
+        # Copyright (c) 2014 by the Pallets team.
         commands = []
         for subcommand in self.list_commands(ctx):
             cmd = self.get_command(ctx, subcommand)
