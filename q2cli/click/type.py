@@ -7,7 +7,6 @@
 # ----------------------------------------------------------------------------
 
 import click
-import tempfile
 
 
 def is_writable_dir(path):
@@ -99,6 +98,7 @@ class QIIME2Type(click.ParamType):
 
     def _convert_input(self, value, param, ctx):
         import os
+        import tempfile
         import qiime2.sdk
         import qiime2.sdk.util
 
