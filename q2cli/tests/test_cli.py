@@ -303,15 +303,8 @@ class CliTests(unittest.TestCase):
         temp = tempfile.tempdir
         with unittest.mock.patch('qiime2.sdk.Result.load',
                                  side_effect=OSError(errno.ENOSPC,
-                                                     'There was not enough '
-                                                     f'space left on {temp!r} '
-                                                     'to extract the artifact '
-                                                     f'{self.artifact1_path!r}'
-                                                     '. (Try setting $TMPDIR '
-                                                     'to a directory with '
-                                                     'more space, or '
-                                                     'increasing the size of '
-                                                     f'{temp!r})')):
+                                                     'No space left on '
+                                                     'device')):
             with self.assertRaisesRegex(click.exceptions.BadParameter,
                                         f'{temp!r}.*'
                                         f'{self.artifact1_path!r}.*'
