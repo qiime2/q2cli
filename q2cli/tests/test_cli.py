@@ -12,6 +12,7 @@ import unittest.mock
 import tempfile
 import shutil
 import click
+import errno
 
 from click.testing import CliRunner
 from qiime2 import Artifact, Visualization
@@ -297,20 +298,25 @@ class CliTests(unittest.TestCase):
                                     "'x' is not a valid filepath"):
             obj._convert_input('x', None, None)
 
-        obj._convert_input = \
-            unittest.mock.Mock(side_effect=click.exceptions.
-                               BadParameter('There was not enough space left '
-                                            f'on {self.tempdir!r} to extract '
-                                            'the artifact '
-                                            f'{self.artifact1_path!r}. (Try '
-                                            'setting $TMPDIR to a directory '
-                                            'with more space, or increasing '
-                                            f'the size of {self.tempdir!r})'))
-        with self.assertRaisesRegex(click.exceptions.BadParameter,
-                                    f'{self.tempdir!r}.*'
-                                    f'{self.artifact1_path!r}.*'
-                                    f'{self.tempdir!r}'):
-            obj._convert_input(self.artifact1_path, None, None)
+        # This is to ensure the temp in the regex matches the temp used in the
+        # method under test in type.py
+        temp = tempfile.tempdir
+        with unittest.mock.patch('qiime2.sdk.Result.load',
+                                 side_effect=OSError(errno.ENOSPC,
+                                                     'There was not enough '
+                                                     f'space left on {temp!r} '
+                                                     'to extract the artifact '
+                                                     f'{self.artifact1_path!r}'
+                                                     '. (Try setting $TMPDIR '
+                                                     'to a directory with '
+                                                     'more space, or '
+                                                     'increasing the size of '
+                                                     f'{temp!r})')):
+            with self.assertRaisesRegex(click.exceptions.BadParameter,
+                                        f'{temp!r}.*'
+                                        f'{self.artifact1_path!r}.*'
+                                        f'{temp!r}'):
+                obj._convert_input(self.artifact1_path, None, None)
 
 
 class TestOptionalArtifactSupport(unittest.TestCase):

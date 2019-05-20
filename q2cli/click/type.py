@@ -116,7 +116,7 @@ class QIIME2Type(click.ParamType):
                 else:
                     raise ControlFlowException
             except ValueError as e:
-                if str(e) == f'{value} does not exist.':
+                if 'does not exist' in str(e):
                     self.fail(f'{value!r} is not a valid filepath', param, ctx)
                 else:
                     raise ControlFlowException
