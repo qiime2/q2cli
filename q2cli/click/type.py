@@ -7,6 +7,7 @@
 # ----------------------------------------------------------------------------
 
 import click
+import tempfile
 
 
 def is_writable_dir(path):
@@ -44,6 +45,10 @@ class OutDirType(click.Path):
             self.fail('%r is not a writable directory, cannot write output'
                       ' to it.' % (value,), param, ctx)
         return value
+
+
+class ControlFlowException(Exception):
+    pass
 
 
 class QIIME2Type(click.ParamType):
@@ -98,10 +103,28 @@ class QIIME2Type(click.ParamType):
         import qiime2.sdk.util
 
         try:
-            result = qiime2.sdk.Result.load(value)
-        except Exception:
-            self.fail('%r is not a QIIME 2 Artifact (.qza)' % value,
-                      param, ctx)
+            try:
+                result = qiime2.sdk.Result.load(value)
+            except OSError as e:
+                if e.errno == 28:
+                    temp = tempfile.tempdir
+                    self.fail(f'There was not enough space left on {temp!r} '
+                              f'to extract the artifact {value!r}. '
+                              '(Try setting $TMPDIR to a directory with '
+                              'more space, or increasing the size of '
+                              f'{temp!r})', param, ctx)
+                else:
+                    raise ControlFlowException
+            except ValueError as e:
+                if str(e) == f'{value} does not exist.':
+                    self.fail(f'{value!r} is not a valid filepath', param, ctx)
+                else:
+                    raise ControlFlowException
+            except Exception:
+                raise ControlFlowException
+        except ControlFlowException:
+            self.fail('%r is not a QIIME 2 Artifact (.qza)' % value, param,
+                      ctx)
 
         if isinstance(result, qiime2.sdk.Visualization):
             maybe = value[:-1] + 'a'

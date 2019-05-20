@@ -8,8 +8,10 @@
 
 import os.path
 import unittest
+import unittest.mock
 import tempfile
 import shutil
+import click
 
 from click.testing import CliRunner
 from qiime2 import Artifact, Visualization
@@ -19,6 +21,7 @@ from qiime2.core.testing.util import get_dummy_plugin
 from q2cli.builtin.info import info
 from q2cli.builtin.tools import tools
 from q2cli.commands import RootCommand
+from q2cli.click.type import QIIME2Type
 
 
 class CliTests(unittest.TestCase):
@@ -281,6 +284,33 @@ class CliTests(unittest.TestCase):
 
         self.assertEqual(result.exit_code, 1)
         self.assertIn('Traceback (most recent call last)', result.output)
+
+    def test_input_conversion(self):
+        obj = QIIME2Type(IntSequence1.to_ast(), repr(IntSequence1))
+
+        with self.assertRaisesRegex(click.exceptions.BadParameter,
+                                    f'{self.tempdir!r} is not a QIIME 2 '
+                                    'Artifact'):
+            obj._convert_input(self.tempdir, None, None)
+
+        with self.assertRaisesRegex(click.exceptions.BadParameter,
+                                    "'x' is not a valid filepath"):
+            obj._convert_input('x', None, None)
+
+        obj._convert_input = \
+            unittest.mock.Mock(side_effect=click.exceptions.
+                               BadParameter('There was not enough space left '
+                                            f'on {self.tempdir!r} to extract '
+                                            'the artifact '
+                                            f'{self.artifact1_path!r}. (Try '
+                                            'setting $TMPDIR to a directory '
+                                            'with more space, or increasing '
+                                            f'the size of {self.tempdir!r})'))
+        with self.assertRaisesRegex(click.exceptions.BadParameter,
+                                    f'{self.tempdir!r}.*'
+                                    f'{self.artifact1_path!r}.*'
+                                    f'{self.tempdir!r}'):
+            obj._convert_input(self.artifact1_path, None, None)
 
 
 class TestOptionalArtifactSupport(unittest.TestCase):
