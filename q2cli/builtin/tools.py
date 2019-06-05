@@ -16,7 +16,6 @@ from q2cli.click.command import ToolCommand, ToolGroupCommand
 
 _COMBO_METAVAR = 'ARTIFACT/VISUALIZATION'
 
-
 @click.group(help='Tools for working with QIIME 2 files.',
              cls=ToolGroupCommand)
 def tools():
@@ -274,7 +273,7 @@ def _load_metadata(path):
 @tools.command(short_help='View a QIIME 2 Visualization.',
                help="Displays a QIIME 2 Visualization until the command "
                     "exits. To open a QIIME 2 Visualization so it can be "
-                    "used after the command exits, use 'qiime tools view --help'.",
+                    "used after the command exits, use 'qiime tools extract'.",
                cls=ToolCommand)
 @click.argument('visualization-path', metavar='VISUALIZATION',
                 type=click.Path(exists=True, file_okay=True, dir_okay=False,
@@ -404,7 +403,7 @@ def validate(path, level):
         result.validate(level)
     except qiime2.plugin.ValidationError as e:
         header = 'Result %s does not appear to be valid at level=%s:' % (
-                path, level)
+            path, level)
         q2cli.util.exit_with_error(e, header=header, traceback=None)
     except Exception as e:
         header = ('An unexpected error has occurred while attempting to '
