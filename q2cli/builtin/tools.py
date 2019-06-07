@@ -274,7 +274,7 @@ def _load_metadata(path):
 @tools.command(short_help='View a QIIME 2 Visualization.',
                help="Displays a QIIME 2 Visualization until the command "
                     "exits. To open a QIIME 2 Visualization so it can be "
-                    "used after the command exits, use 'qiime extract'.",
+                    "used after the command exits, use 'qiime tools extract'.",
                cls=ToolCommand)
 @click.argument('visualization-path', metavar='VISUALIZATION',
                 type=click.Path(exists=True, file_okay=True, dir_okay=False,
