@@ -16,6 +16,7 @@ from q2cli.click.command import ToolCommand, ToolGroupCommand
 
 _COMBO_METAVAR = 'ARTIFACT/VISUALIZATION'
 
+
 @click.group(help='Tools for working with QIIME 2 files.',
              cls=ToolGroupCommand)
 def tools():
@@ -403,7 +404,7 @@ def validate(path, level):
         result.validate(level)
     except qiime2.plugin.ValidationError as e:
         header = 'Result %s does not appear to be valid at level=%s:' % (
-            path, level)
+                path, level)
         q2cli.util.exit_with_error(e, header=header, traceback=None)
     except Exception as e:
         header = ('An unexpected error has occurred while attempting to '
