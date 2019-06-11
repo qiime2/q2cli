@@ -165,7 +165,7 @@ def import_data(type, input_path, output_path, input_format):
     success = 'Imported %s as %s to %s' % (input_path,
                                            input_format,
                                            output_path)
-    click.echo(CONFIG.cfg_style('command', success))
+    click.echo(CONFIG.cfg_style('success', success))
 
 
 @tools.command(short_help='Take a peek at a QIIME 2 Artifact or '
