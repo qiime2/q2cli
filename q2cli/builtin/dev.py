@@ -7,6 +7,7 @@
 # ----------------------------------------------------------------------------
 
 import click
+
 from q2cli.click.command import ToolCommand, ToolGroupCommand
 
 
@@ -29,3 +30,69 @@ def dev():
 def refresh_cache():
     import q2cli.core.cache
     q2cli.core.cache.CACHE.refresh()
+
+
+install_theme_help = \
+    ("Allows for customization of Qiime2's command line styling based on an "
+     "imported .ini file. If you are unfamiliar with the format of .ini "
+     "files look here https://en.wikipedia.org/wiki/INI_file."
+     "\n"
+     "\n"
+     "The .ini allows you to customize text on the basis of what that text "
+     "represents with the following supported text types: command, options, "
+     "type, default_arg, required, emphasis, problem, errors, and success. "
+     "These will be your headers in the '[]' brackets. "
+     "\n"
+     "\n"
+     "Command refers to the name of the command you issued. Options refers "
+     "to the arguments you give to the command when running it. Type refers "
+     "to the Qiime2 semantic typing of these arguments (where applicable). "
+     "Default_arg refers to the label next to the argument indicating its "
+     "default value (where applicable), and if it is required (where "
+     "applicable). Required refers to any arguments that must be passed to "
+     "the command for it to work and gives them special formatting on top of "
+     "your normal 'options' formatting. Emphasis refers to any emphasized "
+     "pieces of text within help text. Problem refers to the text informing "
+     "you there were issues with the command. Errors refers to the text "
+     "specifying those issues. Success refers to text indicating a process "
+     "completed as expected."
+     "\n"
+     "\n"
+     "The following pieces of the text's formatting may be customized: bold, "
+     "dim (if true the text's brightness is reduced), underline, blink, "
+     "reverse (if true foreground and background colors are reversed), and "
+     "finally fg (foreground color) and bg (background color). The first five "
+     "may each be either true or false, while the colors may be set to any of "
+     "the following: black, red, green, yellow, blue, magenta, cyan, white, "
+     "bright_black, bright_red, bright_green, bright_yellow, bright_blue, "
+     "bright_magenta, bright_cyan, or bright_white.")
+
+
+@dev.command(name='install-q2cli-theme',
+             short_help='Install new command line theme.',
+             help=install_theme_help,
+             cls=ToolCommand)
+@click.option('--theme', required=True,
+              type=click.Path(exists=True, file_okay=True,
+                              dir_okay=False, readable=True),
+              help='Path to file containing new theme info')
+def install_q2cli_theme(theme):
+    import os
+    import shutil
+    import q2cli.util
+    from q2cli.core.config import CONFIG
+    CONFIG.parse_file(theme)
+    shutil.copy(theme, os.path.join(q2cli.util.get_app_dir(),
+                'cli-colors.theme'))
+
+
+@dev.command(name='reset-theme',
+             short_help='Reset command line theme to default.',
+             help='Reset command line theme to default.',
+             cls=ToolCommand)
+def reset_theme():
+    import os
+    import q2cli.util
+    path = os.path.join(q2cli.util.get_app_dir(), 'cli-colors.theme')
+    if os.path.exists(path):
+        os.unlink(path)

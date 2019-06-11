@@ -38,6 +38,7 @@ class BaseCommandMixin:
     #   c6042bf2607c5be22b1efef2e42a94ffd281434c/click/core.py#L934 >
     # Copyright (c) 2014 by the Pallets team.
     def parse_args(self, ctx, args):
+        from q2cli.core.config import CONFIG
         if isinstance(self, click.MultiCommand):
             return super().parse_args(ctx, args)
 
@@ -71,14 +72,15 @@ class BaseCommandMixin:
                 problems = 'There were some problems with the command:'
             else:
                 problems = 'There was a problem with the command:'
-            click.secho(problems.center(78, ' '), fg='yellow', err=True)
+            click.echo(CONFIG.cfg_style('problem',
+                       problems.center(78, ' ')), err=True)
             for idx, e in enumerate(errors, 1):
                 msg = click.formatting.wrap_text(
                     e.format_message(),
                     initial_indent=' (%d/%d%s) ' % (idx, len(errors),
                                                     '?' if skip_rest else ''),
                     subsequent_indent='  ')
-                click.secho(msg, err=True, fg='red', bold=True)
+                click.secho(CONFIG.cfg_style('errors', msg), err=True)
             ctx.exit(1)
 
         ctx.args = args
@@ -113,12 +115,14 @@ class BaseCommandMixin:
     #   /c6042bf2607c5be22b1efef2e42a94ffd281434c/click/core.py#L830 >
     # Copyright (c) 2014 by the Pallets team.
     def format_usage(self, ctx, formatter):
+        from q2cli.core.config import CONFIG
         """Writes the usage line into the formatter."""
         pieces = self.collect_usage_pieces(ctx)
-        formatter.write_usage(_style_command(ctx.command_path),
+        formatter.write_usage(CONFIG.cfg_style('command', ctx.command_path),
                               ' '.join(pieces))
 
     def format_options(self, ctx, formatter, COL_MAX=23, COL_MIN=10):
+        from q2cli.core.config import CONFIG
         # write options
         opt_groups = {}
         records = []
@@ -167,7 +171,7 @@ class BaseCommandMixin:
             rows = []
             for subcommand, cmd in commands:
                 help = cmd.get_short_help_str(limit)
-                rows.append((_style_command(subcommand), help))
+                rows.append((CONFIG.cfg_style('command', subcommand), help))
 
             if rows:
                 with formatter.section(click.style('Commands', bold=True)):
@@ -175,6 +179,7 @@ class BaseCommandMixin:
 
     def write_option(self, ctx, formatter, opt, record, border, COL_SPACING=2):
         import itertools
+        from q2cli.core.config import CONFIG
         full_width = formatter.width - formatter.current_indent
         indent_text = ' ' * formatter.current_indent
         opt_text, help_text = record
@@ -208,7 +213,8 @@ class BaseCommandMixin:
             for token in tokens:
                 dangling_edge += len(token) + 1
                 if token.startswith('--'):
-                    token = _style_option(token, required=opt.required)
+                    token = CONFIG.cfg_style('options', token,
+                                             required=opt.required)
                 styled.append(token)
             line = indent_text + ' '.join(styled)
             to_write.append(line)
@@ -224,11 +230,11 @@ class BaseCommandMixin:
                 line = ' '.join(tokens)
                 if first_iter:
                     dangling_edge += 1 + len(line)
-                    line = " " + _style_type(line)
+                    line = " " + CONFIG.cfg_style('type', line)
                     first_iter = False
                 else:
                     dangling_edge = len(type_indent) + len(line)
-                    line = type_indent + _style_type(line)
+                    line = type_indent + CONFIG.cfg_style('type', line)
                 to_write.append(line)
             formatter.write('\n'.join(to_write))
 
@@ -244,7 +250,8 @@ class BaseCommandMixin:
         if type_placement == 'under':
             padding = ' ' * (border + COL_SPACING
                              - len(type_repr) - len(type_indent))
-            line = ''.join([type_indent, _style_type(type_repr), padding])
+            line = ''.join(
+                [type_indent, CONFIG.cfg_style('type', type_repr), padding])
             left_col.append(line)
 
         if hasattr(opt, 'meta_help') and opt.meta_help is not None:
@@ -290,10 +297,13 @@ class BaseCommandMixin:
             else:
                 pad = formatter.width - len(requirements) - dangling_edge
 
-            formatter.write((' ' * pad) + _style_reqs(requirements) + '\n')
+            formatter.write(
+                (' ' * pad) + CONFIG.cfg_style(
+                    'default_args', requirements) + '\n')
 
     def _color_important(self, tokens, ctx):
         import re
+        from q2cli.core.config import CONFIG
 
         for t in tokens:
             if '_' in t:
@@ -301,7 +311,7 @@ class BaseCommandMixin:
                 if re.sub(r'[^\w]', '', t) in names:
                     m = re.search(r'(\w+)', t)
                     word = t[m.start():m.end()]
-                    word = _style_emphasis(word.replace('_', '-'))
+                    word = CONFIG.cfg_style('emphasis', word.replace('_', '-'))
                     token = t[:m.start()] + word + t[m.end():]
                     yield token
                     continue
@@ -353,23 +363,3 @@ def simple_wrap(text, target, start_col=0):
             current_width += 1 + token_len
 
     return result
-
-
-def _style_option(text, required=False):
-    return click.style(text, fg='blue', underline=required)
-
-
-def _style_type(text):
-    return click.style(text, fg='green')
-
-
-def _style_reqs(text):
-    return click.style(text, fg='magenta')
-
-
-def _style_command(text):
-    return _style_option(text)
-
-
-def _style_emphasis(text):
-    return click.style(text, underline=True)
