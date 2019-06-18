@@ -20,7 +20,7 @@ from q2cli.builtin.dev import dev
 class TestDev(unittest.TestCase):
     def setUp(self):
         self.path = os.path.join(q2cli.util.get_app_dir(), 'cli-colors.theme')
-        self.generated_theme = os.path.join(
+        self.generated_config = os.path.join(
             q2cli.util.get_app_dir(), 'generated-theme')
         self.old_settigs = configparser.ConfigParser()
         if os.path.exists(self.path):
