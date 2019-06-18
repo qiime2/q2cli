@@ -310,7 +310,7 @@ def view(visualization_path, index_extension):
 
     if index_extension not in index_paths:
         raise click.BadParameter(
-            'No index %s file with is present in the archive. Available index '
+            'No index %s file is present in the archive. Available index '
             'extensions are: %s' % (index_extension,
                                     ', '.join(index_paths.keys())))
     else:
