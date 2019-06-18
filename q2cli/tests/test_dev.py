@@ -20,6 +20,8 @@ from q2cli.builtin.dev import dev
 class TestDev(unittest.TestCase):
     def setUp(self):
         self.path = os.path.join(q2cli.util.get_app_dir(), 'cli-colors.theme')
+        self.generated_theme = os.path.join(
+            q2cli.util.get_app_dir(), 'generated-theme')
         self.old_settigs = configparser.ConfigParser()
         if os.path.exists(self.path):
             self.old_settigs.read(self.path)
@@ -35,16 +37,20 @@ class TestDev(unittest.TestCase):
             config.write(fh)
 
     def tearDown(self):
-        if os.path.exists(self.path):
-            with open(self.path, 'w') as fh:
-                self.old_settigs.write(fh)
+        with open(self.path, 'w') as fh:
+            self.old_settigs.write(fh)
 
     def test_install_theme(self):
         result = self.runner.invoke(
             dev, ['install-q2cli-theme', '--theme', self.config])
         self.assertEqual(result.exit_code, 0)
 
-    def test_restore_theme(self):
+    def test_generate_config(self):
+        result = self.runner.invoke(
+            dev, ['generate-config', '--output-path', self.generated_config])
+        self.assertEqual(result.exit_code, 0)
+
+    def test_reset_theme(self):
         result = self.runner.invoke(
             dev, ['reset-theme'])
         self.assertEqual(result.exit_code, 0)

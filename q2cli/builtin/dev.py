@@ -33,7 +33,7 @@ def refresh_cache():
 
 
 install_theme_help = \
-    ("Allows for customization of Qiime2's command line styling based on an "
+    ("Allows for customization of q2cli's command line styling based on an "
      "imported .ini file. If you are unfamiliar with the format of .ini "
      "files look here https://en.wikipedia.org/wiki/INI_file."
      "\n"
@@ -84,6 +84,27 @@ def install_q2cli_theme(theme):
     CONFIG.parse_file(theme)
     shutil.copy(theme, os.path.join(q2cli.util.get_app_dir(),
                 'cli-colors.theme'))
+
+
+@dev.command(name='generate-config',
+             short_help='Create a .ini file from the default settings at the '
+             'specified filepath.',
+             help='Create a .ini file from the default settings at the '
+             'specified filepath.',
+             cls=ToolCommand)
+@click.option('--output-path', required=True,
+              type=click.Path(exists=False, file_okay=True,
+                              dir_okay=False, readable=True),
+              help='Path to output the config to')
+def generate_config(output_path):
+    import configparser
+    from q2cli.core.config import CONFIG
+
+    # Check errors on bad paths
+    parser = configparser.ConfigParser()
+    parser.read_dict(CONFIG._get_default_styles())
+    with open(output_path, 'w') as fh:
+        parser.write(fh)
 
 
 @dev.command(name='reset-theme',

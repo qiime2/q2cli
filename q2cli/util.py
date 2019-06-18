@@ -42,6 +42,7 @@ def exit_with_error(e, header='An error has been encountered:',
     import traceback as tb
     import textwrap
     import click
+    from q2cli.core.config import CONFIG
 
     footer = []  # footer only exists if traceback is set
     tb_file = None
@@ -60,7 +61,7 @@ def exit_with_error(e, header='An error has been encountered:',
 
         tb_file.write('\n')
 
-    click.secho('\n\n'.join(segments), fg='red', bold=True, err=True)
+    click.echo(CONFIG.cfg_style('errors', '\n\n'.join(segments)), err=True)
 
     if not footer:
         click.echo(err=True)  # extra newline to look normal
@@ -150,6 +151,7 @@ def convert_primitive(ast):
 
 def citations_option(get_citation_records):
     import click
+    from q2cli.core.config import CONFIG
 
     def callback(ctx, param, value):
         if not value or ctx.resilient_parsing:
@@ -169,7 +171,8 @@ def citations_option(get_citation_records):
                 click.echo(fh.getvalue(), nl=False)
             ctx.exit()
         else:
-            click.secho('No citations found.', fg='yellow', err=True)
+            click.secho(
+                CONFIG.cfg_style('problem', 'No citations found.'), err=True)
             ctx.exit(1)
 
     return click.Option(['--citations'], is_flag=True, expose_value=False,

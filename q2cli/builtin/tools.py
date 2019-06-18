@@ -182,9 +182,9 @@ def peek(path):
 
     metadata = qiime2.sdk.Result.peek(path)
 
-    click.echo(CONFIG.cfg_style('type', "UUID:        "), nl=False)
+    click.echo(CONFIG.cfg_style('type', "UUID")+":        ", nl=False)
     click.echo(metadata.uuid)
-    click.echo(CONFIG.cfg_style('type', "Type:        "), nl=False)
+    click.echo(CONFIG.cfg_style('type', "Type")+":        ", nl=False)
     click.echo(metadata.type)
     if metadata.format is not None:
         click.echo(CONFIG.cfg_style('type', "Data format: "), nl=False)

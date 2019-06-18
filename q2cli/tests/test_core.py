@@ -22,7 +22,7 @@ import q2cli.util
 import q2cli.builtin.info
 import q2cli.builtin.tools
 from q2cli.commands import RootCommand
-from q2cli.core.config import CONFIG
+from q2cli.core.config import CLIConfig
 
 
 class TestOption(unittest.TestCase):
@@ -30,7 +30,9 @@ class TestOption(unittest.TestCase):
         get_dummy_plugin()
         self.runner = CliRunner()
         self.tempdir = tempfile.mkdtemp(prefix='qiime2-q2cli-test-temp-')
-        self.config = configparser.ConfigParser()
+        self.parser = configparser.ConfigParser()
+
+        self.config = CLIConfig()
 
     def tearDown(self):
         shutil.rmtree(self.tempdir)
@@ -120,64 +122,64 @@ class TestOption(unittest.TestCase):
 
     def test_config_expected(self):
         path = os.path.join(self.tempdir, 'good-config.ini')
-        self.config['type'] = {'underline': 't'}
+        self.parser['type'] = {'underline': 't'}
 
         with open(path, 'w') as fh:
-            self.config.write(fh)
-        CONFIG.parse_file(path)
+            self.parser.write(fh)
+        self.config.parse_file(path)
         # CONFIG.styles['type'] should be only {'fg': 'green'} before we change
         # it
         self.assertEqual(
-            CONFIG.styles['type'], {'fg': 'green', 'underline': True})
+            self.config.styles['type'], {'fg': 'green', 'underline': True})
 
-    def test_config_bad_type(self):
-        self.config.clear()
+    def test_config_bad_selector(self):
+        self.parser.clear()
         path = os.path.join(self.tempdir, 'test-config.ini')
-        self.config['tye'] = {'underline': 't'}
+        self.parser['tye'] = {'underline': 't'}
 
         with open(path, 'w') as fh:
-            self.config.write(fh)
+            self.parser.write(fh)
         with self.assertRaisesRegex(
-                ValueError, 'tye.*valid type.*valid types'):
-            CONFIG.parse_file(path)
+                ValueError, 'tye.*valid selector.*valid selectors'):
+            self.config.parse_file(path)
 
     def test_config_bad_styling(self):
-        self.config.clear()
+        self.parser.clear()
         path = os.path.join(self.tempdir, 'test-config.ini')
-        self.config['type'] = {'underlined': 't'}
+        self.parser['type'] = {'underlined': 't'}
 
         with open(path, 'w') as fh:
-            self.config.write(fh)
+            self.parser.write(fh)
         with self.assertRaisesRegex(
                 ValueError, 'underlined.*valid styling.*valid stylings'):
-            CONFIG.parse_file(path)
+            self.config.parse_file(path)
 
     def test_config_bad_color(self):
-        self.config.clear()
+        self.parser.clear()
         path = os.path.join(self.tempdir, 'test-config.ini')
-        self.config['type'] = {'fg': 'purple'}
+        self.parser['type'] = {'fg': 'purple'}
 
         with open(path, 'w') as fh:
-            self.config.write(fh)
+            self.parser.write(fh)
         with self.assertRaisesRegex(
                 ValueError, 'purple.*valid color.*valid colors'):
-            CONFIG.parse_file(path)
+            self.config.parse_file(path)
 
     def test_config_bad_boolean(self):
-        self.config.clear()
+        self.parser.clear()
         path = os.path.join(self.tempdir, 'test-config.ini')
-        self.config['type'] = {'underline': 'g'}
+        self.parser['type'] = {'underline': 'g'}
 
         with open(path, 'w') as fh:
-            self.config.write(fh)
+            self.parser.write(fh)
         with self.assertRaisesRegex(
                 ValueError, 'g.*valid boolean.*valid booleans'):
-            CONFIG.parse_file(path)
+            self.config.parse_file(path)
 
     def test_no_file(self):
-        with self.assertRaisesRegex(ValueError, "'Path' is not a valid "
-                                    "filepath."):
-            CONFIG.parse_file('Path')
+        with self.assertRaisesRegex(
+                ValueError, "'Path' is not a valid filepath."):
+            self.config.parse_file('Path')
 
 
 if __name__ == "__main__":
