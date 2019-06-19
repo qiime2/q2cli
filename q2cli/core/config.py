@@ -16,14 +16,15 @@ import q2cli.util
 
 class CLIConfig():
     path = os.path.join(q2cli.util.get_app_dir(), 'cli-colors.theme')
-    VALID_SELECTORS = {'option', 'type', 'default_arg', 'command', 'emphasis',
-                       'problem', 'error', 'required', 'success'}
-    VALID_STYLINGS = {'fg', 'bg', 'bold', 'dim', 'underline', 'blink',
-                      'reverse'}
-    VALID_COLORS = {'black', 'red', 'green', 'yellow', 'blue', 'magenta',
-                    'cyan', 'white', 'bright_black', 'bright_red',
-                    'bright_green', 'bright_yellow', 'bright_blue',
-                    'bright_magenta', 'bright_cyan', 'bright_white'}
+    VALID_SELECTORS = frozenset(
+        ['option', 'type', 'default_arg', 'command', 'emphasis', 'problem',
+         'error', 'required', 'success'])
+    VALID_STYLINGS = frozenset(
+        ['fg', 'bg', 'bold', 'dim', 'underline', 'blink', 'reverse'])
+    VALID_COLORS = frozenset(
+        ['black', 'red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white',
+         'bright_black', 'bright_red', 'bright_green', 'bright_yellow',
+         'bright_blue', 'bright_magenta', 'bright_cyan', 'bright_white'])
     VALID_BOOLEANS = {'true': True,
                       'false': False,
                       't': True,
@@ -50,9 +51,7 @@ class CLIConfig():
                 'success': {'fg': 'green'}}
 
     def _build_error(self, current, valid_list, valid_string):
-        valids = ''
-        for valid in valid_list:
-            valids += valid + '\n'
+        valids = '\n'.join(valid_list)
         raise ValueError(f'{current!r} is not a {valid_string}. The '
                          f'{valid_string}s are:\n{valids}')
 

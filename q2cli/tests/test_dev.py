@@ -53,5 +53,10 @@ class TestDev(unittest.TestCase):
 
     def test_reset_theme(self):
         result = self.runner.invoke(
-            dev, ['reset-theme'])
+            dev, ['reset-theme', '--yes'])
         self.assertEqual(result.exit_code, 0)
+
+    def test_reset_theme_no_yes(self):
+        result = self.runner.invoke(
+            dev, ['reset-theme'])
+        self.assertNotEqual(result.exit_code, 0)

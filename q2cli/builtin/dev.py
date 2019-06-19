@@ -34,36 +34,37 @@ def refresh_cache():
 
 install_theme_help = \
     ("Allows for customization of q2cli's command line styling based on an "
-     "imported .ini file. If you are unfamiliar with the format of .ini "
-     "files look here https://en.wikipedia.org/wiki/INI_file."
+     "imported .theme (INI formatted) file. If you are unfamiliar with .ini "
+     "formatted files look here https://en.wikipedia.org/wiki/INI_file."
      "\n"
      "\n"
-     "The .ini allows you to customize text on the basis of what that text "
-     "represents with the following supported text types: command, options, "
-     "type, default_arg, required, emphasis, problem, errors, and success. "
-     "These will be your headers in the '[]' brackets. "
+     "The .theme file allows you to customize text on the basis of what that "
+     "text represents with the following supported text types: command, "
+     "option, type, default_arg, required, emphasis, problem, error, and "
+     "success. These will be your headers in the '[]' brackets. "
      "\n"
      "\n"
-     "Command refers to the name of the command you issued. Option refers "
-     "to the arguments you give to the command when running it. Type refers "
-     "to the Qiime2 semantic typing of these arguments (where applicable). "
-     "Default_arg refers to the label next to the argument indicating its "
+     "`command` refers to the name of the command you issued. `option` refers "
+     "to the arguments you give to the command when running it. `type` refers "
+     "to the QIIME 2 semantic typing of these arguments (where applicable). "
+     "`default_arg` refers to the label next to the argument indicating its "
      "default value (where applicable), and if it is required (where "
-     "applicable). Required refers to any arguments that must be passed to "
+     "applicable). `required` refers to any arguments that must be passed to "
      "the command for it to work and gives them special formatting on top of "
-     "your normal 'options' formatting. Emphasis refers to any emphasized "
-     "pieces of text within help text. Problem refers to the text informing "
-     "you there were issues with the command. Error refers to the text "
-     "specifying those issues. Success refers to text indicating a process "
+     "your normal `option` formatting. `emphasis` refers to any emphasized "
+     "pieces of text within help text. `problem` refers to the text informing "
+     "you there were issues with the command. `error` refers to the text "
+     "specifying those issues. `success` refers to text indicating a process "
      "completed as expected."
      "\n"
      "\n"
-     "The following pieces of the text's formatting may be customized: bold, "
-     "dim (if true the text's brightness is reduced), underline, blink, "
-     "reverse (if true foreground and background colors are reversed), and "
-     "finally fg (foreground color) and bg (background color). The first five "
-     "may each be either true or false, while the colors may be set to any of "
-     "the following: black, red, green, yellow, blue, magenta, cyan, white, "
+     "Depending on what your terminal supports, some or all of the following "
+     "pieces of the text's formatting may be customized: bold, dim (if true "
+     "the text's brightness is reduced), underline, blink, reverse (if true "
+     "foreground and background colors are reversed), and finally fg "
+     "(foreground color) and bg (background color). The first five may each "
+     "be either true or false, while the colors may be set to any of the "
+     "following: black, red, green, yellow, blue, magenta, cyan, white, "
      "bright_black, bright_red, bright_green, bright_yellow, bright_blue, "
      "bright_magenta, bright_cyan, or bright_white.")
 
@@ -81,16 +82,16 @@ def install_theme(theme):
     import shutil
     import q2cli.util
     from q2cli.core.config import CONFIG
+
     CONFIG.parse_file(theme)
     shutil.copy(theme, os.path.join(q2cli.util.get_app_dir(),
                 'cli-colors.theme'))
 
 
 @dev.command(name='write-default-theme',
-             short_help='Create a .ini file from the default settings at the '
-             'specified filepath.',
-             help='Create a .ini file from the default settings at the '
-             'specified filepath.',
+             short_help='Export the default settings.',
+             help='Create a .thenme (INI formatted) file from the default '
+             'settings at the specified filepath.',
              cls=ToolCommand)
 @click.option('--output-path', required=True,
               type=click.Path(exists=False, file_okay=True,
@@ -100,7 +101,6 @@ def write_default_theme(output_path):
     import configparser
     from q2cli.core.config import CONFIG
 
-    # Check errors on bad paths
     parser = configparser.ConfigParser()
     parser.read_dict(CONFIG._get_default_styles())
     with open(output_path, 'w') as fh:
@@ -109,11 +109,16 @@ def write_default_theme(output_path):
 
 @dev.command(name='reset-theme',
              short_help='Reset command line theme to default.',
-             help='Reset command line theme to default.',
+             help="Reset command line theme to default. Requres the '--yes' "
+             "parameter to be passed asserting you do want to reset.",
              cls=ToolCommand)
-def reset_theme():
+@click.option('--yes', required=True, is_flag=True, default=None,
+              help='parameter asserting you want to reset your command line '
+              'theme to the default.')
+def reset_theme(yes):
     import os
     import q2cli.util
+
     path = os.path.join(q2cli.util.get_app_dir(), 'cli-colors.theme')
     if os.path.exists(path):
         os.unlink(path)
