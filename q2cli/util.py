@@ -61,7 +61,7 @@ def exit_with_error(e, header='An error has been encountered:',
 
         tb_file.write('\n')
 
-    click.echo(CONFIG.cfg_style('errors', '\n\n'.join(segments)), err=True)
+    click.echo(CONFIG.cfg_style('error', '\n\n'.join(segments)), err=True)
 
     if not footer:
         click.echo(err=True)  # extra newline to look normal

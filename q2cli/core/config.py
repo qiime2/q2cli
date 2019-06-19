@@ -16,8 +16,8 @@ import q2cli.util
 
 class CLIConfig():
     path = os.path.join(q2cli.util.get_app_dir(), 'cli-colors.theme')
-    VALID_SELECTORS = {'options', 'type', 'default_arg', 'command', 'emphasis',
-                       'problem', 'errors', 'required', 'success'}
+    VALID_SELECTORS = {'option', 'type', 'default_arg', 'command', 'emphasis',
+                       'problem', 'error', 'required', 'success'}
     VALID_STYLINGS = {'fg', 'bg', 'bold', 'dim', 'underline', 'blink',
                       'reverse'}
     VALID_COLORS = {'black', 'red', 'green', 'yellow', 'blue', 'magenta',
@@ -39,13 +39,13 @@ class CLIConfig():
             self.styles = self._get_default_styles()
 
     def _get_default_styles(self):
-        return {'options': {'fg': 'blue'},
+        return {'option': {'fg': 'blue'},
                 'type': {'fg': 'green'},
-                'default_args': {'fg': 'magenta'},
+                'default_arg': {'fg': 'magenta'},
                 'command': {'fg': 'blue'},
                 'emphasis': {'underline': True},
                 'problem': {'fg': 'yellow'},
-                'errors': {'fg': 'red', 'bold': True},
+                'error': {'fg': 'red', 'bold': True},
                 'required': {'underline': True},
                 'success': {'fg': 'green'}}
 

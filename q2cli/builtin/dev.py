@@ -44,7 +44,7 @@ install_theme_help = \
      "These will be your headers in the '[]' brackets. "
      "\n"
      "\n"
-     "Command refers to the name of the command you issued. Options refers "
+     "Command refers to the name of the command you issued. Option refers "
      "to the arguments you give to the command when running it. Type refers "
      "to the Qiime2 semantic typing of these arguments (where applicable). "
      "Default_arg refers to the label next to the argument indicating its "
@@ -53,7 +53,7 @@ install_theme_help = \
      "the command for it to work and gives them special formatting on top of "
      "your normal 'options' formatting. Emphasis refers to any emphasized "
      "pieces of text within help text. Problem refers to the text informing "
-     "you there were issues with the command. Errors refers to the text "
+     "you there were issues with the command. Error refers to the text "
      "specifying those issues. Success refers to text indicating a process "
      "completed as expected."
      "\n"
@@ -68,7 +68,7 @@ install_theme_help = \
      "bright_magenta, bright_cyan, or bright_white.")
 
 
-@dev.command(name='install-q2cli-theme',
+@dev.command(name='install-theme',
              short_help='Install new command line theme.',
              help=install_theme_help,
              cls=ToolCommand)
@@ -76,7 +76,7 @@ install_theme_help = \
               type=click.Path(exists=True, file_okay=True,
                               dir_okay=False, readable=True),
               help='Path to file containing new theme info')
-def install_q2cli_theme(theme):
+def install_theme(theme):
     import os
     import shutil
     import q2cli.util
@@ -86,7 +86,7 @@ def install_q2cli_theme(theme):
                 'cli-colors.theme'))
 
 
-@dev.command(name='generate-config',
+@dev.command(name='write-default-theme',
              short_help='Create a .ini file from the default settings at the '
              'specified filepath.',
              help='Create a .ini file from the default settings at the '
@@ -96,7 +96,7 @@ def install_q2cli_theme(theme):
               type=click.Path(exists=False, file_okay=True,
                               dir_okay=False, readable=True),
               help='Path to output the config to')
-def generate_config(output_path):
+def write_default_theme(output_path):
     import configparser
     from q2cli.core.config import CONFIG
 

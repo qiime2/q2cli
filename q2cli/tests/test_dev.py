@@ -42,12 +42,13 @@ class TestDev(unittest.TestCase):
 
     def test_install_theme(self):
         result = self.runner.invoke(
-            dev, ['install-q2cli-theme', '--theme', self.config])
+            dev, ['install-theme', '--theme', self.config])
         self.assertEqual(result.exit_code, 0)
 
     def test_generate_config(self):
         result = self.runner.invoke(
-            dev, ['generate-config', '--output-path', self.generated_config])
+            dev, ['write-default-theme', '--output-path',
+                  self.generated_config])
         self.assertEqual(result.exit_code, 0)
 
     def test_reset_theme(self):

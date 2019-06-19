@@ -57,7 +57,7 @@ def export_data(input_path, output_path, output_format):
     else:
         if isinstance(result, qiime2.sdk.Visualization):
             error = '--output-format cannot be used with visualizations'
-            click.echo(CONFIG.cfg_style('errors', error), err=True)
+            click.echo(CONFIG.cfg_style('error', error), err=True)
             click.get_current_context().exit(1)
         else:
             source = result.view(qiime2.sdk.parse_format(output_format))
@@ -321,7 +321,7 @@ def view(visualization_path, index_extension):
         index_path = index_paths[index_extension]
         launch_status = click.launch(index_path)
         if launch_status != 0:
-            click.echo(CONFIG.cfg_style('errors', 'Viewing visualization '
+            click.echo(CONFIG.cfg_style('error', 'Viewing visualization '
                                         'failed while attempting to open '
                                         f'{index_path}'), err=True)
         else:

@@ -80,7 +80,7 @@ class BaseCommandMixin:
                     initial_indent=' (%d/%d%s) ' % (idx, len(errors),
                                                     '?' if skip_rest else ''),
                     subsequent_indent='  ')
-                click.secho(CONFIG.cfg_style('errors', msg), err=True)
+                click.secho(CONFIG.cfg_style('error', msg), err=True)
             ctx.exit(1)
 
         ctx.args = args
@@ -213,7 +213,7 @@ class BaseCommandMixin:
             for token in tokens:
                 dangling_edge += len(token) + 1
                 if token.startswith('--'):
-                    token = CONFIG.cfg_style('options', token,
+                    token = CONFIG.cfg_style('option', token,
                                              required=opt.required)
                 styled.append(token)
             line = indent_text + ' '.join(styled)
@@ -299,7 +299,7 @@ class BaseCommandMixin:
 
             formatter.write(
                 (' ' * pad) + CONFIG.cfg_style(
-                    'default_args', requirements) + '\n')
+                    'default_arg', requirements) + '\n')
 
     def _color_important(self, tokens, ctx):
         import re
