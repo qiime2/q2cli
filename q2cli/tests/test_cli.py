@@ -517,7 +517,7 @@ class TestMetadataSupport(MetadataTestsBase):
                 '--m-metadata-file', self.metadata_file1)
 
             self.assertNotEqual(result.exit_code, 0)
-            self.assertIn('overlapping columns', result.output)
+            self.assertIn('duplicate metadata files', result.output)
 
 
 class TestMetadataColumnSupport(MetadataTestsBase):

@@ -201,10 +201,10 @@ def peek(path):
                                 readable=True))
 @q2cli.util.pretty_failure(traceback=None)
 def inspect_metadata(paths, tsv, failure):
-    m = [_load_metadata(p) for p in paths]
-    metadata = m[0]
-    if m[1:]:
-        metadata = metadata.merge(*m[1:])
+    mds = [_load_metadata(p) for p in paths]
+    metadata = mds[0]
+    if mds[1:]:
+        metadata = metadata.merge(*mds[1:])
 
     # we aren't expecting errors below this point, so set traceback to default
     failure.traceback = 'stderr'
@@ -247,6 +247,29 @@ def inspect_metadata(paths, tsv, failure):
         click.secho(("{0:>%d}  " % max_name_len).format("COLUMNS:"),
                     bold=True, nl=False)
         click.echo(metadata.column_count)
+
+        # We probably only want this to happen if there actually are overlaps
+        if len(paths) > 1:
+            COLUMN_PATH = 'PATH'
+            COLUMN_HASH = 'HASH'
+
+            max_path_len = max([len(os.path.relpath(p)) for p in paths] +
+                               [len(COLUMN_PATH)])
+            max_hash_len = max([len(md.hash) for md in mds] +
+                               [len(COLUMN_HASH)])
+
+            formatter = ("{0:>%d}  {1:%d}" % (max_path_len,
+                                              max_hash_len)).format
+            click.secho(formatter(COLUMN_PATH, COLUMN_HASH), bold=True)
+
+            click.secho(formatter("=" * max_path_len, "=" * max_hash_len),
+                        bold=True)
+
+            for path, md in zip(paths, mds):
+                click.echo(formatter(os.path.relpath(path), md.hash))
+
+            click.secho(formatter("=" * max_path_len, "=" * max_hash_len),
+                        bold=True)
 
 
 def _load_metadata(path):
