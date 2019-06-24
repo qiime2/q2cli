@@ -196,11 +196,13 @@ def peek(path):
                cls=ToolCommand)
 @click.option('--tsv/--no-tsv', default=False,
               help='Print as machine-readable TSV instead of text.')
+@click.option('--show-hashes/--no-show-hashes', default=False,
+              help='Print hash(es) for metadata being inspected.')
 @click.argument('paths', nargs=-1, required=True, metavar='METADATA...',
                 type=click.Path(exists=True, file_okay=True, dir_okay=False,
                                 readable=True))
 @q2cli.util.pretty_failure(traceback=None)
-def inspect_metadata(paths, tsv, failure):
+def inspect_metadata(paths, tsv, show_hashes, failure):
     mds = [_load_metadata(p) for p in paths]
     metadata = mds[0]
     if mds[1:]:
@@ -248,8 +250,7 @@ def inspect_metadata(paths, tsv, failure):
                     bold=True, nl=False)
         click.echo(metadata.column_count)
 
-        # We probably only want this to happen if there actually are overlaps
-        if len(paths) > 1:
+        if metadata.contains_renamed_columns or show_hashes:
             COLUMN_PATH = 'PATH'
             COLUMN_HASH = 'HASH'
 
