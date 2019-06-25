@@ -32,7 +32,7 @@ def refresh_cache():
     q2cli.core.cache.CACHE.refresh()
 
 
-install_theme_help = \
+import_theme_help = \
     ("Allows for customization of q2cli's command line styling based on an "
      "imported .theme (INI formatted) file. If you are unfamiliar with .ini "
      "formatted files look here https://en.wikipedia.org/wiki/INI_file."
@@ -69,42 +69,54 @@ install_theme_help = \
      "bright_magenta, bright_cyan, or bright_white.")
 
 
-@dev.command(name='install-theme',
+@dev.command(name='import-theme',
              short_help='Install new command line theme.',
-             help=install_theme_help,
+             help=import_theme_help,
              cls=ToolCommand)
 @click.option('--theme', required=True,
               type=click.Path(exists=True, file_okay=True,
                               dir_okay=False, readable=True),
               help='Path to file containing new theme info')
-def install_theme(theme):
+def import_theme(theme):
     import os
     import shutil
     import q2cli.util
-    from q2cli.core.config import CONFIG
+    from q2cli.core.config import ParserError, CONFIG
 
-    CONFIG.parse_file(theme)
+    try:
+        CONFIG.parse_file(theme)
+    except ParserError as e:
+        # If they tried to change error in a valid manner before we hit our
+        # parsing error, we don't want to use their imported error settings
+        CONFIG.styles = CONFIG.get_default_styles()
+        header = 'Something went wrong while parsing your theme: '
+        q2cli.util.exit_with_error(e, header=header, traceback=None)
     shutil.copy(theme, os.path.join(q2cli.util.get_app_dir(),
                 'cli-colors.theme'))
 
 
-@dev.command(name='write-default-theme',
+@dev.command(name='export-default-theme',
              short_help='Export the default settings.',
-             help='Create a .thenme (INI formatted) file from the default '
+             help='Create a .theme (INI formatted) file from the default '
              'settings at the specified filepath.',
              cls=ToolCommand)
 @click.option('--output-path', required=True,
               type=click.Path(exists=False, file_okay=True,
                               dir_okay=False, readable=True),
               help='Path to output the config to')
-def write_default_theme(output_path):
+def export_default_theme(output_path):
     import configparser
     from q2cli.core.config import CONFIG
 
     parser = configparser.ConfigParser()
-    parser.read_dict(CONFIG._get_default_styles())
+    parser.read_dict(CONFIG.get_default_styles())
     with open(output_path, 'w') as fh:
         parser.write(fh)
+
+
+def abort_if_false(ctx, param, value):
+    if not value:
+        ctx.abort()
 
 
 @dev.command(name='reset-theme',
@@ -112,13 +124,16 @@ def write_default_theme(output_path):
              help="Reset command line theme to default. Requres the '--yes' "
              "parameter to be passed asserting you do want to reset.",
              cls=ToolCommand)
-@click.option('--yes', required=True, is_flag=True, default=None,
-              help='parameter asserting you want to reset your command line '
-              'theme to the default.')
-def reset_theme(yes):
+@click.option('--yes', is_flag=True, callback=abort_if_false,
+              expose_value=False,
+              prompt='Are you sure you want to reset your theme?')
+def reset_theme():
     import os
     import q2cli.util
 
     path = os.path.join(q2cli.util.get_app_dir(), 'cli-colors.theme')
     if os.path.exists(path):
         os.unlink(path)
+        click.echo('Theme reset.')
+    else:
+        click.echo('Theme was already default.')

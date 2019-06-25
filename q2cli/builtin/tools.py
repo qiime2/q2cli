@@ -187,7 +187,7 @@ def peek(path):
     click.echo(CONFIG.cfg_style('type', "Type")+":        ", nl=False)
     click.echo(metadata.type)
     if metadata.format is not None:
-        click.echo(CONFIG.cfg_style('type', "Data format: "), nl=False)
+        click.echo(CONFIG.cfg_style('type', "Data format")+": ", nl=False)
         click.echo(metadata.format)
 
 

@@ -22,7 +22,7 @@ import q2cli.util
 import q2cli.builtin.info
 import q2cli.builtin.tools
 from q2cli.commands import RootCommand
-from q2cli.core.config import CLIConfig
+from q2cli.core.config import CLIConfig, ParserError
 
 
 class TestOption(unittest.TestCase):
@@ -140,7 +140,7 @@ class TestOption(unittest.TestCase):
         with open(path, 'w') as fh:
             self.parser.write(fh)
         with self.assertRaisesRegex(
-                ValueError, 'tye.*valid selector.*valid selectors'):
+                ParserError, 'tye.*valid selector.*valid selectors'):
             self.config.parse_file(path)
 
     def test_config_bad_styling(self):
@@ -151,7 +151,7 @@ class TestOption(unittest.TestCase):
         with open(path, 'w') as fh:
             self.parser.write(fh)
         with self.assertRaisesRegex(
-                ValueError, 'underlined.*valid styling.*valid stylings'):
+                ParserError, 'underlined.*valid styling.*valid stylings'):
             self.config.parse_file(path)
 
     def test_config_bad_color(self):
@@ -162,7 +162,7 @@ class TestOption(unittest.TestCase):
         with open(path, 'w') as fh:
             self.parser.write(fh)
         with self.assertRaisesRegex(
-                ValueError, 'purple.*valid color.*valid colors'):
+                ParserError, 'purple.*valid color.*valid colors'):
             self.config.parse_file(path)
 
     def test_config_bad_boolean(self):
@@ -173,12 +173,12 @@ class TestOption(unittest.TestCase):
         with open(path, 'w') as fh:
             self.parser.write(fh)
         with self.assertRaisesRegex(
-                ValueError, 'g.*valid boolean.*valid booleans'):
+                ParserError, 'g.*valid boolean.*valid booleans'):
             self.config.parse_file(path)
 
     def test_no_file(self):
         with self.assertRaisesRegex(
-                ValueError, "'Path' is not a valid filepath."):
+                ParserError, "'Path' is not a valid filepath."):
             self.config.parse_file('Path')
 
 

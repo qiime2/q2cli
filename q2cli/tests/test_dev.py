@@ -40,14 +40,14 @@ class TestDev(unittest.TestCase):
         with open(self.path, 'w') as fh:
             self.old_settigs.write(fh)
 
-    def test_install_theme(self):
+    def test_import_theme(self):
         result = self.runner.invoke(
-            dev, ['install-theme', '--theme', self.config])
+            dev, ['import-theme', '--theme', self.config])
         self.assertEqual(result.exit_code, 0)
 
-    def test_generate_config(self):
+    def test_export_default_theme(self):
         result = self.runner.invoke(
-            dev, ['write-default-theme', '--output-path',
+            dev, ['export-default-theme', '--output-path',
                   self.generated_config])
         self.assertEqual(result.exit_code, 0)
 
