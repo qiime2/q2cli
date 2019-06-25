@@ -250,7 +250,7 @@ def inspect_metadata(paths, tsv, show_hashes, failure):
                     bold=True, nl=False)
         click.echo(metadata.column_count)
 
-        if metadata.contains_renamed_columns or show_hashes:
+        if metadata.contains_renamed_columns and show_hashes:
             COLUMN_PATH = 'PATH'
             COLUMN_HASH = 'HASH'
 
