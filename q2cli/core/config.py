@@ -37,7 +37,18 @@ class CLIConfig():
     def __init__(self):
         if os.path.exists(self.path):
             self.styles = self.get_editable_styles()
-            self.parse_file(self.path)
+            try:
+                self.parse_file(self.path)
+            except Exception as e:
+                click.secho(
+                    "We encountered the following error when parsing your "
+                    f"theme:\n\n{str(e)}\n\nIf you want to use a custom "
+                    "theme, please either import a new theme, or reset your "
+                    "current theme. If you encountered this message while "
+                    "importing a new theme or resetting your current theme, "
+                    "ignore it.",
+                    fg='yellow')
+                self.styles = self.get_default_styles()
         else:
             self.styles = self.get_default_styles()
 

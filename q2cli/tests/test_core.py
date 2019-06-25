@@ -133,7 +133,6 @@ class TestOption(unittest.TestCase):
             self.config.styles['type'], {'fg': 'green', 'underline': True})
 
     def test_config_bad_selector(self):
-        self.parser.clear()
         path = os.path.join(self.tempdir, 'test-config.ini')
         self.parser['tye'] = {'underline': 't'}
 
@@ -144,7 +143,6 @@ class TestOption(unittest.TestCase):
             self.config.parse_file(path)
 
     def test_config_bad_styling(self):
-        self.parser.clear()
         path = os.path.join(self.tempdir, 'test-config.ini')
         self.parser['type'] = {'underlined': 't'}
 
@@ -155,7 +153,6 @@ class TestOption(unittest.TestCase):
             self.config.parse_file(path)
 
     def test_config_bad_color(self):
-        self.parser.clear()
         path = os.path.join(self.tempdir, 'test-config.ini')
         self.parser['type'] = {'fg': 'purple'}
 
@@ -166,7 +163,6 @@ class TestOption(unittest.TestCase):
             self.config.parse_file(path)
 
     def test_config_bad_boolean(self):
-        self.parser.clear()
         path = os.path.join(self.tempdir, 'test-config.ini')
         self.parser['type'] = {'underline': 'g'}
 

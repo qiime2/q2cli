@@ -18,27 +18,27 @@ from q2cli.builtin.dev import dev
 
 
 class TestDev(unittest.TestCase):
+    path = os.path.join(q2cli.util.get_app_dir(), 'cli-colors.theme')
+    old_settings = None
+    if os.path.exists(path):
+        old_settings = configparser.ConfigParser()
+        old_settings.read(path)
+
     def setUp(self):
-        self.path = os.path.join(q2cli.util.get_app_dir(), 'cli-colors.theme')
-        self.generated_config = os.path.join(
-            q2cli.util.get_app_dir(), 'generated-theme')
-        self.old_settigs = configparser.ConfigParser()
-        if os.path.exists(self.path):
-            self.old_settigs.read(self.path)
-
-        config = configparser.ConfigParser()
-
+        self.parser = configparser.ConfigParser()
         self.runner = CliRunner()
         self.tempdir = tempfile.mkdtemp(prefix='qiime2-q2cli-test-temp-')
+        self.generated_config = os.path.join(self.tempdir, 'generated-theme')
 
         self.config = os.path.join(self.tempdir, 'good-config.ini')
-        config['type'] = {'underline': 't'}
+        self.parser['type'] = {'underline': 't'}
         with open(self.config, 'w') as fh:
-            config.write(fh)
+            self.parser.write(fh)
 
     def tearDown(self):
-        with open(self.path, 'w') as fh:
-            self.old_settigs.write(fh)
+        if self.old_settings is not None:
+            with open(self.path, 'w') as fh:
+                self.old_settings.write(fh)
 
     def test_import_theme(self):
         result = self.runner.invoke(

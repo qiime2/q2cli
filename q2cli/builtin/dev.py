@@ -86,7 +86,7 @@ def import_theme(theme):
     try:
         CONFIG.parse_file(theme)
     except ParserError as e:
-        # If they tried to change error in a valid manner before we hit our
+        # If they tried to change [error] in a valid manner before we hit our
         # parsing error, we don't want to use their imported error settings
         CONFIG.styles = CONFIG.get_default_styles()
         header = 'Something went wrong while parsing your theme: '
