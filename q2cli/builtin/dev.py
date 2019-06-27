@@ -80,12 +80,14 @@ import_theme_help = \
 def import_theme(theme):
     import os
     import shutil
+    from configparser import Error
+
     import q2cli.util
-    from q2cli.core.config import ParserError, CONFIG
+    from q2cli.core.config import CONFIG
 
     try:
         CONFIG.parse_file(theme)
-    except ParserError as e:
+    except Error as e:
         # If they tried to change [error] in a valid manner before we hit our
         # parsing error, we don't want to use their imported error settings
         CONFIG.styles = CONFIG.get_default_styles()

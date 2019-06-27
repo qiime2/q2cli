@@ -22,7 +22,7 @@ import q2cli.util
 import q2cli.builtin.info
 import q2cli.builtin.tools
 from q2cli.commands import RootCommand
-from q2cli.core.config import CLIConfig, ParserError
+from q2cli.core.config import CLIConfig
 
 
 class TestOption(unittest.TestCase):
@@ -30,9 +30,9 @@ class TestOption(unittest.TestCase):
         get_dummy_plugin()
         self.runner = CliRunner()
         self.tempdir = tempfile.mkdtemp(prefix='qiime2-q2cli-test-temp-')
-        self.parser = configparser.ConfigParser()
 
-        self.config = CLIConfig()
+        self.parser = configparser.ConfigParser()
+        self.path = os.path.join(q2cli.util.get_app_dir(), 'cli-colors.theme')
 
     def tearDown(self):
         shutil.rmtree(self.tempdir)
@@ -121,61 +121,62 @@ class TestOption(unittest.TestCase):
         self.assertEqual(Artifact.load(output_path).view(list), [0, 42, 43])
 
     def test_config_expected(self):
-        path = os.path.join(self.tempdir, 'good-config.ini')
         self.parser['type'] = {'underline': 't'}
-
-        with open(path, 'w') as fh:
+        with open(self.path, 'w') as fh:
             self.parser.write(fh)
-        self.config.parse_file(path)
-        # CONFIG.styles['type'] should be only {'fg': 'green'} before we change
-        # it
+
+        config = CLIConfig()
+        config.parse_file(self.path)
+
         self.assertEqual(
-            self.config.styles['type'], {'fg': 'green', 'underline': True})
+            config.styles['type'], {'underline': True})
 
     def test_config_bad_selector(self):
-        path = os.path.join(self.tempdir, 'test-config.ini')
         self.parser['tye'] = {'underline': 't'}
-
-        with open(path, 'w') as fh:
+        with open(self.path, 'w') as fh:
             self.parser.write(fh)
+
+        config = CLIConfig()
         with self.assertRaisesRegex(
-                ParserError, 'tye.*valid selector.*valid selectors'):
-            self.config.parse_file(path)
+                configparser.Error, 'tye.*valid selector.*valid selectors'):
+            config.parse_file(self.path)
 
     def test_config_bad_styling(self):
-        path = os.path.join(self.tempdir, 'test-config.ini')
         self.parser['type'] = {'underlined': 't'}
-
-        with open(path, 'w') as fh:
+        with open(self.path, 'w') as fh:
             self.parser.write(fh)
+
+        config = CLIConfig()
         with self.assertRaisesRegex(
-                ParserError, 'underlined.*valid styling.*valid stylings'):
-            self.config.parse_file(path)
+                configparser.Error, 'underlined.*valid styling.*valid '
+                'stylings'):
+            config.parse_file(self.path)
 
     def test_config_bad_color(self):
-        path = os.path.join(self.tempdir, 'test-config.ini')
         self.parser['type'] = {'fg': 'purple'}
-
-        with open(path, 'w') as fh:
+        with open(self.path, 'w') as fh:
             self.parser.write(fh)
+
+        config = CLIConfig()
         with self.assertRaisesRegex(
-                ParserError, 'purple.*valid color.*valid colors'):
-            self.config.parse_file(path)
+                configparser.Error, 'purple.*valid color.*valid colors'):
+            config.parse_file(self.path)
 
     def test_config_bad_boolean(self):
-        path = os.path.join(self.tempdir, 'test-config.ini')
         self.parser['type'] = {'underline': 'g'}
-
-        with open(path, 'w') as fh:
+        with open(self.path, 'w') as fh:
             self.parser.write(fh)
+
+        config = CLIConfig()
         with self.assertRaisesRegex(
-                ParserError, 'g.*valid boolean.*valid booleans'):
-            self.config.parse_file(path)
+                configparser.Error, 'g.*valid boolean.*valid booleans'):
+            config.parse_file(self.path)
 
     def test_no_file(self):
+        config = CLIConfig()
         with self.assertRaisesRegex(
-                ParserError, "'Path' is not a valid filepath."):
-            self.config.parse_file('Path')
+                configparser.Error, "'Path' is not a valid filepath."):
+            config.parse_file('Path')
 
 
 if __name__ == "__main__":

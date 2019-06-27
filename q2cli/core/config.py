@@ -14,10 +14,6 @@ import click
 import q2cli.util
 
 
-class ParserError(Exception):
-    pass
-
-
 class CLIConfig():
     path = os.path.join(q2cli.util.get_app_dir(), 'cli-colors.theme')
     VALID_SELECTORS = frozenset(
@@ -66,20 +62,20 @@ class CLIConfig():
     # This maintains the default colors while getting rid of all the default
     # styling modifiers so what the user puts in their file is all they'll see
     def get_editable_styles(self):
-        return {'option': {'fg': 'blue'},
-                'type': {'fg': 'green'},
-                'default_arg': {'fg': 'magenta'},
-                'command': {'fg': 'blue'},
+        return {'option': {},
+                'type': {},
+                'default_arg': {},
+                'command': {},
                 'emphasis': {},
-                'problem': {'fg': 'yellow'},
-                'error': {'fg': 'red'},
+                'problem': {},
+                'error': {},
                 'required': {},
-                'success': {'fg': 'green'}}
+                'success': {}}
 
     def _build_error(self, current, valid_list, valid_string):
-        valids = '\n'.join(valid_list)
-        raise ParserError(f'{current!r} is not a {valid_string}. The '
-                          f'{valid_string}s are:\n{valids}')
+        valids = ', '.join(valid_list)
+        raise configparser.Error(f'{current!r} is not a {valid_string}. The '
+                                 f'{valid_string}s are:\n{valids}')
 
     def parse_file(self, fp):
         if os.path.exists(fp):
@@ -108,7 +104,7 @@ class CLIConfig():
                         val = self.VALID_BOOLEANS[val]
                     self.styles[selector][styling] = val
         else:
-            raise ParserError(f'{fp!r} is not a valid filepath.')
+            raise configparser.Error(f'{fp!r} is not a valid filepath.')
 
     def cfg_style(self, selector, text, required=False):
         kwargs = self.styles[selector]
