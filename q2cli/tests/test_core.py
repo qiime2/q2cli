@@ -10,6 +10,7 @@ import os.path
 import shutil
 import tempfile
 import unittest
+import configparser
 
 from click.testing import CliRunner
 from qiime2 import Artifact
@@ -17,9 +18,11 @@ from qiime2.core.testing.type import IntSequence1
 from qiime2.core.testing.util import get_dummy_plugin
 
 import q2cli
+import q2cli.util
 import q2cli.builtin.info
 import q2cli.builtin.tools
 from q2cli.commands import RootCommand
+from q2cli.core.config import CLIConfig
 
 
 class TestOption(unittest.TestCase):
@@ -27,6 +30,9 @@ class TestOption(unittest.TestCase):
         get_dummy_plugin()
         self.runner = CliRunner()
         self.tempdir = tempfile.mkdtemp(prefix='qiime2-q2cli-test-temp-')
+
+        self.parser = configparser.ConfigParser()
+        self.path = os.path.join(q2cli.util.get_app_dir(), 'cli-colors.theme')
 
     def tearDown(self):
         shutil.rmtree(self.tempdir)
@@ -113,6 +119,64 @@ class TestOption(unittest.TestCase):
         self.assertEqual(result.exit_code, 0)
         self.assertTrue(os.path.exists(output_path))
         self.assertEqual(Artifact.load(output_path).view(list), [0, 42, 43])
+
+    def test_config_expected(self):
+        self.parser['type'] = {'underline': 't'}
+        with open(self.path, 'w') as fh:
+            self.parser.write(fh)
+
+        config = CLIConfig()
+        config.parse_file(self.path)
+
+        self.assertEqual(
+            config.styles['type'], {'underline': True})
+
+    def test_config_bad_selector(self):
+        self.parser['tye'] = {'underline': 't'}
+        with open(self.path, 'w') as fh:
+            self.parser.write(fh)
+
+        config = CLIConfig()
+        with self.assertRaisesRegex(
+                configparser.Error, 'tye.*valid selector.*valid selectors'):
+            config.parse_file(self.path)
+
+    def test_config_bad_styling(self):
+        self.parser['type'] = {'underlined': 't'}
+        with open(self.path, 'w') as fh:
+            self.parser.write(fh)
+
+        config = CLIConfig()
+        with self.assertRaisesRegex(
+                configparser.Error, 'underlined.*valid styling.*valid '
+                'stylings'):
+            config.parse_file(self.path)
+
+    def test_config_bad_color(self):
+        self.parser['type'] = {'fg': 'purple'}
+        with open(self.path, 'w') as fh:
+            self.parser.write(fh)
+
+        config = CLIConfig()
+        with self.assertRaisesRegex(
+                configparser.Error, 'purple.*valid color.*valid colors'):
+            config.parse_file(self.path)
+
+    def test_config_bad_boolean(self):
+        self.parser['type'] = {'underline': 'g'}
+        with open(self.path, 'w') as fh:
+            self.parser.write(fh)
+
+        config = CLIConfig()
+        with self.assertRaisesRegex(
+                configparser.Error, 'g.*valid boolean.*valid booleans'):
+            config.parse_file(self.path)
+
+    def test_no_file(self):
+        config = CLIConfig()
+        with self.assertRaisesRegex(
+                configparser.Error, "'Path' is not a valid filepath."):
+            config.parse_file('Path')
 
 
 if __name__ == "__main__":
