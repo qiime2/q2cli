@@ -343,15 +343,17 @@ class DeploymentCache:
 
         if not qiime2.sdk.util.is_semantic_type(type):
             if style.style is None:
-                if style.expr.predicate is not None:
+                if hasattr(style.expr, 'predicate') and style.expr.predicate is not None:
                     type_repr = repr(style.expr.predicate)
-                elif not type.fields:
+                elif hasattr(type, 'fields') and not type.fields:
                     type_repr = None
             elif style.style == 'simple':
                 if style.members.predicate is not None:
                     type_repr = repr(style.members.predicate)
 
         return type_repr
+
+    # TODO: make sure line wrapping still works
 
     def _get_metavar(self, type):
         import qiime2.sdk.util
