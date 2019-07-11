@@ -382,6 +382,8 @@ class DeploymentCache:
             metavar = 'METADATA'
         elif style.style is not None and style.style != 'simple':
             metavar = 'VALUE'
+        elif qiime2.sdk.util.is_union(type):
+            metavar = ''
         else:
             metavar = name_to_var[inner_type.name]
         if (metavar == 'NUMBER' and inner_type is not None
