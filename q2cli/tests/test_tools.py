@@ -247,6 +247,18 @@ class TestInspectMetadata(unittest.TestCase):
                   'directory %s\n' % (self.viz, output_path)
         self.assertEqual(success, result.output)
 
+    def test_export_to_filename_without_path(self):
+        current_dir = os.getcwd()
+        os.chdir(self.tempdir)
+        output_path = 'output'
+        result = self.runner.invoke(tools, [
+            'export', '--input-path', self.viz, '--output-path', output_path
+        ])
+        success = 'Exported %s as Visualization to '\
+                  'directory %s\n' % (self.viz, output_path)
+        self.assertEqual(success, result.output)
+        os.chdir(current_dir)
+
     def test_extract_to_dir_success_message(self):
         result = self.runner.invoke(tools, [
             'extract', '--input-path', self.ints1,

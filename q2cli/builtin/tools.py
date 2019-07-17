@@ -65,6 +65,10 @@ def export_data(input_path, output_path, output_format):
                 if os.path.isfile(output_path):
                     os.remove(output_path)
                 else:
+                    # This allows the user to pass a filename as a path if they
+                    # want their output in the current working directory
+                    if os.path.dirname(output_path) == '':
+                        output_path = os.path.join('.', output_path)
                     # create directory (recursively) if it doesn't exist yet
                     os.makedirs(os.path.dirname(output_path), exist_ok=True)
                 qiime2.util.duplicate(str(source), output_path)
