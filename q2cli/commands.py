@@ -12,6 +12,8 @@ import q2cli.builtin.dev
 import q2cli.builtin.info
 import q2cli.builtin.tools
 
+from q2cli.core.config import CONFIG
+
 from q2cli.click.command import BaseCommandMixin
 
 
@@ -220,8 +222,13 @@ class ActionCommand(BaseCommandMixin, click.Command):
         ]
 
         options = [*self._inputs, *self._params, *self._outputs, *self._misc]
+        help_ = [action['description']]
+        if self._get_action().deprecated:
+            help_.append(CONFIG.cfg_style(
+                'warning', 'WARNING:\n\nThis command is deprecated and will '
+                           'be removed in a future version of this plugin.'))
         super().__init__(name, params=options, callback=self,
-                         short_help=action['name'], help=action['description'])
+                         short_help=action['name'], help='\n\n'.join(help_))
 
     def _build_generated_options(self):
         import q2cli.click.option
@@ -304,6 +311,15 @@ class ActionCommand(BaseCommandMixin, click.Command):
             log = tempfile.NamedTemporaryFile(prefix='qiime2-q2cli-err-',
                                               suffix='.log',
                                               delete=False, mode='w')
+        if action.deprecated:
+            # We don't need to worry about redirecting this, since it should a)
+            # always be shown to the user and b) the framework-originated
+            # FutureWarning will wind up in the log file in quiet mode.
+
+            msg = ('Plugin warning from %s:\n\n%s is deprecated and '
+                   'will be removed in a future version of this plugin.' %
+                   (q2cli.util.to_cli_name(self.plugin['name']), self.name))
+            click.echo(CONFIG.cfg_style('warning', msg))
 
         cleanup_logfile = False
         try:

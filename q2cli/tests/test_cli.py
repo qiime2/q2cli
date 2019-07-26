@@ -311,6 +311,35 @@ class CliTests(unittest.TestCase):
                                         f'{temp!r}'):
                 obj._convert_input(self.artifact1_path, None, None)
 
+    def test_deprecated_help_text(self):
+        qiime_cli = RootCommand()
+        command = qiime_cli.get_command(ctx=None, name='dummy-plugin')
+
+        result = self.runner.invoke(command, ['deprecated-method', '--help'])
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertTrue('WARNING' in result.output)
+        self.assertTrue('deprecated' in result.output)
+
+    def test_run_deprecated_gets_warning_msg(self):
+        qiime_cli = RootCommand()
+        command = qiime_cli.get_command(ctx=None, name='dummy-plugin')
+        output_path = os.path.join(self.tempdir, 'output.qza')
+
+        result = self.runner.invoke(
+            command,
+            ['deprecated-method', '--o-out', output_path, '--verbose'])
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertTrue(os.path.exists(output_path))
+
+        artifact = Artifact.load(output_path)
+
+        # Just make sure that the command ran as expected
+        self.assertEqual(artifact.view(dict), {'foo': '43'})
+
+        self.assertTrue('deprecated' in result.output)
+
 
 class TestOptionalArtifactSupport(unittest.TestCase):
     def setUp(self):
