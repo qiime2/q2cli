@@ -13,6 +13,7 @@ import q2cli.builtin.info
 import q2cli.builtin.tools
 
 from q2cli.click.command import BaseCommandMixin
+from q2cli.core.config import CONFIG
 
 
 class RootCommand(BaseCommandMixin, click.MultiCommand):
@@ -44,10 +45,10 @@ class RootCommand(BaseCommandMixin, click.MultiCommand):
 
         if invalid_chars or categories:
             if invalid_chars:
-                click.secho("Error: Detected invalid character in: %s\n"
-                            "Verify the correct quotes or dashes (ASCII) are "
-                            "being used." % ', '.join(invalid_chars),
-                            err=True, fg='red', bold=True)
+                msg = ("Error: Detected invalid character in: %s\nVerify the "
+                       "correct quotes or dashes (ASCII) are being used."
+                       % ', '.join(invalid_chars))
+                click.echo(CONFIG.cfg_style('error', msg), err=True)
             if categories:
                 old_to_new_names = '\n'.join(
                     'Instead of %s, trying using %s' % (old, new)
@@ -55,7 +56,7 @@ class RootCommand(BaseCommandMixin, click.MultiCommand):
                 msg = ("Error: The following options no longer exist because "
                        "metadata *categories* are now called metadata "
                        "*columns* in QIIME 2.\n\n%s" % old_to_new_names)
-                click.secho(msg, err=True, fg='red', bold=True)
+                click.echo(CONFIG.cfg_style('error', msg), err=True)
             sys.exit(-1)
 
         super().__init__(*args, **kwargs)
@@ -108,9 +109,10 @@ class RootCommand(BaseCommandMixin, click.MultiCommand):
             else:
                 hint = ''
 
-            click.secho("Error: QIIME 2 has no plugin/command named %r."
-                        % name + hint,
-                        err=True, fg='red')
+            click.echo(
+                CONFIG.cfg_style('error', "Error: QIIME 2 has no "
+                                 "plugin/command named %r." % name + hint,
+                                 err=True))
             ctx.exit(2)  # Match exit code of `return None`
 
         return PluginCommand(plugin, name)
@@ -185,9 +187,10 @@ class PluginCommand(BaseCommandMixin, click.MultiCommand):
             else:
                 hint = ''
 
-            click.secho("Error: QIIME 2 plugin %r has no action %r."
-                        % (self._plugin['name'], name) + hint,
-                        err=True, fg='red')
+            click.echo(
+                CONFIG.cfg_style('error', "Error: QIIME 2 plugin %r has no "
+                                 "action %r." % (self._plugin['name'], name) +
+                                 hint), err=True)
             ctx.exit(2)  # Match exit code of `return None`
 
         return ActionCommand(name, self._plugin, action)
@@ -333,8 +336,9 @@ class ActionCommand(BaseCommandMixin, click.Command):
         for result, output in zip(results, outputs):
             path = result.save(output)
             if not quiet:
-                click.secho('Saved %s to: %s' % (result.type, path),
-                            fg='green')
+                click.echo(
+                    CONFIG.cfg_style('success', 'Saved %s to: %s' %
+                                     (result.type, path)))
 
     def _order_outputs(self, outputs):
         ordered = []

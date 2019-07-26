@@ -36,6 +36,8 @@ class CLIConfig():
             try:
                 self.parse_file(self.path)
             except Exception as e:
+                # Let's just be safe and make no attempt to use CONFIG to
+                # format this text if the CONFIG is broken
                 click.secho(
                     "We encountered the following error when parsing your "
                     f"theme:\n\n{str(e)}\n\nIf you want to use a custom "
@@ -43,7 +45,7 @@ class CLIConfig():
                     "current theme. If you encountered this message while "
                     "importing a new theme or resetting your current theme, "
                     "ignore it.",
-                    fg='yellow')
+                    fg='red')
                 self.styles = self.get_default_styles()
         else:
             self.styles = self.get_default_styles()
