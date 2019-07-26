@@ -51,7 +51,8 @@ def write_bash_completion_script(plugins, path):
     # Make bash completion script executable:
     #   http://stackoverflow.com/a/12792002/3776794
     st = os.stat(path)
-    os.chmod(path, st.st_mode | stat.S_IEXEC)
+    # Set executable bit for user,group,other for root/sudo installs
+    os.chmod(path, st.st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
 
 
 def _generate_command_reply(cmd):
