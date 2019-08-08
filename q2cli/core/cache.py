@@ -341,7 +341,8 @@ class DeploymentCache:
         type_repr = repr(type)
         style = qiime2.sdk.util.interrogate_collection_type(type)
 
-        if not qiime2.sdk.util.is_semantic_type(type):
+        if not qiime2.sdk.util.is_semantic_type(type) and \
+                not qiime2.sdk.util.is_union(type):
             if style.style is None:
                 if style.expr.predicate is not None:
                     type_repr = repr(style.expr.predicate)
@@ -379,6 +380,8 @@ class DeploymentCache:
         elif qiime2.sdk.util.is_metadata_type(type):
             metavar = 'METADATA'
         elif style.style is not None and style.style != 'simple':
+            metavar = 'VALUE'
+        elif qiime2.sdk.util.is_union(type):
             metavar = 'VALUE'
         else:
             metavar = name_to_var[inner_type.name]
