@@ -247,61 +247,6 @@ class TestInspectMetadata(unittest.TestCase):
                   'directory %s\n' % (self.viz, output_path)
         self.assertEqual(success, result.output)
 
-    def test_export_file_format(self):
-        current_dir = os.getcwd()
-        os.chdir(self.tempdir)
-        output_path = os.path.join(os.getcwd(), 'output')
-        result = self.runner.invoke(tools, [
-            'export', '--input-path', self.ints1, '--output-path', output_path,
-            '--output-format', 'IntSequenceFormat'
-        ])
-
-        success = 'Exported %s as IntSequenceFormat to file %s\n' % \
-                  (self.ints1, output_path)
-        self.assertEqual(success, result.output)
-        os.chdir(current_dir)
-
-    def test_export_dir_format(self):
-        current_dir = os.getcwd()
-        os.chdir(self.tempdir)
-        result = self.runner.invoke(tools, [
-            'export', '--input-path', self.ints1, '--output-path', os.getcwd(),
-            '--output-format', 'IntSequenceDirectoryFormat'
-        ])
-
-        success = 'Exported %s as IntSequenceDirectoryFormat to directory ' \
-                  '%s\n' % (self.ints1, os.getcwd())
-        self.assertEqual(success, result.output)
-        os.chdir(current_dir)
-
-    def test_export_dir_format_nested(self):
-        current_dir = os.getcwd()
-        os.chdir(self.tempdir)
-        output_path = os.path.join(os.getcwd(), 'output')
-        result = self.runner.invoke(tools, [
-            'export', '--input-path', self.ints1, '--output-path', output_path,
-            '--output-format', 'IntSequenceDirectoryFormat'
-        ])
-
-        success = 'Exported %s as IntSequenceDirectoryFormat to directory ' \
-                  '%s\n' % (self.ints1, output_path)
-        self.assertEqual(success, result.output)
-        os.chdir(current_dir)
-
-    def test_export_to_filename_without_path(self):
-        # Change to tempdir so the test file isn't added to the current
-        # directory every time the test is run
-        current_dir = os.getcwd()
-        os.chdir(self.tempdir)
-        output_path = 'output'
-        result = self.runner.invoke(tools, [
-            'export', '--input-path', self.viz, '--output-path', output_path
-        ])
-        success = 'Exported %s as Visualization to '\
-                  'directory %s\n' % (self.viz, output_path)
-        self.assertEqual(success, result.output)
-        os.chdir(current_dir)
-
     def test_extract_to_dir_success_message(self):
         result = self.runner.invoke(tools, [
             'extract', '--input-path', self.ints1,
@@ -330,6 +275,60 @@ class TestInspectMetadata(unittest.TestCase):
         ])
         success = 'Imported %s as IntSequenceFormat to '\
                   '%s\n' % (os.path.join(self.ints2, 'ints.txt'), output_path)
+        self.assertEqual(success, result.output)
+
+
+class TestExportToFileFormat(TestInspectMetadata):
+    def setUp(self):
+        super().setUp()
+        # Working directory is changed to temp directory to prevent cluttering
+        # the repo directory with test files
+        self.current_dir = os.getcwd()
+        os.chdir(self.tempdir)
+
+    def tearDown(self):
+        super().tearDown()
+        os.chdir(self.current_dir)
+
+    def test_export_file_format(self):
+        output_path = os.path.join(os.getcwd(), 'output')
+        result = self.runner.invoke(tools, [
+            'export', '--input-path', self.ints1, '--output-path', output_path,
+            '--output-format', 'IntSequenceFormat'
+        ])
+
+        success = 'Exported %s as IntSequenceFormat to file %s\n' % \
+                  (self.ints1, output_path)
+        self.assertEqual(success, result.output)
+
+    def test_export_dir_format(self):
+        result = self.runner.invoke(tools, [
+            'export', '--input-path', self.ints1, '--output-path', os.getcwd(),
+            '--output-format', 'IntSequenceDirectoryFormat'
+        ])
+
+        success = 'Exported %s as IntSequenceDirectoryFormat to directory ' \
+                  '%s\n' % (self.ints1, os.getcwd())
+        self.assertEqual(success, result.output)
+
+    def test_export_dir_format_nested(self):
+        output_path = os.path.join(os.getcwd(), 'output')
+        result = self.runner.invoke(tools, [
+            'export', '--input-path', self.ints1, '--output-path', output_path,
+            '--output-format', 'IntSequenceDirectoryFormat'
+        ])
+
+        success = 'Exported %s as IntSequenceDirectoryFormat to directory ' \
+                  '%s\n' % (self.ints1, output_path)
+        self.assertEqual(success, result.output)
+
+    def test_export_to_filename_without_path(self):
+        output_path = 'output'
+        result = self.runner.invoke(tools, [
+            'export', '--input-path', self.viz, '--output-path', output_path
+        ])
+        success = 'Exported %s as Visualization to '\
+                  'directory %s\n' % (self.viz, output_path)
         self.assertEqual(success, result.output)
 
 
