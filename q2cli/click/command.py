@@ -80,7 +80,7 @@ class BaseCommandMixin:
                     initial_indent=' (%d/%d%s) ' % (idx, len(errors),
                                                     '?' if skip_rest else ''),
                     subsequent_indent='  ')
-                click.secho(CONFIG.cfg_style('error', msg), err=True)
+                click.echo(CONFIG.cfg_style('error', msg), err=True)
             ctx.exit(1)
 
         ctx.args = args

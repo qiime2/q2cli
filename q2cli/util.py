@@ -171,7 +171,7 @@ def citations_option(get_citation_records):
                 click.echo(fh.getvalue(), nl=False)
             ctx.exit()
         else:
-            click.secho(
+            click.echo(
                 CONFIG.cfg_style('problem', 'No citations found.'), err=True)
             ctx.exit(1)
 
