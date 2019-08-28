@@ -12,10 +12,9 @@ import q2cli.builtin.dev
 import q2cli.builtin.info
 import q2cli.builtin.tools
 
-from q2cli.core.config import CONFIG
-
 from q2cli.click.command import BaseCommandMixin
 from q2cli.core.config import CONFIG
+from q2cli.core.cache import DeploymentCache
 
 
 class RootCommand(BaseCommandMixin, click.MultiCommand):
@@ -226,7 +225,7 @@ class ActionCommand(BaseCommandMixin, click.Command):
 
         options = [*self._inputs, *self._params, *self._outputs, *self._misc]
         help_ = [action['description']]
-        if self._get_action().deprecated:
+        if self.action['deprecated']:
             help_.append(CONFIG.cfg_style(
                 'warning', 'WARNING:\n\nThis command is deprecated and will '
                            'be removed in a future version of this plugin.'))
