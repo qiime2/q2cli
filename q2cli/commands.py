@@ -14,7 +14,6 @@ import q2cli.builtin.tools
 
 from q2cli.click.command import BaseCommandMixin
 from q2cli.core.config import CONFIG
-from q2cli.core.cache import DeploymentCache
 
 
 class RootCommand(BaseCommandMixin, click.MultiCommand):
