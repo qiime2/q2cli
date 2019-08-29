@@ -270,7 +270,8 @@ class DeploymentCache:
             'id': action.id,
             'name': action.name,
             'description': action.description,
-            'signature': []
+            'signature': [],
+            'deprecated': action.deprecated,
         }
 
         sig = action.signature
