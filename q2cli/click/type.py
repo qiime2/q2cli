@@ -198,7 +198,7 @@ class QIIME2Type(click.ParamType):
             args = ', '.join(map(repr, value))
             expr = qiime2.sdk.util.type_from_ast(self.type_ast)
             raise click.BadParameter(
-                'recieved <%s> as an argument, which is incompatible'
+                'received <%s> as an argument, which is incompatible'
                 ' with parameter type: %r' % (args, expr),
                 ctx=ctx)
 

@@ -169,7 +169,7 @@ class GeneratedOption(click.Option):
                 args = ', '.join(map(repr, (x.type for x in value)))
                 if value not in type_expr:
                     raise click.BadParameter(
-                        'recieved <%s> as an argument, which is incompatible'
+                        'received <%s> as an argument, which is incompatible'
                         ' with parameter type: %r' % (args, type_expr),
                         ctx=ctx, param=self)
                 return value
@@ -195,7 +195,7 @@ class GeneratedOption(click.Option):
                     args = ', '.join(map(repr, value))
                     expr = qiime2.sdk.util.type_from_ast(self.q2_ast)
                     raise click.BadParameter(
-                        'recieved <%s> as an argument, which is incompatible'
+                        'received <%s> as an argument, which is incompatible'
                         ' with parameter type: %r' % (args, expr),
                         ctx=ctx, param=self)
                 return value
@@ -210,5 +210,5 @@ class GeneratedOption(click.Option):
         args = ', '.join(map(repr, value))
         if dups:
             raise click.BadParameter(
-                'recieved <%s> as an argument, which contains duplicates'
+                'received <%s> as an argument, which contains duplicates'
                 ' of the following: <%s>' % (args, dups), ctx=ctx, param=self)
