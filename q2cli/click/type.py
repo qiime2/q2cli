@@ -192,7 +192,15 @@ class QIIME2Type(click.ParamType):
     def _convert_primitive(self, value, param, ctx):
         import qiime2.sdk.util
 
-        return qiime2.sdk.util.parse_primitive(self.type_expr, value)
+        try:
+            return qiime2.sdk.util.parse_primitive(self.type_expr, value)
+        except ValueError:
+            args = ', '.join(map(repr, value))
+            expr = qiime2.sdk.util.type_from_ast(self.type_ast)
+            raise click.BadParameter(
+                'recieved <%s> as an argument, which is incompatible'
+                ' with parameter type: %r' % (args, expr),
+                ctx=ctx)
 
     @property
     def name(self):
