@@ -28,7 +28,7 @@ class RootCommand(BaseCommandMixin, click.MultiCommand):
         import re
         import sys
 
-        unicodes = ["\u2018", "\u2019", "\u201C", "\u201D", "\u2014"]
+        unicodes = ["\u2018", "\u2019", "\u201C", "\u201D", "\u2014", "\u2013"]
         category_regex = re.compile(r'--m-(\S+)-category')
 
         invalid_chars = []
