@@ -256,7 +256,7 @@ def inspect_metadata(paths, tsv, show_hashes, failure):
 
             max_path_len = max([len(os.path.relpath(p)) for p in paths] +
                                [len(COLUMN_PATH)])
-            max_hash_len = max([len(md.hash) for md in mds] +
+            max_hash_len = max([len(md.id) for md in mds] +
                                [len(COLUMN_HASH)])
 
             formatter = ("{0:>%d}  {1:%d}" % (max_path_len,
@@ -267,7 +267,7 @@ def inspect_metadata(paths, tsv, show_hashes, failure):
                         bold=True)
 
             for path, md in zip(paths, mds):
-                click.echo(formatter(os.path.relpath(path), md.hash))
+                click.echo(formatter(os.path.relpath(path), md.id))
 
             click.secho(formatter("=" * max_path_len, "=" * max_hash_len),
                         bold=True)
