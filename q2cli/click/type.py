@@ -91,6 +91,10 @@ class QIIME2Type(click.ParamType):
                 self.fail('%r is already a directory.' % (value,), param, ctx)
 
         directory = os.path.dirname(value)
+        if directory and not os.path.exists(directory):
+            self.fail('Directory %r does not exist, cannot save %r into it.'
+                      % (directory, os.path.basename(value)), param, ctx)
+
         if not is_writable_dir(directory):
             self.fail('%r is not a writable directory, cannot write output'
                       ' to it.' % (directory,), param, ctx)
