@@ -473,7 +473,7 @@ class TestMetadataSupport(MetadataTestsBase):
 
         self.assertEqual(result.exit_code, 1)
         self.assertTrue(result.output.startswith('Usage:'))
-        self.assertIn("Missing option \"--m-metadata-file\"", result.output)
+        self.assertIn("Missing option '--m-metadata-file'", result.output)
 
     def test_optional_metadata_missing(self):
         result = self._run_command(
@@ -557,7 +557,7 @@ class TestMetadataColumnSupport(MetadataTestsBase):
 
         self.assertEqual(result.exit_code, 1)
         self.assertTrue(result.output.startswith('Usage:'))
-        self.assertIn("Missing option \"--m-metadata-file\"", result.output)
+        self.assertIn("Missing option '--m-metadata-file'", result.output)
 
     def test_optional_metadata_missing(self):
         result = self._run_command(
@@ -575,7 +575,7 @@ class TestMetadataColumnSupport(MetadataTestsBase):
 
         self.assertEqual(result.exit_code, 1)
         self.assertTrue(result.output.startswith('Usage:'))
-        self.assertIn("Missing option \"--m-metadata-column\"", result.output)
+        self.assertIn("Missing option '--m-metadata-column'", result.output)
 
     def test_optional_column_without_metadata(self):
         result = self._run_command(
@@ -585,7 +585,7 @@ class TestMetadataColumnSupport(MetadataTestsBase):
 
         self.assertEqual(result.exit_code, 1)
         self.assertTrue(result.output.startswith('Usage:'))
-        self.assertIn("Missing option \"--m-metadata-file\"", result.output)
+        self.assertIn("Missing option '--m-metadata-file'", result.output)
 
     def test_single_metadata(self):
         for command in ('identity-with-metadata-column',
