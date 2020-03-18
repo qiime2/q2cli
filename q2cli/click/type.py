@@ -185,7 +185,7 @@ class QIIME2Type(click.ParamType):
                 metadata_column = metadata.get_column(column)
             except Exception:
                 self.fail("There was an issue with retrieving column %r from "
-                          "the metadata:" % column)
+                          "the metadata." % column)
 
             if metadata_column not in self.type_expr:
                 self.fail("Metadata column is of type %r, but expected %r."
