@@ -57,19 +57,23 @@ class CLIUsage(usage.Usage):
     def _template_action(self, action_f, input_opts, outputs):
         # The following assumes a 1-1 relationship between params and targets
         cmd = f"qiime {action_f.plugin_id} {action_f.id}".replace("_", "-")
-        # Might be able to use just one list
-        inputs, params = [], []
-        for k, v in input_opts.items():
-            if v in self._scope.records:
-                inputs.append(f"{' ':>4}--i-{k} {v}.qza")
-            else:
-                params.append(f"{' ':>4}--p-{k} {v}")
+        inputs = [
+            f"{' ':>4}--i-{i} {input_opts[i]}.qza"
+            for i in action_f.signature.inputs
+        ]
+        params = [
+            f"{' ':>4}--p-{i} {input_opts[i]}"
+            for i in action_f.signature.parameters
+        ]
 
-        cli_outputs = []
-        for k, v in outputs.items():
-            param = f"{' ':>4}--o-{v}".replace("_", "-")
-            target = f"{k}.qza"
-            cli_outputs.append(f"{param} {target}")
+        # HACK: Reverse output dict for now
+        rev_outputs = {v: k for k, v in outputs.items()}
+        cli_outputs = [
+            (
+                f"{' ':>4}--o-{i.replace('_', '-')} "
+                f"{rev_outputs[i].replace('-', '_')}.qza"
+            )
+            for i in action_f.signature.outputs
+        ]
         t = " \\\n".join([cmd] + inputs + params + cli_outputs)
         return t
-
