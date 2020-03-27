@@ -67,7 +67,7 @@ class CLIUsage(usage.Usage):
         for i in action_f.signature.parameters:
             spec = action_f.signature.parameters[i]
             if spec.qiime_type is Bool and i in input_opts:
-                params.append(f"--p-{i.replace('_', '-')}")
+                params.append(f"{' ':>4}--p-{i.replace('_', '-')}")
             elif i in input_opts:
                 p = f"--p-{i.replace('_', '-')}"
                 val = f" {input_opts[i]}"
