@@ -12,7 +12,6 @@ import qiime2.sdk.usage as usage
 class CLIUsage(usage.Usage):
     def __init__(self):
         super().__init__()
-        self._imports = set()
         self._recorder = []
         self._init_data_refs = dict()
 
@@ -74,8 +73,3 @@ class CLIUsage(usage.Usage):
         t = " \\\n".join([cmd] + inputs + params + cli_outputs)
         return t
 
-    def _update_imports(self, action_f):
-        # TODO:  Probably don't care about imports for this driver
-        full_import = action_f.get_import_path()
-        import_path, action_api_name = full_import.rsplit('.', 1)
-        self._imports.add((import_path, action_api_name))
