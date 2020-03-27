@@ -35,10 +35,10 @@ class CLIUsage(usage.Usage):
     def _comment_(self, text: str):
         self._recorder.append('# %s' % (text,))
 
-    def _action_(self, action: usage.UsageAction, input_opts: dict, output_opts: dict):
+    def _action_(
+        self, action: usage.UsageAction, input_opts: dict, output_opts: dict
+    ):
         action_f, action_sig = action.get_action()
-        # TODO: Probably don't need this
-        self._update_imports(action_f)
         t = self._template_action(action_f, input_opts, output_opts)
         self._recorder.append(t)
 
