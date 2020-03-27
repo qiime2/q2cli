@@ -50,6 +50,21 @@ params = [
             "    --o-concatenated-ints concatenated_ints.qza",
         ),
     ),
+    (
+        'typical_pipeline',
+        'typical_pipeline_simple',
+        (
+            "qiime dummy-plugin typical-pipeline \\",
+            "    --i-int-sequence ints.qza \\",
+            "    --i-mapping mapper.qza \\",
+            "    --p-do-extra-thing \\",
+            "    --o-out-map out_map.qza \\",
+            "    --o-left left.qza \\",
+            "    --o-right right.qza \\",
+            "    --o-left-viz left_viz.qza \\",
+            "    --o-right-viz right_viz.qza"
+        ),
+    ),
 ]
 
 

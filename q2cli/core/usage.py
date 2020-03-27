@@ -6,6 +6,7 @@
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 
+from qiime2.core.type.primitive import Bool
 import qiime2.sdk.usage as usage
 
 
@@ -58,13 +59,19 @@ class CLIUsage(usage.Usage):
         # The following assumes a 1-1 relationship between params and targets
         cmd = f"qiime {action_f.plugin_id} {action_f.id}".replace("_", "-")
         inputs = [
-            f"{' ':>4}--i-{i} {input_opts[i]}.qza"
+            f"{' ':>4}--i-{i.replace('_', '-')} {input_opts[i]}.qza"
             for i in action_f.signature.inputs
         ]
-        params = [
-            f"{' ':>4}--p-{i} {input_opts[i]}"
-            for i in action_f.signature.parameters
-        ]
+
+        params = []
+        for i in action_f.signature.parameters:
+            spec = action_f.signature.parameters[i]
+            if spec.qiime_type is Bool and i in input_opts:
+                params.append(f"--p-{i.replace('_', '-')}")
+            elif i in input_opts:
+                p = f"--p-{i.replace('_', '-')}"
+                val = f" {input_opts[i]}"
+                params.append(f"{' ':>4}{p}{val}")
 
         # HACK: Reverse output dict for now
         rev_outputs = {v: k for k, v in outputs.items()}
