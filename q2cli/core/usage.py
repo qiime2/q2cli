@@ -61,35 +61,54 @@ class CLIUsage(usage.Usage):
 
     def _template_action(self, action_f, input_opts, outputs):
         cmd = to_cli_name(f"qiime {action_f.plugin_id} {action_f.id}")
-        inputs, params, cli_outputs = [], [], []
-        for i in action_f.signature.inputs:
-            p = f"--i-{to_cli_name(i)}"
-            val = f"{input_opts[i]}.qza"
-            inputs.append(f"{' ':>4}{p} {val}")
-
-        for i, spec in action_f.signature.parameters.items():
-            if i in input_opts and not is_metadata_type(spec.qiime_type):
-                p = f"--p-{to_cli_name(i)}"
-                val = ""
-                if spec.qiime_type is not Bool:
-                    val = f" {input_opts[i]}"
-                params.append(f"{' ':>4}{p + val}")
-
-        for i in self._metadata_refs:
-            p = f"--m-metadata-file"
-            val = f"{i}.tsv"
-            params.append(f"{' ':>4}{p} {val}")
-            try:
-                col = self._col_refs[i]
-                p = f"--m-metadata-column"
-                params.append(f"{' ':>4}{p} {col}")
-            except KeyError:
-                pass
-
-        for i in action_f.signature.outputs:
-            p = f"--o-{to_cli_name(i)}"
-            val = f"{to_snake_case(outputs[i])}.qza"
-            cli_outputs.append(f"{' ':>4}{p} {val}")
-
+        inputs = template_inputs(action_f, input_opts)
+        params = template_parameters(action_f, input_opts)
+        params += template_metadata(self._metadata_refs, self._col_refs)
+        cli_outputs = template_outputs(action_f, outputs)
         t = " \\\n".join([cmd] + inputs + params + cli_outputs)
         return t
+
+
+def template_inputs(action, input_opts):
+    inputs = []
+    for i in action.signature.inputs:
+        p = f"--i-{to_cli_name(i)}"
+        val = f"{input_opts[i]}.qza"
+        inputs.append(f"{' ':>4}{p} {val}")
+    return inputs
+
+
+def template_parameters(action_f, input_opts):
+    params = []
+    for i, spec in action_f.signature.parameters.items():
+        if i in input_opts and not is_metadata_type(spec.qiime_type):
+            p = f"--p-{to_cli_name(i)}"
+            val = ""
+            if spec.qiime_type is not Bool:
+                val = f" {input_opts[i]}"
+            params.append(f"{' ':>4}{p + val}")
+    return params
+
+
+def template_metadata(metadata, cols):
+    params = []
+    for i in metadata:
+        p = f"--m-metadata-file"
+        val = f"{i}.tsv"
+        params.append(f"{' ':>4}{p} {val}")
+        try:
+            col = cols[i]
+            p = f"--m-metadata-column"
+            params.append(f"{' ':>4}{p} {col}")
+        except KeyError:
+            pass
+    return params
+
+
+def template_outputs(action, outputs):
+    cli_outputs = []
+    for i in action.signature.outputs:
+        p = f"--o-{to_cli_name(i)}"
+        val = f"{to_snake_case(outputs[i])}.qza"
+        cli_outputs.append(f"{' ':>4}{p} {val}")
+    return cli_outputs
