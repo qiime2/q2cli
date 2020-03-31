@@ -65,6 +65,17 @@ params = [
             "    --o-right-viz right_viz.qza"
         ),
     ),
+    (
+        'identity_with_metadata',
+        'identity_with_metadata_merging',
+        (
+            "qiime dummy-plugin identity-with-metadata \\",
+            "    --i-ints ints.qza \\",
+            "    --m-metadata-file md1.tsv \\",
+            "    --m-metadata-file md2.tsv \\",
+            "    --o-out out.qza"
+        ),
+    ),
 ]
 
 

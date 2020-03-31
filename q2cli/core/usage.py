@@ -6,7 +6,6 @@
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 
-from qiime2.core.type.primitive import Bool
 import qiime2.sdk.usage as usage
 
 
@@ -15,6 +14,7 @@ class CLIUsage(usage.Usage):
         super().__init__()
         self._recorder = []
         self._init_data_refs = dict()
+        self._metadata_refs = dict()
 
     def _init_data_(self, ref, factory):
         self._init_data_refs[ref] = factory
@@ -22,11 +22,10 @@ class CLIUsage(usage.Usage):
         return ref
 
     def _merge_metadata_(self, ref, records):
-        first_md = records[0].ref
-        remaining_records = ', '.join([r.ref for r in records[1:]])
-        t = '%s = %s.merge(%s)\n' % (ref, first_md, remaining_records)
-        self._recorder.append(t)
-        return ref
+        merge_target = ref
+        for record in records:
+            self._metadata_refs[record.ref] = record.result
+        return merge_target
 
     def _get_metadata_column_(self, ref, record, column_name):
         t = '%s = %s.get_column(%r)\n' % (ref, record.ref, column_name)
@@ -65,13 +64,16 @@ class CLIUsage(usage.Usage):
 
         params = []
         for i in action_f.signature.parameters:
-            spec = action_f.signature.parameters[i]
-            if spec.qiime_type is Bool and i in input_opts:
-                params.append(f"{' ':>4}--p-{i.replace('_', '-')}")
-            elif i in input_opts:
+            if i in input_opts and i != "metadata":
+                spec = action_f.signature.parameters[i]
                 p = f"--p-{i.replace('_', '-')}"
-                val = f" {input_opts[i]}"
+                val = input_opts[i]
+                val = f" {val}" if not isinstance(val, bool) else ""
                 params.append(f"{' ':>4}{p}{val}")
+        for i in self._metadata_refs:
+            p = f"--m-metadata-file"
+            val = f"{i}.tsv"
+            params.append(f"{' ':>4}{p} {val}")
 
         # HACK: Reverse output dict for now
         rev_outputs = {v: k for k, v in outputs.items()}
