@@ -6,7 +6,13 @@
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 
+from qiime2.core.type.primitive import Bool
+
 import qiime2.sdk.usage as usage
+from qiime2.sdk.util import is_metadata_type
+
+from q2cli.util import to_cli_name
+from q2cli.util import to_snake_case
 
 
 class CLIUsage(usage.Usage):
@@ -41,9 +47,7 @@ class CLIUsage(usage.Usage):
         action_f, action_sig = action.get_action()
         t = self._template_action(action_f, input_opts, output_opts)
         self._recorder.append(t)
-
-        new_output_opts = {k: k for k in output_opts.keys()}
-        return new_output_opts
+        return output_opts
 
     def _assert_has_line_matching_(self, ref, label, path, expression):
         pass
@@ -55,34 +59,30 @@ class CLIUsage(usage.Usage):
         return {r: f() for r, f in self._init_data_refs.items()}
 
     def _template_action(self, action_f, input_opts, outputs):
-        # The following assumes a 1-1 relationship between params and targets
-        cmd = f"qiime {action_f.plugin_id} {action_f.id}".replace("_", "-")
-        inputs = [
-            f"{' ':>4}--i-{i.replace('_', '-')} {input_opts[i]}.qza"
-            for i in action_f.signature.inputs
-        ]
+        cmd = to_cli_name(f"qiime {action_f.plugin_id} {action_f.id}")
+        inputs, params, cli_outputs = [], [], []
+        for i in action_f.signature.inputs:
+            p = f"--i-{to_cli_name(i)}"
+            val = f"{input_opts[i]}.qza"
+            inputs.append(f"{' ':>4}{p} {val}")
 
-        params = []
-        for i in action_f.signature.parameters:
-            if i in input_opts and i != "metadata":
-                spec = action_f.signature.parameters[i]
-                p = f"--p-{i.replace('_', '-')}"
-                val = input_opts[i]
-                val = f" {val}" if not isinstance(val, bool) else ""
-                params.append(f"{' ':>4}{p}{val}")
+        for i, spec in action_f.signature.parameters.items():
+            if i in input_opts and not is_metadata_type(spec.qiime_type):
+                p = f"--p-{to_cli_name(i)}"
+                val = ""
+                if spec.qiime_type is not Bool:
+                    val = f" {input_opts[i]}"
+                params.append(f"{' ':>4}{p + val}")
+
         for i in self._metadata_refs:
             p = f"--m-metadata-file"
             val = f"{i}.tsv"
             params.append(f"{' ':>4}{p} {val}")
 
-        # HACK: Reverse output dict for now
-        rev_outputs = {v: k for k, v in outputs.items()}
-        cli_outputs = [
-            (
-                f"{' ':>4}--o-{i.replace('_', '-')} "
-                f"{rev_outputs[i].replace('-', '_')}.qza"
-            )
-            for i in action_f.signature.outputs
-        ]
+        for i in action_f.signature.outputs:
+            p = f"--o-{to_cli_name(i)}"
+            val = f"{to_snake_case(outputs[i])}.qza"
+            cli_outputs.append(f"{' ':>4}{p} {val}")
+
         t = " \\\n".join([cmd] + inputs + params + cli_outputs)
         return t

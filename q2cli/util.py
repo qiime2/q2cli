@@ -36,6 +36,10 @@ def to_cli_name(name):
     return name.replace('_', '-')
 
 
+def to_snake_case(name):
+    return name.replace('-', '_')
+
+
 def exit_with_error(e, header='An error has been encountered:',
                     traceback='stderr', status=1):
     import sys
