@@ -21,6 +21,7 @@ class CLIUsage(usage.Usage):
         self._recorder = []
         self._init_data_refs = dict()
         self._metadata_refs = dict()
+        self._col_refs = dict()
 
     def _init_data_(self, ref, factory):
         self._init_data_refs[ref] = factory
@@ -34,8 +35,8 @@ class CLIUsage(usage.Usage):
         return merge_target
 
     def _get_metadata_column_(self, ref, record, column_name):
-        t = '%s = %s.get_column(%r)\n' % (ref, record.ref, column_name)
-        self._recorder.append(t)
+        self._metadata_refs[record.ref] = record.result
+        self._col_refs[record.ref] = column_name
         return ref
 
     def _comment_(self, text: str):
@@ -78,6 +79,12 @@ class CLIUsage(usage.Usage):
             p = f"--m-metadata-file"
             val = f"{i}.tsv"
             params.append(f"{' ':>4}{p} {val}")
+            try:
+                col = self._col_refs[i]
+                p = f"--m-metadata-column"
+                params.append(f"{' ':>4}{p} {col}")
+            except KeyError:
+                pass
 
         for i in action_f.signature.outputs:
             p = f"--o-{to_cli_name(i)}"

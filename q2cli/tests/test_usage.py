@@ -76,6 +76,18 @@ params = [
             "    --o-out out.qza"
         ),
     ),
+    (
+        'identity_with_metadata_column',
+        'identity_with_metadata_column_get_mdc',
+        (
+            "qiime dummy-plugin identity-with-metadata-column \\",
+            "    --i-ints ints.qza \\",
+            "    --m-metadata-file md.tsv \\",
+            "    --m-metadata-column a \\",
+            "    --o-out out.qza"
+        )
+
+    )
 ]
 
 
