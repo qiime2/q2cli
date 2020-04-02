@@ -61,8 +61,42 @@ params = [
             "    --o-out-map out_map.qza \\",
             "    --o-left left.qza \\",
             "    --o-right right.qza \\",
-            "    --o-left-viz left_viz.qza \\",
-            "    --o-right-viz right_viz.qza"
+            "    --o-left-viz left_viz.qzv \\",
+            "    --o-right-viz right_viz.qzv"
+        ),
+    ),
+    (
+        'typical_pipeline',
+        'typical_pipeline_complex',
+        (
+            "qiime dummy-plugin typical-pipeline \\",
+            "    --i-int-sequence ints1.qza \\",
+            "    --i-mapping mapper1.qza \\",
+            "    --p-do-extra-thing \\",
+            "    --o-out-map out_map1.qza \\",
+            "    --o-left left1.qza \\",
+            "    --o-right right1.qza \\",
+            "    --o-left-viz left_viz1.qzv \\",
+            "    --o-right-viz right_viz1.qzv",
+            "qiime dummy-plugin typical-pipeline \\",
+            "    --i-int-sequence left1.qza \\",
+            "    --i-mapping out_map1.qza \\",
+            "    --p-no-do-extra-thing \\",
+            "    --o-out-map out_map2.qza \\",
+            "    --o-left left2.qza \\",
+            "    --o-right right2.qza \\",
+            "    --o-left-viz left_viz2.qzv \\",
+            "    --o-right-viz right_viz2.qzv"
+        ),
+    ),
+    (
+        'identity_with_metadata',
+        'identity_with_metadata_simple',
+        (
+            "qiime dummy-plugin identity-with-metadata \\",
+            "    --i-ints ints.qza \\",
+            "    --m-metadata-file md.tsv \\",
+            "    --o-out out.qza"
         ),
     ),
     (
@@ -83,7 +117,19 @@ params = [
             "qiime dummy-plugin identity-with-metadata-column \\",
             "    --i-ints ints.qza \\",
             "    --m-metadata-file md.tsv \\",
-            "    --m-metadata-column a \\",
+            "    --m-metadata-column 'a' \\",
+            "    --o-out out.qza"
+        )
+
+    ),
+        (
+        'identity_with_metadata_column',
+        'identity_with_metadata_column_from_factory',
+        (
+            "qiime dummy-plugin identity-with-metadata-column \\",
+            "    --i-ints ints.qza \\",
+            "    --m-metadata-file mdc.tsv \\",
+            "    --m-metadata-column 'mdc' \\",
             "    --o-out out.qza"
         )
 

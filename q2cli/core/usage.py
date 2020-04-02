@@ -9,7 +9,11 @@
 from qiime2.core.type.primitive import Bool
 
 import qiime2.sdk.usage as usage
-from qiime2.sdk.util import is_metadata_type
+from qiime2.sdk.util import (
+    is_metadata_type,
+    is_metadata_column_type,
+    is_visualization_type,
+)
 
 from q2cli.util import to_cli_name
 from q2cli.util import to_snake_case
@@ -22,6 +26,7 @@ class CLIUsage(usage.Usage):
         self._init_data_refs = dict()
         self._metadata_refs = dict()
         self._col_refs = dict()
+        self._merge_targets = []
 
     def _init_data_(self, ref, factory):
         self._init_data_refs[ref] = factory
@@ -30,6 +35,7 @@ class CLIUsage(usage.Usage):
 
     def _merge_metadata_(self, ref, records):
         merge_target = ref
+        self._merge_targets.append(merge_target)
         for record in records:
             self._metadata_refs[record.ref] = record.result
         return merge_target
@@ -37,7 +43,7 @@ class CLIUsage(usage.Usage):
     def _get_metadata_column_(self, ref, record, column_name):
         self._metadata_refs[record.ref] = record.result
         self._col_refs[record.ref] = column_name
-        return ref
+        return record.result
 
     def _comment_(self, text: str):
         self._recorder.append('# %s' % (text,))
@@ -62,11 +68,47 @@ class CLIUsage(usage.Usage):
     def _template_action(self, action_f, input_opts, outputs):
         cmd = to_cli_name(f"qiime {action_f.plugin_id} {action_f.id}")
         inputs = template_inputs(action_f, input_opts)
-        params = template_parameters(action_f, input_opts)
-        params += template_metadata(self._metadata_refs, self._col_refs)
+        params = self.template_parameters(action_f, input_opts)
+        params += self.template_metadata()
         cli_outputs = template_outputs(action_f, outputs)
         t = " \\\n".join([cmd] + inputs + params + cli_outputs)
         return t
+
+    def template_parameters(self, action_f, input_opts):
+        params = []
+        for i, spec in action_f.signature.parameters.items():
+            qtype = spec.qiime_type
+            val = str(input_opts[i]) if i in input_opts else ""
+            if spec.qiime_type is Bool:
+                pfx = f"--p-" if val == "True" else f"--p-no-"
+                p = f"{pfx}{to_cli_name(i)}"
+                params.append(f"{' ':>4}{p}")
+            elif not is_metadata_type(qtype) and val:
+                p = f"--p-{to_cli_name(i)}"
+                _val = f" {val}"
+                params.append(f"{' ':>4}{p + _val}")
+            elif is_metadata_type(qtype) and val not in self._merge_targets:
+                if is_metadata_column_type(qtype) and val not in self._col_refs:
+                    self._col_refs[val] = val
+                else:
+                    self._metadata_refs[val] = val
+        return params
+
+    def template_metadata(self):
+        params = []
+        for i in self._metadata_refs:
+            p = f"--m-metadata-file"
+            val = f"{i}.tsv"
+            params.append(f"{' ':>4}{p} {val}")
+        for i in self._col_refs:
+            if i not in self._metadata_refs:
+                p = f"--m-metadata-file"
+                val = f"{i}.tsv"
+                params.append(f"{' ':>4}{p} {val}")
+            col = self._col_refs[i]
+            p = f"--m-metadata-column"
+            params.append(f"{' ':>4}{p} '{col}'")
+        return params
 
 
 def template_inputs(action, input_opts):
@@ -78,37 +120,12 @@ def template_inputs(action, input_opts):
     return inputs
 
 
-def template_parameters(action_f, input_opts):
-    params = []
-    for i, spec in action_f.signature.parameters.items():
-        if i in input_opts and not is_metadata_type(spec.qiime_type):
-            p = f"--p-{to_cli_name(i)}"
-            val = ""
-            if spec.qiime_type is not Bool:
-                val = f" {input_opts[i]}"
-            params.append(f"{' ':>4}{p + val}")
-    return params
-
-
-def template_metadata(metadata, cols):
-    params = []
-    for i in metadata:
-        p = f"--m-metadata-file"
-        val = f"{i}.tsv"
-        params.append(f"{' ':>4}{p} {val}")
-        try:
-            col = cols[i]
-            p = f"--m-metadata-column"
-            params.append(f"{' ':>4}{p} {col}")
-        except KeyError:
-            pass
-    return params
-
-
 def template_outputs(action, outputs):
     cli_outputs = []
-    for i in action.signature.outputs:
+    for i, spec in action.signature.outputs.items():
+        qtype = spec.qiime_type
+        ext = ".qzv" if is_visualization_type(qtype) else ".qza"
         p = f"--o-{to_cli_name(i)}"
-        val = f"{to_snake_case(outputs[i])}.qza"
+        val = f"{to_snake_case(outputs[i])}{ext}"
         cli_outputs.append(f"{' ':>4}{p} {val}")
     return cli_outputs
