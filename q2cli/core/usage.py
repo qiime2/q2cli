@@ -52,7 +52,8 @@ class CLIUsage(usage.Usage):
         self, action: usage.UsageAction, input_opts: dict, output_opts: dict
     ):
         action_f, action_sig = action.get_action()
-        t = self._template_action(action_f, input_opts, output_opts)
+        inputs, params = self.extract(action_f, input_opts)
+        t = self._template_action(action_f, inputs, params, output_opts)
         self._recorder.append(t)
         return output_opts
 
@@ -65,11 +66,14 @@ class CLIUsage(usage.Usage):
     def get_example_data(self):
         return {r: f() for r, f in self._init_data_refs.items()}
 
-    def _template_action(self, action_f, input_opts, outputs):
-        cmd = to_cli_name(f"qiime {action_f.plugin_id} {action_f.id}")
+    def extract(self, action_f, input_opts):
         inputs = template_inputs(action_f, input_opts)
         params = self.template_parameters(action_f, input_opts)
         params += self.template_metadata()
+        return inputs, params
+
+    def _template_action(self, action_f, inputs, params, outputs):
+        cmd = to_cli_name(f"qiime {action_f.plugin_id} {action_f.id}")
         cli_outputs = template_outputs(action_f, outputs)
         t = " \\\n".join([cmd] + inputs + params + cli_outputs)
         return t
