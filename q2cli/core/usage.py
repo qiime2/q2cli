@@ -87,11 +87,10 @@ class CLIUsage(usage.Usage):
                 p = f"--p-{to_cli_name(i)}"
                 _val = f" {val}"
                 params.append(f"{' ':>4}{p + _val}")
+            elif is_metadata_column_type(qtype) and val not in self._col_refs:
+                self._col_refs[val] = val
             elif is_metadata_type(qtype) and val not in self._merge_targets:
-                if is_metadata_column_type(qtype) and val not in self._col_refs:
-                    self._col_refs[val] = val
-                else:
-                    self._metadata_refs[val] = val
+                self._metadata_refs[val] = val
         return params
 
     def template_metadata(self):
