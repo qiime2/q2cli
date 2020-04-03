@@ -182,3 +182,20 @@ def citations_option(get_citation_records):
     return click.Option(['--citations'], is_flag=True, expose_value=False,
                         is_eager=True, callback=callback,
                         help='Show citations and exit.')
+
+
+def usage_example_option(action):
+    import click
+
+    def callback(ctx, param, value):
+        if not value or ctx.resilient_parsing:
+            return
+        else:
+            import q2cli.core.usage as usage
+
+        examples = usage.examples(action)
+        click.secho(examples)
+        ctx.exit()
+
+    return click.Option(['--examples'], is_flag=True, callback=callback,
+                        help='Echo example data and exit.')

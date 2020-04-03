@@ -690,6 +690,14 @@ class TestMetadataColumnSupport(MetadataTestsBase):
         self.assertIn("categorical", result.output)
         self.assertIn("expected Numeric", result.output)
 
+    def test_examples(self):
+        qiime_cli = RootCommand()
+        command = qiime_cli.get_command(ctx=None, name='dummy-plugin')
+        result = self.runner.invoke(
+            command, ['typical-pipeline', '--examples']
+        )
+        self.assertEqual(result.exit_code, 1)
+
 
 if __name__ == "__main__":
     unittest.main()

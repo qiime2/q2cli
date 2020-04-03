@@ -132,3 +132,13 @@ def template_outputs(action, outputs):
         val = f"{to_snake_case(outputs[i])}{ext}"
         cli_outputs.append(f"{' ':>4}{p} {val}")
     return cli_outputs
+
+
+def examples(action):
+    use = CLIUsage()
+    all_examples = []
+    for e in action.examples:
+        action.examples[e](use)
+        example_ = use.render()
+        all_examples.append(example_)
+    return "\n\n".join(all_examples)
