@@ -122,7 +122,7 @@ params = [
         )
 
     ),
-        (
+    (
         'identity_with_metadata_column',
         'identity_with_metadata_column_from_factory',
         (
