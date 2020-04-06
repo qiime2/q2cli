@@ -9,6 +9,8 @@
 import pytest
 
 from q2cli.core.usage import CLIUsage
+from q2cli.core.usage import examples
+
 from qiime2.core.testing.util import get_dummy_plugin
 
 
@@ -148,3 +150,10 @@ def test_render(dummy_plugin, action, example, exp):
     use = CLIUsage()
     action.examples[example](use)
     assert "\n".join(exp) == use.render()
+
+
+def test_examples(dummy_plugin):
+    action = dummy_plugin.actions["typical_pipeline"]
+    all_examples = examples(action)
+    assert "# typical pipeline simple" in all_examples
+    assert "# typical pipeline complex" in all_examples
