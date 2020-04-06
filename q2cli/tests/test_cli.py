@@ -340,6 +340,14 @@ class CliTests(unittest.TestCase):
 
         self.assertTrue('deprecated' in result.output)
 
+    def test_examples(self):
+        qiime_cli = RootCommand()
+        command = qiime_cli.get_command(ctx=None, name='dummy-plugin')
+        result = self.runner.invoke(
+            command, ['typical-pipeline', '--examples']
+        )
+        self.assertEqual(result.exit_code, 0)
+
 
 class TestOptionalArtifactSupport(unittest.TestCase):
     def setUp(self):
@@ -689,14 +697,6 @@ class TestMetadataColumnSupport(MetadataTestsBase):
         self.assertIn("Metadata column", result.output)
         self.assertIn("categorical", result.output)
         self.assertIn("expected Numeric", result.output)
-
-    def test_examples(self):
-        qiime_cli = RootCommand()
-        command = qiime_cli.get_command(ctx=None, name='dummy-plugin')
-        result = self.runner.invoke(
-            command, ['typical-pipeline', '--examples']
-        )
-        self.assertEqual(result.exit_code, 1)
 
 
 if __name__ == "__main__":
