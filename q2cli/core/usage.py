@@ -135,10 +135,12 @@ def template_outputs(action, outputs):
 
 
 def examples(action):
-    use = CLIUsage()
     all_examples = []
-    for e in action.examples:
-        action.examples[e](use)
-        example_ = use.render()
-        all_examples.append(example_)
+    for i in action.examples:
+        use = CLIUsage()
+        action.examples[i](use)
+        example = use.render()
+        comment = f"# {i}".replace('_', ' ')
+        all_examples.append(comment)
+        all_examples.append(f"{example}\n")
     return "\n\n".join(all_examples)
