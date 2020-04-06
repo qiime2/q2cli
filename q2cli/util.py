@@ -197,5 +197,6 @@ def usage_example_option(action):
         click.secho(examples)
         ctx.exit()
 
-    return click.Option(['--examples'], is_flag=True, callback=callback,
-                        help='Echo example data and exit.')
+    return click.Option(['--examples'], is_flag=True, expose_value=False,
+                        is_eager=True, callback=callback,
+                        help='Show example data and exit.')
