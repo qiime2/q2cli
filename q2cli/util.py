@@ -200,4 +200,4 @@ def usage_example_option(action):
 
     return click.Option(['--examples'], is_flag=True, expose_value=False,
                         is_eager=True, callback=callback,
-                        help='Show example data and exit.')
+                        help='Show usage examples and exit.')
