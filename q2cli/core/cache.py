@@ -265,13 +265,19 @@ class DeploymentCache:
 
     def _get_action_state(self, action):
         import itertools
+        import pickle
 
+        examples = {
+            k: pickle.dumps(v, 0).decode()
+            for k, v in action.examples.items()
+        }
         state = {
             'id': action.id,
             'name': action.name,
             'description': action.description,
             'signature': [],
             'deprecated': action.deprecated,
+            'examples': examples,
         }
 
         sig = action.signature
