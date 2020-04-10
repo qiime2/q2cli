@@ -135,6 +135,34 @@ params = [
             "    --o-out out.qza"
         )
 
+    ###########################################################################
+
+    # optional inputs example #################################################
+    (
+        'optional_artifacts_method',
+        'optional_inputs',
+        (
+            "qiime dummy-plugin optional-artifacts-method \\",
+            "    --i-ints ints.qza \\",
+            "    --p-num1 1 \\",
+            "    --o-output output.qza",
+            "qiime dummy-plugin optional-artifacts-method \\",
+            "    --i-ints ints.qza \\",
+            "    --p-num1 1 \\",
+            "    --p-num2 2 \\",
+            "    --o-output output.qza",
+            "qiime dummy-plugin optional-artifacts-method \\",
+            "    --i-ints ints.qza \\",
+            "    --p-num1 1 \\",
+            "    --p-num2 None \\",
+            "    --o-output ints_b.qza",
+            "qiime dummy-plugin optional-artifacts-method \\",
+            "    --i-ints ints.qza \\",
+            "    --i-optional1 ints_b.qza \\",
+            "    --p-num1 3 \\",
+            "    --p-num2 4 \\",
+            "    --o-output output.qza"
+        )
     )
 ]
 
