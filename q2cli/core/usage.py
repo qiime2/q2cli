@@ -117,9 +117,10 @@ class CLIUsage(usage.Usage):
 def template_inputs(action, input_opts):
     inputs = []
     for i in action.signature.inputs:
-        p = f"--i-{to_cli_name(i)}"
-        val = f"{input_opts[i]}.qza"
-        inputs.append(f"{' ':>4}{p} {val}")
+        if i in input_opts:
+            p = f"--i-{to_cli_name(i)}"
+            val = f"{input_opts[i]}.qza"
+            inputs.append(f"{' ':>4}{p} {val}")
     return inputs
 
 
