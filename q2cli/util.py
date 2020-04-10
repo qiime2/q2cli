@@ -194,8 +194,10 @@ def usage_example_option(action):
             import q2cli.core.usage as usage
 
         action = ctx.command._get_action()
-        examples = usage.examples(action)
-        click.secho(examples)
+        msg = usage.examples(action)
+        if not msg:
+            msg = "No examples have been registered for this action yet."
+        click.secho(msg)
         ctx.exit()
 
     return click.Option(['--examples'], is_flag=True, expose_value=False,
