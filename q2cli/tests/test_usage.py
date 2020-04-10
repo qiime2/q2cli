@@ -15,6 +15,7 @@ from qiime2.core.testing.util import get_dummy_plugin
 
 
 params = [
+    # concatenate ints simple example #########################################
     (
         'concatenate_ints',
         'concatenate_ints_simple',
@@ -29,6 +30,9 @@ params = [
             "    --o-concatenated-ints ints_d.qza",
         ),
     ),
+    ###########################################################################
+
+    # concatenate ints complex example ########################################
     (
         'concatenate_ints',
         'concatenate_ints_complex',
@@ -52,6 +56,9 @@ params = [
             "    --o-concatenated-ints concatenated_ints.qza",
         ),
     ),
+    ###########################################################################
+
+    # typical pipeline simple example #########################################
     (
         'typical_pipeline',
         'typical_pipeline_simple',
@@ -67,6 +74,9 @@ params = [
             "    --o-right-viz right_viz.qzv"
         ),
     ),
+    ###########################################################################
+
+    # typical pipeline complex example ########################################
     (
         'typical_pipeline',
         'typical_pipeline_complex',
@@ -91,6 +101,9 @@ params = [
             "    --o-right-viz right_viz2.qzv"
         ),
     ),
+    ###########################################################################
+
+    # identity with metadata simple example ###################################
     (
         'identity_with_metadata',
         'identity_with_metadata_simple',
@@ -101,6 +114,9 @@ params = [
             "    --o-out out.qza"
         ),
     ),
+    ###########################################################################
+
+    # identity with metadata merging example ##################################
     (
         'identity_with_metadata',
         'identity_with_metadata_merging',
@@ -112,6 +128,9 @@ params = [
             "    --o-out out.qza"
         ),
     ),
+    ###########################################################################
+
+    # identity with metadata column get metadata column example ###############
     (
         'identity_with_metadata_column',
         'identity_with_metadata_column_get_mdc',
@@ -124,6 +143,9 @@ params = [
         )
 
     ),
+    ###########################################################################
+
+    # identity with metadata column from factory example ######################
     (
         'identity_with_metadata_column',
         'identity_with_metadata_column_from_factory',
@@ -135,6 +157,7 @@ params = [
             "    --o-out out.qza"
         )
 
+    ),
     ###########################################################################
 
     # optional inputs example #################################################
