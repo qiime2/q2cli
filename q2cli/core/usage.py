@@ -9,7 +9,7 @@
 from qiime2.core.type.primitive import Bool
 
 import qiime2.sdk.usage as usage
-from qiime2 import Metadata
+from qiime2 import Metadata, MetadataColumn
 from qiime2.sdk.util import (
     is_metadata_type,
     is_metadata_column_type,
@@ -27,8 +27,6 @@ class CLIUsage(usage.Usage):
         self._init_data_refs = dict()
 
     def _init_data_(self, ref, factory):
-        # TODO: This may be the place to do something if initialized data is
-        # metadata.
         self._init_data_refs[ref] = factory
         data = factory()
         if isinstance(data, MetadataColumn):
@@ -68,11 +66,11 @@ class CLIUsage(usage.Usage):
         params, mds = [], []
         for i, spec in action_sig.parameters.items():
             q_type = spec.qiime_type
-            if not is_metadata_type(q_type):
-                params.append((i, spec))
-            else:
+            if is_metadata_type(q_type):
                 mds.append((i, spec))
-        return (params, mds)
+            else:
+                params.append((i, spec))
+        return params, mds
 
     def _template_action(self, action, input_opts, outputs):
         action_f, action_sig = action.get_action()
@@ -122,25 +120,27 @@ class CLIUsage(usage.Usage):
         mds_t = []
         data = self.get_example_data()
         data = {k: v for k, v in data.items() if isinstance(v, Metadata)}
-        # TODO: Join mds and data here?
+        file_param = f"--m-metadata-file"
+        col_param = f"--m-metadata-column"
         for i, spec in mds:
             qtype = spec.qiime_type
-            name = str(input_opts[i]) if i in input_opts else ""
-            val = name
-            # TODO: if i is a merge target, extract the mergees
             if not is_metadata_column_type(qtype):
-                if name not in data:
+                name = str(input_opts[i]) if i in input_opts else ""
+                if name in data:
+                    # Metadata item `i` was registered by Usage.init_data and
+                    # can therefore be assumed *not* to be a merge target.
+                    mds_t.append(f"{' ':>4}{file_param} {name}.tsv")
+                else:
+                    # Metadata item `i` was not registered by Usage.init_data
+                    # and can therefore be assumed to be a merge target.
+                    #
+                    # Extract metadata that was merged into merge target `i`
                     for k, v in data.items():
-                        p = f"--m-metadata-file"
-                        val = f"{k}.tsv"
-                        mds_t.append(f"{' ':>4}{p} {val}")
+                        mds_t.append(f"{' ':>4}{file_param} {k}.tsv")
             elif is_metadata_column_type(qtype):
-                p = f"--m-metadata-file"
-                val = f"{val}.tsv"
-                mds_t.append(f"{' ':>4}{p} {val}")
-                p = f"--m-metadata-column"
-                mds_t.append(f"{' ':>4}{p} '{col}'")
-
+                col, md = input_opts[i]
+                mds_t.append(f"{' ':>4}{file_param} {md}.tsv")
+                mds_t.append(f"{' ':>4}{col_param} '{col}'")
         return mds_t
 
 
