@@ -25,9 +25,6 @@ class CLIUsage(usage.Usage):
         super().__init__()
         self._recorder = []
         self._init_data_refs = dict()
-        self._metadata_refs = dict()
-        self._col_refs = dict()
-        self._merge_targets = []
 
     def _init_data_(self, ref, factory):
         # TODO: This may be the place to do something if initialized data is
@@ -42,9 +39,6 @@ class CLIUsage(usage.Usage):
 
     def _merge_metadata_(self, ref, records):
         merge_target = ref
-        self._merge_targets.append(merge_target)
-        for record in records:
-            self._metadata_refs[record.ref] = record.result
         return merge_target
 
     def _get_metadata_column_(self, ref, record, column_name):
@@ -144,7 +138,6 @@ class CLIUsage(usage.Usage):
                 p = f"--m-metadata-file"
                 val = f"{val}.tsv"
                 mds_t.append(f"{' ':>4}{p} {val}")
-                col = self._col_refs[name]
                 p = f"--m-metadata-column"
                 mds_t.append(f"{' ':>4}{p} '{col}'")
 
