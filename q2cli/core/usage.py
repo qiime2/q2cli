@@ -33,6 +33,11 @@ class CLIUsage(usage.Usage):
         # TODO: This may be the place to do something if initialized data is
         # metadata.
         self._init_data_refs[ref] = factory
+        data = factory()
+        if isinstance(data, MetadataColumn):
+            col = data.name
+            md_file = ref  # Using ref just to make it easy atm
+            return col, md_file
         return ref
 
     def _merge_metadata_(self, ref, records):
@@ -43,9 +48,8 @@ class CLIUsage(usage.Usage):
         return merge_target
 
     def _get_metadata_column_(self, ref, record, column_name):
-        self._metadata_refs[record.ref] = record.result
-        self._col_refs[record.ref] = column_name
-        return record.result
+        md = record.result
+        return column_name, md
 
     def _comment_(self, text: str):
         self._recorder.append('# %s' % (text,))
