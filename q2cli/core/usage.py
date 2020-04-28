@@ -5,6 +5,8 @@
 #
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
+import textwrap
+import itertools
 
 from qiime2.core.type.primitive import Bool
 
@@ -80,8 +82,17 @@ class CLIUsage(usage.Usage):
         params_t = self._template_parameters(params, input_opts)
         mds_t = self._template_metadata(mds, input_opts)
         outputs_t = self._template_outputs(action_sig, outputs)
-        t = " \\\n".join([cmd] + inputs_t + params_t + mds_t + outputs_t)
-        return t
+        templates = [inputs_t, params_t, mds_t, outputs_t]
+        action_t = self._format_templates(cmd, templates)
+        return action_t
+
+    def _format_templates(self, command, templates):
+        wrapper = textwrap.TextWrapper(initial_indent=" " * 4)
+        templates = itertools.chain(*templates)
+        templates = map(wrapper.fill, templates)
+        action_t = [command] + list(templates)
+        action_t = " \\\n".join(action_t)
+        return action_t
 
     def _template_inputs(self, action_sig, input_opts):
         inputs = []
@@ -89,7 +100,7 @@ class CLIUsage(usage.Usage):
             if i in input_opts:
                 p = f"--i-{to_cli_name(i)}"
                 val = f"{input_opts[i]}.qza"
-                inputs.append(f"{' ':>4}{p} {val}")
+                inputs.append(f"{p} {val}")
         return inputs
 
     def _template_parameters(self, params, input_opts):
@@ -99,11 +110,11 @@ class CLIUsage(usage.Usage):
             if spec.qiime_type is Bool:
                 pfx = f"--p-" if val == "True" else f"--p-no-"
                 p = f"{pfx}{to_cli_name(i)}"
-                params_t.append(f"{' ':>4}{p}")
+                params_t.append(p)
             elif val:
                 p = f"--p-{to_cli_name(i)}"
                 _val = f" {val}"
-                params_t.append(f"{' ':>4}{p + _val}")
+                params_t.append(f"{p + _val}")
         return params_t
 
     def _template_outputs(self, action_sig, outputs):
@@ -113,7 +124,7 @@ class CLIUsage(usage.Usage):
             ext = ".qzv" if is_visualization_type(qtype) else ".qza"
             p = f"--o-{to_cli_name(i)}"
             val = f"{to_snake_case(outputs[i])}{ext}"
-            outputs_t.append(f"{' ':>4}{p} {val}")
+            outputs_t.append(f"{p} {val}")
         return outputs_t
 
     def _template_metadata(self, mds, input_opts):
@@ -129,18 +140,18 @@ class CLIUsage(usage.Usage):
                 if name in data:
                     # Metadata item `i` was registered by Usage.init_data and
                     # can therefore be assumed *not* to be a merge target.
-                    mds_t.append(f"{' ':>4}{file_param} {name}.tsv")
+                    mds_t.append(f"{file_param} {name}.tsv")
                 else:
                     # Metadata item `i` was not registered by Usage.init_data
                     # and can therefore be assumed to be a merge target.
                     #
                     # Extract metadata that was merged into merge target `i`
                     for k, v in data.items():
-                        mds_t.append(f"{' ':>4}{file_param} {k}.tsv")
+                        mds_t.append(f"{file_param} {k}.tsv")
             elif is_metadata_column_type(qtype):
                 col, md = input_opts[i]
-                mds_t.append(f"{' ':>4}{file_param} {md}.tsv")
-                mds_t.append(f"{' ':>4}{col_param} '{col}'")
+                mds_t.append(f"{file_param} {md}.tsv")
+                mds_t.append(f"{col_param} '{col}'")
         return mds_t
 
 
