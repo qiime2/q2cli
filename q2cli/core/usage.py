@@ -11,7 +11,7 @@ import itertools
 from qiime2.core.type.primitive import Bool
 
 import qiime2.sdk.usage as usage
-from qiime2 import Metadata, MetadataColumn
+from qiime2 import Metadata
 from qiime2.sdk.util import (
     is_metadata_type,
     is_metadata_column_type,
@@ -30,11 +30,6 @@ class CLIUsage(usage.Usage):
 
     def _init_data_(self, ref, factory):
         self._init_data_refs[ref] = factory
-        data = factory()
-        if isinstance(data, MetadataColumn):
-            col = data.name
-            md_file = ref  # Using ref just to make it easy atm
-            return col, md_file
         return ref
 
     def _merge_metadata_(self, ref, records):
@@ -149,7 +144,14 @@ class CLIUsage(usage.Usage):
                     for k, v in data.items():
                         mds_t.append(f"{file_param} {k}.tsv")
             elif is_metadata_column_type(qtype):
-                col, md = input_opts[i]
+                try:
+                    col, md = input_opts[i]
+                except ValueError:
+                    # The metadata column was passed in as a factory. The
+                    # factory needs to be called so we can get the column name
+                    md = input_opts[i]
+                    data = self._init_data_refs[md]()
+                    col = data.name
                 mds_t.append(f"{file_param} {md}.tsv")
                 mds_t.append(f"{col_param} '{col}'")
         return mds_t
