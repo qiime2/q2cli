@@ -191,7 +191,8 @@ params = [
 
 
 @pytest.fixture
-def dummy_plugin():
+def dummy_plugin(monkeypatch):
+    monkeypatch.setenv("QIIMETEST", "")
     return get_dummy_plugin()
 
 
