@@ -153,7 +153,7 @@ params = [
             "qiime dummy-plugin identity-with-metadata-column \\",
             "    --i-ints ints.qza \\",
             "    --m-metadata-file mdc.tsv \\",
-            "    --m-metadata-column 'a' \\",
+            "    --m-metadata-column 'mdc' \\",
             "    --o-out out.qza"
         )
 

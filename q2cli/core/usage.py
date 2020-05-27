@@ -11,7 +11,9 @@ import itertools
 from qiime2.core.type.primitive import Bool
 
 import qiime2.sdk.usage as usage
-from qiime2.sdk.util import is_metadata_type, is_visualization_type
+from qiime2.sdk.util import (
+    is_metadata_type, is_visualization_type, is_metadata_column_type
+)
 
 from q2cli.util import to_cli_name
 from q2cli.util import to_snake_case
@@ -129,6 +131,8 @@ class CLIUsage(usage.Usage):
             source = record.source
             if source == "init_data":
                 mds_t.append(f"{file_param} {name}.tsv")
+                if is_metadata_column_type(spec.qiime_type):
+                    mds_t.append(f"{col_param} '{name}'")
             elif source == "merge_metadata":
                 # Extract implicitly merged metadata params
                 for mergee in result:
