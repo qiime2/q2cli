@@ -11,12 +11,7 @@ import itertools
 from qiime2.core.type.primitive import Bool
 
 import qiime2.sdk.usage as usage
-from qiime2 import Metadata
-from qiime2.sdk.util import (
-    is_metadata_type,
-    is_metadata_column_type,
-    is_visualization_type,
-)
+from qiime2.sdk.util import is_metadata_type, is_visualization_type
 
 from q2cli.util import to_cli_name
 from q2cli.util import to_snake_case
@@ -33,12 +28,11 @@ class CLIUsage(usage.Usage):
         return ref
 
     def _merge_metadata_(self, ref, records):
-        merge_target = ref
-        return merge_target
+        mergees = [i.ref for i in records]
+        return ref, mergees
 
     def _get_metadata_column_(self, ref, record, column_name):
-        md = record.result
-        return column_name, md
+        return ref, (record.ref, column_name)
 
     def _comment_(self, text: str):
         self._recorder.append('# %s' % (text,))
@@ -103,7 +97,7 @@ class CLIUsage(usage.Usage):
         for i, spec in params:
             val = str(input_opts[i]) if i in input_opts else ""
             if spec.qiime_type is Bool:
-                pfx = f"--p-" if val == "True" else f"--p-no-"
+                pfx = "--p-" if val == "True" else "--p-no-"
                 p = f"{pfx}{to_cli_name(i)}"
                 params_t.append(p)
             elif val:
@@ -124,34 +118,24 @@ class CLIUsage(usage.Usage):
 
     def _template_metadata(self, mds, input_opts):
         mds_t = []
-        data = self.get_example_data()
-        data = {k: v for k, v in data.items() if isinstance(v, Metadata)}
-        file_param = f"--m-metadata-file"
-        col_param = f"--m-metadata-column"
+        file_param = "--m-metadata-file"
+        col_param = "--m-metadata-column"
+        scope_records = self._scope.records
         for i, spec in mds:
-            qtype = spec.qiime_type
-            if not is_metadata_column_type(qtype):
-                name = str(input_opts[i]) if i in input_opts else ""
-                if name in data:
-                    # Metadata item `i` was registered by Usage.init_data and
-                    # can therefore be assumed *not* to be a merge target.
-                    mds_t.append(f"{file_param} {name}.tsv")
-                else:
-                    # Metadata item `i` was not registered by Usage.init_data
-                    # and can therefore be assumed to be a merge target.
-                    #
-                    # Extract metadata that was merged into merge target `i`
-                    for k, v in data.items():
-                        mds_t.append(f"{file_param} {k}.tsv")
-            elif is_metadata_column_type(qtype):
-                try:
-                    col, md = input_opts[i]
-                except ValueError:
-                    # The metadata column was passed in as a factory. The
-                    # factory needs to be called so we can get the column name
-                    md = input_opts[i]
-                    data = self._init_data_refs[md]()
-                    col = data.name
+            name = input_opts[i]
+            if not isinstance(name, str):
+                name, result = name
+            record = scope_records[name]
+            source = record.source
+            if source == "init_data":
+                mds_t.append(f"{file_param} {name}.tsv")
+            elif source == "merge_metadata":
+                # Extract implicitly merged metadata params
+                for mergee in result:
+                    mds_t.append(f"{file_param} {mergee}.tsv")
+            elif source == "get_metadata_column":
+                ref, result = record.result
+                md, col = result
                 mds_t.append(f"{file_param} {md}.tsv")
                 mds_t.append(f"{col_param} '{col}'")
         return mds_t
