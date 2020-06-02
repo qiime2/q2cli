@@ -145,20 +145,6 @@ params = [
     ),
     ###########################################################################
 
-    # identity with metadata column from factory example ######################
-    (
-        'identity_with_metadata_column',
-        'identity_with_metadata_column_from_factory',
-        (
-            "qiime dummy-plugin identity-with-metadata-column \\",
-            "    --i-ints ints.qza \\",
-            "    --m-metadata-file mdc.tsv \\",
-            "    --m-metadata-column 'mdc' \\",
-            "    --o-out out.qza"
-        )
-
-    ),
-    ###########################################################################
 
     # optional inputs example #################################################
     (
