@@ -29,6 +29,10 @@ class CLIUsage(usage.Usage):
         self._init_data_refs[ref] = factory
         return ref
 
+    def _init_metadata_(self, ref, factory):
+        self._init_data_refs[ref] = factory
+        return ref
+
     def _merge_metadata_(self, ref, records):
         mergees = [i.ref for i in records]
         return ref, mergees
@@ -129,7 +133,7 @@ class CLIUsage(usage.Usage):
                 name, result = name
             record = scope_records[name]
             source = record.source
-            if source == "init_data":
+            if source == "init_metadata":
                 mds_t.append(f"{file_param} {name}.tsv")
                 if is_metadata_column_type(spec.qiime_type):
                     mds_t.append(f"{col_param} '{name}'")
