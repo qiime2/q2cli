@@ -187,7 +187,7 @@ def test_render(dummy_plugin, action, example, exp):
     action = dummy_plugin.actions[action]
     use = CLIUsage()
     action.examples[example](use)
-    assert "\n".join(exp) == use.render()
+    assert use.render() == "\n".join(exp)
 
 
 def test_examples(dummy_plugin):
