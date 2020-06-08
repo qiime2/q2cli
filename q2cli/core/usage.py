@@ -135,7 +135,7 @@ class CLIUsage(usage.Usage):
             if source == "init_metadata":
                 mds_t.append(f"{file_param} {name}.tsv")
                 if is_metadata_column_type(spec.qiime_type):
-                    mds_t.append(f"{col_param} '{name}'")
+                    mds_t.append(f"{col_param} '{result}'")
             elif source == "merge_metadata":
                 # Extract implicitly merged metadata params
                 for mergee in result:
