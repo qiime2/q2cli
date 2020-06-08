@@ -126,12 +126,11 @@ class CLIUsage(usage.Usage):
         mds_t = []
         file_param = "--m-metadata-file"
         col_param = "--m-metadata-column"
-        scope_records = self._scope.records
         for i, spec in mds:
             name = input_opts[i]
             if not isinstance(name, str):
                 name, result = name
-            record = scope_records[name]
+            record = self._get_record(name)
             source = record.source
             if source == "init_metadata":
                 mds_t.append(f"{file_param} {name}.tsv")
