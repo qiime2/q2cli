@@ -37,8 +37,8 @@ class CLIUsage(usage.Usage):
         mergees = [i.ref for i in records]
         return ref, mergees
 
-    def _get_metadata_column_(self, ref, record, column_name):
-        return ref, (record.ref, column_name)
+    def _get_metadata_column_(self, column_name, record):
+        return record.ref, column_name
 
     def _comment_(self, text: str):
         self._recorder.append('# %s' % (text,))
