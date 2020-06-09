@@ -123,8 +123,9 @@ class CLIUsage(usage.Usage):
     def _template_parameters(self, params, input_opts):
         params_t = []
         for i, spec in params:
-            val = input_opts.get(i)
-            if val is None:
+            try:
+                val = input_opts[i]
+            except KeyError:
                 continue
             if spec.qiime_type is Bool:
                 pfx = "--p-" if str(val) == "True" else "--p-no-"
