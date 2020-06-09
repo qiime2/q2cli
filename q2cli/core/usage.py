@@ -36,14 +36,13 @@ class CLIUsage(usage.Usage):
         self._init_data_refs[ref] = factory
         return ref
 
-    def _init_data_collection_(self, ref, records):
+    def _init_data_collection_(self, ref, container_type, **records):
 
         def factory():
-            container_type = type(records)
-            return container_type([i() for i in records])
+            return container_type([i() for i in records.values()])
 
         self._init_data_refs[ref] = factory
-        return ref, len(records)
+        return ref, records.keys()
 
     def _merge_metadata_(self, ref, records):
         mergees = [i.ref for i in records]
@@ -104,21 +103,39 @@ class CLIUsage(usage.Usage):
     def _template_inputs(self, action_sig, input_opts):
         inputs = []
         for i in action_sig.inputs:
-            if i in input_opts:
+            option = input_opts.get(i)
+            if not option:
+                continue
+            if isinstance(option, tuple):
+                option, artifacts = option
+            source = self._get_record(option).source
+            if source == "init_data_collection":
+                for artifact in artifacts:
+                    p = f"--i-{to_cli_name(i)}"
+                    val = f"{artifact}.qza"
+                    inputs.append(f"{p} {val}")
+            else:
                 p = f"--i-{to_cli_name(i)}"
-                val = f"{input_opts[i]}.qza"
+                val = f"{option}.qza"
                 inputs.append(f"{p} {val}")
         return inputs
 
     def _template_parameters(self, params, input_opts):
         params_t = []
         for i, spec in params:
-            val = str(input_opts[i]) if i in input_opts else ""
+            val = input_opts.get(i)
+            if val is None:
+                continue
             if spec.qiime_type is Bool:
-                pfx = "--p-" if val == "True" else "--p-no-"
+                pfx = "--p-" if str(val) == "True" else "--p-no-"
                 p = f"{pfx}{to_cli_name(i)}"
                 params_t.append(p)
-            elif val:
+            elif is_collection_type(spec.qiime_type):
+                for _val in val:
+                    p = f"--p-{to_cli_name(i)}"
+                    val = f"{_val}"
+                    params_t.append(f"{p} {val}")
+            else:
                 p = f"--p-{to_cli_name(i)}"
                 _val = f" {val}"
                 params_t.append(f"{p + _val}")
