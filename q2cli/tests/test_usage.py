@@ -145,7 +145,6 @@ params = [
     ),
     ###########################################################################
 
-
     # optional inputs example #################################################
     (
         'optional_artifacts_method',
@@ -171,6 +170,19 @@ params = [
             "    --p-num1 3 \\",
             "    --p-num2 4 \\",
             "    --o-output output.qza"
+        )
+    ),
+    ###########################################################################
+
+    # variadic input example ##################################################
+    (
+        'variadic_input_method',
+        'variadic_input_simple',
+        (
+            "qiime dummy-plugin variadic-input-method \\",
+            "    --i-ints ints.qza \\",
+            "    --p-num1 1 \\",
+            "    --o-output output.qza",
         )
     )
 ]
