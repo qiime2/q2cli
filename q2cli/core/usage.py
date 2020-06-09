@@ -104,7 +104,7 @@ class CLIUsage(usage.Usage):
         inputs = []
         for i in action_sig.inputs:
             option = input_opts.get(i)
-            if not option:
+            if option is None:
                 continue
             if isinstance(option, tuple):
                 option, artifacts = option
