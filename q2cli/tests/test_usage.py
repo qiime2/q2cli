@@ -178,12 +178,16 @@ params = [
     (
         'variadic_input_method',
         'variadic_input_simple',
-        (
-            "qiime dummy-plugin variadic-input-method \\",
-            "    --i-ints ints.qza \\",
-            "    --p-num1 1 \\",
-            "    --o-output output.qza",
-        )
+        ( "qiime dummy-plugin variadic-input-method \\",
+          "    --i-ints int1.qza \\",
+          "    --i-ints int2.qza \\",
+          "    --i-int-set single_int1.qza \\",
+          "    --i-int-set single_int2.qza \\",
+          "    --p-nums 8 \\",
+          "    --p-nums 9 \\",
+          "    --p-nums 7 \\",
+          "    --o-output out.qza",
+          )
     )
 ]
 
