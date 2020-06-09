@@ -12,7 +12,10 @@ from qiime2.core.type.primitive import Bool
 
 import qiime2.sdk.usage as usage
 from qiime2.sdk.util import (
-    is_metadata_type, is_visualization_type, is_metadata_column_type
+    is_metadata_type,
+    is_visualization_type,
+    is_metadata_column_type,
+    is_collection_type
 )
 
 from q2cli.util import to_cli_name
