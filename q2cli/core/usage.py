@@ -37,7 +37,6 @@ class CLIUsage(usage.Usage):
         return ref
 
     def _init_data_collection_(self, ref, container_type, *records):
-
         self._init_data_refs[ref] = ref
         return ref, [i.ref for i in records]
 
