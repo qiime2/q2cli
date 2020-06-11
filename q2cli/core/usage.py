@@ -38,7 +38,7 @@ class CLIUsage(usage.Usage):
 
     def _init_data_collection_(self, ref, container_type, *records):
         self._init_data_refs[ref] = ref
-        return ref, [i.ref for i in records]
+        return ref, container_type([i.ref for i in records])
 
     def _merge_metadata_(self, ref, records):
         mergees = [i.ref for i in records]
