@@ -38,8 +38,8 @@ class CLIUsage(usage.Usage):
 
     def _init_data_collection_(self, ref, collection_type, *records):
         self._init_data_refs[ref] = ref
-        collection = collection_type([i.ref for i in records])
-        return ref, sorted(collection)
+        collection = sorted([i.ref for i in records])
+        return ref, collection
 
     def _merge_metadata_(self, ref, records):
         mergees = [i.ref for i in records]
