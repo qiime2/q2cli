@@ -14,6 +14,12 @@ from q2cli.core.usage import examples
 from qiime2.core.testing.util import get_dummy_plugin
 
 
+@pytest.fixture
+def dummy_plugin(monkeypatch):
+    monkeypatch.setenv("QIIMETEST", "")
+    return get_dummy_plugin()
+
+
 params = [
     # concatenate ints simple example #########################################
     (
@@ -190,12 +196,6 @@ params = [
          )
     )
 ]
-
-
-@pytest.fixture
-def dummy_plugin(monkeypatch):
-    monkeypatch.setenv("QIIMETEST", "")
-    return get_dummy_plugin()
 
 
 @pytest.mark.parametrize("action, example, exp", params)
