@@ -5,21 +5,21 @@
 #
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
+
+import collections.abc
 import textwrap
-import itertools
 
-from qiime2.core.type.primitive import Bool
-
-import qiime2.sdk.usage as usage
+from qiime2.sdk import usage
 from qiime2.sdk.util import (
     is_metadata_type,
     is_visualization_type,
-    is_metadata_column_type,
-    is_collection_type
 )
 
 from q2cli.util import to_cli_name
-from q2cli.util import to_snake_case
+
+
+def is_iterable(val):
+    return isinstance(val, collections.abc.Iterable)
 
 
 class CLIUsage(usage.Usage):
@@ -37,23 +37,18 @@ class CLIUsage(usage.Usage):
         return ref
 
     def _init_data_collection_(self, ref, collection_type, *records):
-        self._init_data_refs[ref] = ref
-        collection = sorted([i.ref for i in records])
-        return ref, collection
+        return sorted([r.ref for r in records])
 
     def _merge_metadata_(self, ref, records):
-        mergees = [i.ref for i in records]
-        return ref, mergees
+        return sorted([r.ref for r in records])
 
     def _get_metadata_column_(self, column_name, record):
-        return record.ref, column_name
+        return (record.ref, column_name)
 
     def _comment_(self, text: str):
         self._recorder.append('# %s' % (text,))
 
-    def _action_(
-        self, action: usage.UsageAction, input_opts: dict, output_opts: dict
-    ):
+    def _action_(self, action, input_opts, output_opts):
         t = self._template_action(action, input_opts, output_opts)
         self._recorder.append(t)
         return output_opts
@@ -67,121 +62,111 @@ class CLIUsage(usage.Usage):
     def get_example_data(self):
         return {r: f() for r, f in self._init_data_refs.items()}
 
-    def _extract_from_signature(self, action_sig):
-        params, mds = [], []
-        for i, spec in action_sig.parameters.items():
-            q_type = spec.qiime_type
-            if is_metadata_type(q_type):
-                mds.append((i, spec))
-            else:
-                params.append((i, spec))
-        return params, mds
+    def _destructure_signature(self, action_sig):
+        inputs = {k: v for k, v in action_sig.inputs.items()}
+        params, mds = {}, {}
+        outputs = {k: v for k, v in action_sig.outputs.items()}
 
-    def _template_action(self, action, input_opts, outputs):
+        for param_name, spec in action_sig.inputs.items():
+            inputs[param_name] = spec
+
+        for param_name, spec in action_sig.parameters.items():
+            if is_metadata_type(spec.qiime_type):
+                mds[param_name] = spec
+            else:
+                params[param_name] = spec
+
+        return {'inputs': inputs, 'params': params,
+                'mds': mds, 'outputs': outputs}
+
+    def _destructure_opts(self, signature, input_opts, output_opts):
+        inputs, params, mds, outputs = {}, {}, {}, {}
+
+        for opt_name, val in input_opts.items():
+            if opt_name in signature['inputs'].keys():
+                inputs[opt_name] = (val, signature['inputs'][opt_name])
+            elif opt_name in signature['params'].keys():
+                params[opt_name] = (val, signature['params'][opt_name])
+            elif opt_name in signature['mds'].keys():
+                mds[opt_name] = (val, signature['mds'][opt_name])
+
+        for opt_name, val in output_opts.items():
+            outputs[opt_name] = (val, signature['outputs'][opt_name])
+
+        return inputs, params, mds, outputs
+
+    def _template_action(self, action, input_opts, output_opts):
         action_f, action_sig = action.get_action()
-        cmd = to_cli_name(f"qiime {action_f.plugin_id} {action_f.id}")
-        params, mds = self._extract_from_signature(action_sig)
-        inputs_t = self._template_inputs(action_sig, input_opts)
-        params_t = self._template_parameters(params, input_opts)
-        mds_t = self._template_metadata(mds, input_opts)
-        outputs_t = self._template_outputs(action_sig, outputs)
-        templates = [inputs_t, params_t, mds_t, outputs_t]
-        action_t = self._format_templates(cmd, templates)
+        signature = self._destructure_signature(action_sig)
+        inputs, params, mds, outputs = self._destructure_opts(
+            signature, input_opts, output_opts)
+
+        templates = [
+            *self._template_inputs(inputs),
+            *self._template_parameters(params),
+            *self._template_metadata(mds),
+            *self._template_outputs(outputs),
+        ]
+
+        base_cmd = to_cli_name(f"qiime {action_f.plugin_id} {action_f.id}")
+
+        action_t = self._format_templates(base_cmd, templates)
         return action_t
 
     def _format_templates(self, command, templates):
         wrapper = textwrap.TextWrapper(initial_indent=" " * 4)
-        templates = itertools.chain(*templates)
-        templates = map(wrapper.fill, templates)
-        action_t = [command] + list(templates)
-        action_t = " \\\n".join(action_t)
-        return action_t
+        templates = [command] + [wrapper.fill(t) for t in templates]
+        # TODO: double-check that string escaping is working
+        return " \\\n".join(templates)
 
-    def _template_inputs(self, action_sig, input_opts):
+    def _template_inputs(self, input_opts):
         inputs = []
-        for i in action_sig.inputs:
-            option = input_opts.get(i)
-            if option is None:
-                continue
-            if isinstance(option, tuple):
-                option, artifacts = option
-            source = self._get_record(option).source
-            if source == "init_data_collection":
-                for artifact in artifacts:
-                    p = f"--i-{to_cli_name(i)}"
-                    val = f"{artifact}.qza"
-                    inputs.append(f"{p} {val}")
-            else:
-                p = f"--i-{to_cli_name(i)}"
-                val = f"{option}.qza"
-                inputs.append(f"{p} {val}")
+        for opt_name, (ref, _) in input_opts.items():
+            refs = ref if isinstance(ref, list) else [ref]
+            for ref in refs:
+                opt_name = to_cli_name(opt_name)
+                inputs.append(f"--i-{opt_name} {ref}.qza")
         return inputs
 
-    def _template_parameters(self, params, input_opts):
-        params_t = []
-        for i, spec in params:
-            try:
-                val = input_opts[i]
-            except KeyError:
-                continue
-            if spec.qiime_type is Bool:
-                pfx = "--p-" if str(val) == "True" else "--p-no-"
-                p = f"{pfx}{to_cli_name(i)}"
-                params_t.append(p)
-            elif is_collection_type(spec.qiime_type):
-                for _val in val:
-                    p = f"--p-{to_cli_name(i)}"
-                    val = f"{_val}"
-                    params_t.append(f"{p} {val}")
-            else:
-                p = f"--p-{to_cli_name(i)}"
-                _val = f" {val}"
-                params_t.append(f"{p + _val}")
-        return params_t
+    def _template_parameters(self, param_opts):
+        params = []
+        for opt_name, (val, _) in param_opts.items():
+            vals = val if is_iterable(val) else [val]
+            for val in sorted(vals):
+                opt_name = to_cli_name(opt_name)
+                params.append(f"--p-{opt_name} {val}")
+        return params
 
-    def _template_outputs(self, action_sig, outputs):
-        outputs_t = []
-        for i, spec in action_sig.outputs.items():
-            qtype = spec.qiime_type
-            ext = ".qzv" if is_visualization_type(qtype) else ".qza"
-            p = f"--o-{to_cli_name(i)}"
-            val = f"{to_snake_case(outputs[i])}{ext}"
-            outputs_t.append(f"{p} {val}")
-        return outputs_t
+    def _template_metadata(self, md_opts):
+        mds = []
+        for opt_name, (ref, spec) in md_opts.items():
+            refs = ref if isinstance(ref, list) else [ref]
+            for ref in refs:
+                opt_name = to_cli_name(opt_name)
+                col = None
+                if isinstance(ref, tuple):
+                    ref, col = ref
+                mds.append(f"--m-{opt_name}-file {ref}.tsv")
+                if col is not None:
+                    mds.append(f"--m-{opt_name}-column '{col}'")
+        return mds
 
-    def _template_metadata(self, mds, input_opts):
-        mds_t = []
-        file_param = "--m-metadata-file"
-        col_param = "--m-metadata-column"
-        for i, spec in mds:
-            name = input_opts[i]
-            if not isinstance(name, str):
-                name, result = name
-            record = self._get_record(name)
-            source = record.source
-            if source == "init_metadata":
-                mds_t.append(f"{file_param} {name}.tsv")
-                if is_metadata_column_type(spec.qiime_type):
-                    mds_t.append(f"{col_param} '{result}'")
-            elif source == "merge_metadata":
-                # Extract implicitly merged metadata params
-                for mergee in result:
-                    mds_t.append(f"{file_param} {mergee}.tsv")
-            elif source == "get_metadata_column":
-                ref, result = record.result
-                md, col = result
-                mds_t.append(f"{file_param} {md}.tsv")
-                mds_t.append(f"{col_param} '{col}'")
-        return mds_t
+    def _template_outputs(self, output_opts):
+        outputs = []
+        for opt_name, (ref, spec) in output_opts.items():
+            opt_name = to_cli_name(opt_name)
+            ext = "qzv" if is_visualization_type(spec.qiime_type) else "qza"
+            outputs.append(f"--o-{opt_name} {ref}.{ext}")
+        return outputs
 
 
 def examples(action):
     all_examples = []
-    for i in action.examples:
+    for example in action.examples:
         use = CLIUsage()
-        action.examples[i](use)
-        example = use.render()
-        comment = f"# {i}".replace('_', ' ')
-        all_examples.append(comment)
-        all_examples.append(f"{example}\n")
+        action.examples[example](use)
+        rendered_example = use.render()
+        header = f"# {example}".replace('_', ' ')
+        all_examples.append(header)
+        all_examples.append(f"{rendered_example}\n")
     return "\n\n".join(all_examples)
