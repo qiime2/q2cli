@@ -186,20 +186,17 @@ def citations_option(get_citation_records):
 
 def usage_example_option(action):
     import click
-    import q2cli.core.cache
+    from q2cli.core.usage import examples
 
     def callback(ctx, param, value):
         if not value or ctx.resilient_parsing:
             return
 
         action = ctx.command._get_action()
-        plugin_id = to_cli_name(action.plugin_id)
-        cached_plugin = q2cli.core.cache.CACHE.plugins[plugin_id]
-        cached_action = cached_plugin['actions'][action.id]
-        msg = cached_action.get("examples")
-        if not msg:
-            msg = "No examples have been registered for this action yet."
-        click.secho(msg)
+
+        for line in examples(action):
+            click.secho(line)
+
         ctx.exit()
 
     return click.Option(['--examples'], is_flag=True, expose_value=False,

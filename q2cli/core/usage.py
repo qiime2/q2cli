@@ -7,8 +7,6 @@
 # ----------------------------------------------------------------------------
 
 import collections
-# TODO: drop after done debugging
-import pprint
 import textwrap
 
 from qiime2.sdk import usage, util
@@ -20,21 +18,14 @@ from qiime2.sdk.util import (
 from q2cli.util import to_cli_name
 
 
-# TODO: drop after done debugging
-pp = pprint.PrettyPrinter(indent=4)
-
-
 def is_iterable(val):
     return isinstance(val, collections.abc.Iterable)
 
 
-# TODO: split out templating into it's own class
 class CLIUsage(usage.Usage):
     def __init__(self):
         super().__init__()
         self._cache_recorder = []
-        # TODO: drop recorder
-        self._recorder = []
         self._init_data_refs = dict()
 
     def _add_cache_record(self, source, value):
@@ -58,9 +49,7 @@ class CLIUsage(usage.Usage):
     def _get_metadata_column_(self, column_name, record):
         return (record.ref, column_name)
 
-    def _comment_(self, text: str):
-        # TODO: drop recorder
-        self._recorder.append('# %s' % (text,))
+    def _comment_(self, text):
         self._add_cache_record(source='comment', value=text)
 
     def _action_(self, action, input_opts, output_opts):
@@ -69,10 +58,6 @@ class CLIUsage(usage.Usage):
         inputs, params, mds, outputs = self._destructure_opts(
             signature, input_opts, output_opts)
 
-        t = self._template_action(action_f.plugin_id, action_f.id, inputs, params, mds, outputs)
-
-        # TODO: drop recorder
-        self._recorder.append(t)
         value = dict(plugin_id=action_f.plugin_id, action_id=action_f.id,
                      inputs=inputs, params=params, mds=mds, outputs=outputs)
         self._add_cache_record(source='action', value=value)
@@ -83,9 +68,6 @@ class CLIUsage(usage.Usage):
 
     def cache(self):
         return self._cache_recorder
-
-    def render(self):
-        return '\n'.join(self._recorder)
 
     def get_example_data(self):
         return {r: f() for r, f in self._init_data_refs.items()}
@@ -129,7 +111,39 @@ class CLIUsage(usage.Usage):
 
         return inputs, params, mds, outputs
 
-    def _template_action(self, plugin_id, action_id, inputs, params, mds, outputs):
+
+class CLIRenderer:
+    def __init__(self, records):
+        self.cache_records = records
+
+    def render(self):
+        if len(self.cache_records) == 0:
+            yield 'No examples have been registered for this action yet.'
+        else:
+            for record in self.cache_records:
+                yield self.dispatch(record)
+
+    def dispatch(self, record):
+        source = record['source']
+
+        if source == 'comment':
+            return self.template_comment(record['value'])
+        elif source == 'action':
+            return self.template_action(
+                record['value']['plugin_id'],
+                record['value']['action_id'],
+                record['value']['inputs'],
+                record['value']['params'],
+                record['value']['mds'],
+                record['value']['outputs'],
+            )
+        else:
+            raise Exception('uh oh')
+
+    def template_comment(self, comment):
+        return f"# {comment}"
+
+    def template_action(self, plugin_id, action_id, inputs, params, mds, outputs):
         templates = [
             *self._template_inputs(inputs),
             *self._template_parameters(params),
@@ -160,6 +174,7 @@ class CLIUsage(usage.Usage):
         params = []
         for opt_name, (val, _) in param_opts.items():
             # TODO: circle back on sets
+            # TODO: need to test parameter collections in test_usage.py
             vals = val if is_iterable(val) else [val]
             for val in sorted(vals):
                 opt_name = to_cli_name(opt_name)
@@ -194,11 +209,22 @@ def cache_examples(action):
     all_examples = []
     for example in action.examples:
         use = CLIUsage()
+        header = str(example).replace('_', ' ')
+        use._comment_(f"### example: {header} ###")
         action.examples[example](use)
         cache = use.cache()
-        all_examples.append(cache)
+        all_examples.extend(cache)
     return all_examples
 
 
-def examples(foo):
-    return foo
+def examples(action):
+    import q2cli.core.cache
+
+    plugin_id = to_cli_name(action.plugin_id)
+    cached_plugin = q2cli.core.cache.CACHE.plugins[plugin_id]
+    cached_action = cached_plugin['actions'][action.id]
+    cached_examples = cached_action['examples']
+
+    cache_render = CLIRenderer(cached_examples)
+    for rendered in cache_render.render():
+        yield rendered
