@@ -265,7 +265,7 @@ class DeploymentCache:
 
     def _get_action_state(self, action):
         import itertools
-        from q2cli.core.usage import examples
+        from q2cli.core.usage import cache_examples
 
         state = {
             'id': action.id,
@@ -273,7 +273,7 @@ class DeploymentCache:
             'description': action.description,
             'signature': [],
             'deprecated': action.deprecated,
-            'examples': examples(action)
+            'examples': cache_examples(action)
         }
 
         sig = action.signature
