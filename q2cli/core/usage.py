@@ -141,9 +141,10 @@ class CLIRenderer:
             raise Exception('uh oh')
 
     def template_comment(self, comment):
-        return f"# {comment}"
+        return f'# {comment}'
 
-    def template_action(self, plugin_id, action_id, inputs, params, mds, outputs):
+    def template_action(self, plugin_id, action_id,
+                        inputs, params, mds, outputs):
         templates = [
             *self._template_inputs(inputs),
             *self._template_parameters(params),
@@ -151,15 +152,15 @@ class CLIRenderer:
             *self._template_outputs(outputs),
         ]
 
-        base_cmd = to_cli_name(f"qiime {plugin_id} {action_id}")
+        base_cmd = to_cli_name(f'qiime {plugin_id} {action_id}')
         action_t = self._format_templates(base_cmd, templates)
         return action_t
 
     def _format_templates(self, command, templates):
-        wrapper = textwrap.TextWrapper(initial_indent=" " * 4)
+        wrapper = textwrap.TextWrapper(initial_indent=' ' * 4)
         templates = [command] + [wrapper.fill(t) for t in templates]
         # TODO: double-check that string escaping is working
-        return " \\\n".join(templates)
+        return ' \\\n'.join(templates)
 
     def _template_inputs(self, input_opts):
         inputs = []
@@ -167,7 +168,7 @@ class CLIRenderer:
             refs = ref if isinstance(ref, list) else [ref]
             for ref in refs:
                 opt_name = to_cli_name(opt_name)
-                inputs.append(f"--i-{opt_name} {ref}.qza")
+                inputs.append(f'--i-{opt_name} {ref}.qza')
         return inputs
 
     def _template_parameters(self, param_opts):
@@ -178,7 +179,7 @@ class CLIRenderer:
             vals = val if is_iterable(val) else [val]
             for val in sorted(vals):
                 opt_name = to_cli_name(opt_name)
-                params.append(f"--p-{opt_name} {val}")
+                params.append(f'--p-{opt_name} {val}')
         return params
 
     def _template_metadata(self, md_opts):
@@ -190,9 +191,9 @@ class CLIRenderer:
                 col = None
                 if isinstance(ref, tuple):
                     ref, col = ref
-                mds.append(f"--m-{opt_name}-file {ref}.tsv")
+                mds.append(f'--m-{opt_name}-file {ref}.tsv')
                 if col is not None:
-                    mds.append(f"--m-{opt_name}-column '{col}'")
+                    mds.append(f'--m-{opt_name}-column \'{col}\'')
         return mds
 
     def _template_outputs(self, output_opts):
@@ -200,8 +201,8 @@ class CLIRenderer:
         for opt_name, (ref, qiime_type) in output_opts.items():
             opt_name = to_cli_name(opt_name)
             qiime_type = util.parse_type(qiime_type)
-            ext = "qzv" if is_visualization_type(qiime_type) else "qza"
-            outputs.append(f"--o-{opt_name} {ref}.{ext}")
+            ext = 'qzv' if is_visualization_type(qiime_type) else 'qza'
+            outputs.append(f'--o-{opt_name} {ref}.{ext}')
         return outputs
 
 
@@ -210,7 +211,7 @@ def cache_examples(action):
     for example in action.examples:
         use = CLIUsage()
         header = str(example).replace('_', ' ')
-        use._comment_(f"### example: {header} ###")
+        use._comment_(f'### example: {header} ###')
         action.examples[example](use)
         cache = use.cache()
         all_examples.extend(cache)
