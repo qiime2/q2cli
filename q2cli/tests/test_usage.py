@@ -6,12 +6,9 @@
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 
-from click.testing import CliRunner
 import pytest
-import unittest
 
 from q2cli.core.usage import CLIUsage, CLIRenderer
-from q2cli.commands import RootCommand
 
 from qiime2.core.testing.util import get_dummy_plugin
 
@@ -209,49 +206,3 @@ def test_render(dummy_plugin, action, example, exp):
     cache_renderer = CLIRenderer(cache)
     rendered = '\n'.join(list(cache_renderer.render()))
     assert rendered == '\n'.join(exp)
-
-
-class CliTests(unittest.TestCase):
-    def setUp(self):
-        get_dummy_plugin()
-        self.runner = CliRunner()
-
-    def test_examples(self):
-        qiime_cli = RootCommand()
-        command = qiime_cli.get_command(ctx=None, name='dummy-plugin')
-
-        result = self.runner.invoke(command,
-                                    ['typical-pipeline', '--examples'])
-
-        exp = (
-            '# ### example: typical pipeline simple ###',
-            'qiime dummy-plugin typical-pipeline \\',
-            '    --i-int-sequence ints.qza \\',
-            '    --i-mapping mapper.qza \\',
-            '    --p-do-extra-thing True \\',
-            '    --o-out-map out_map.qza \\',
-            '    --o-left left.qza \\',
-            '    --o-right right.qza \\',
-            '    --o-left-viz left_viz.qzv \\',
-            '    --o-right-viz right_viz.qzv',
-            '# ### example: typical pipeline complex ###',
-            'qiime dummy-plugin typical-pipeline \\',
-            '    --i-int-sequence ints1.qza \\',
-            '    --i-mapping mapper1.qza \\',
-            '    --p-do-extra-thing True \\',
-            '    --o-out-map out_map1.qza \\',
-            '    --o-left left1.qza \\',
-            '    --o-right right1.qza \\',
-            '    --o-left-viz left_viz1.qzv \\',
-            '    --o-right-viz right_viz1.qzv',
-            'qiime dummy-plugin typical-pipeline \\',
-            '    --i-int-sequence left1.qza \\',
-            '    --i-mapping out_map1.qza \\',
-            '    --p-do-extra-thing False \\',
-            '    --o-out-map out_map2.qza \\',
-            '    --o-left left2.qza \\',
-            '    --o-right right2.qza \\',
-            '    --o-left-viz left_viz2.qzv \\',
-            '    --o-right-viz right_viz2.qzv\n'
-        )
-        self.assertEqual(result.output, '\n'.join(exp))
