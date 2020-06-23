@@ -382,6 +382,22 @@ class CliTests(unittest.TestCase):
         self.assertEqual(result.exit_code, 0)
         self.assertEqual(result.output, '\n'.join(exp))
 
+        result = self.runner.invoke(
+            command, ['identity-with-metadata-column', '--examples']
+        )
+
+        exp = (
+            '# ### example: identity with metadata column get mdc ###',
+            'qiime dummy-plugin identity-with-metadata-column \\',
+            '    --i-ints ints.qza \\',
+            '    --m-metadata-file md.tsv \\',
+            '    --m-metadata-column \'a\' \\',
+            '    --o-out out.qza\n'
+        )
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertEqual(result.output, '\n'.join(exp))
+
     def test_no_examples(self):
         qiime_cli = RootCommand()
         command = qiime_cli.get_command(ctx=None, name='dummy-plugin')

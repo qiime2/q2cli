@@ -185,6 +185,7 @@ class CLIRenderer:
     def _template_metadata(self, md_opts):
         mds = []
         for opt_name, (ref, _) in md_opts.items():
+            ref = tuple(ref) if "Column" in _ else ref
             refs = ref if isinstance(ref, list) else [ref]
             for ref in refs:
                 opt_name = to_cli_name(opt_name)
