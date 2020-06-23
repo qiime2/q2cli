@@ -35,6 +35,14 @@ params = [
             '    --o-concatenated-ints ints_d.qza',
         ),
     ),
+    (
+        'concatenate_ints',
+        'comments_only',
+        (
+            '# comment 1',
+            '# comment 2'
+        ),
+    ),
     ###########################################################################
 
     # concatenate ints complex example ########################################
@@ -50,7 +58,6 @@ params = [
             '    --p-int1 4 \\',
             '    --p-int2 2 \\',
             '    --o-concatenated-ints ints_d.qza',
-            # TODO: Test to make sure there is additional \n here?
             '# This example demonstrates chained usage (pt 2).',
             'qiime dummy-plugin concatenate-ints \\',
             '    --i-ints1 ints_d.qza \\',
