@@ -346,57 +346,7 @@ class CliTests(unittest.TestCase):
         result = self.runner.invoke(
             command, ['typical-pipeline', '--examples']
         )
-
-        exp = (
-            '# ### example: typical pipeline simple ###',
-            'qiime dummy-plugin typical-pipeline \\',
-            '    --i-int-sequence ints.qza \\',
-            '    --i-mapping mapper.qza \\',
-            '    --p-do-extra-thing True \\',
-            '    --o-out-map out_map.qza \\',
-            '    --o-left left.qza \\',
-            '    --o-right right.qza \\',
-            '    --o-left-viz left_viz.qzv \\',
-            '    --o-right-viz right_viz.qzv',
-            '# ### example: typical pipeline complex ###',
-            'qiime dummy-plugin typical-pipeline \\',
-            '    --i-int-sequence ints1.qza \\',
-            '    --i-mapping mapper1.qza \\',
-            '    --p-do-extra-thing True \\',
-            '    --o-out-map out_map1.qza \\',
-            '    --o-left left1.qza \\',
-            '    --o-right right1.qza \\',
-            '    --o-left-viz left_viz1.qzv \\',
-            '    --o-right-viz right_viz1.qzv',
-            'qiime dummy-plugin typical-pipeline \\',
-            '    --i-int-sequence left1.qza \\',
-            '    --i-mapping out_map1.qza \\',
-            '    --p-do-extra-thing False \\',
-            '    --o-out-map out_map2.qza \\',
-            '    --o-left left2.qza \\',
-            '    --o-right right2.qza \\',
-            '    --o-left-viz left_viz2.qzv \\',
-            '    --o-right-viz right_viz2.qzv\n'
-        )
-
         self.assertEqual(result.exit_code, 0)
-        self.assertEqual(result.output, '\n'.join(exp))
-
-        result = self.runner.invoke(
-            command, ['identity-with-metadata-column', '--examples']
-        )
-
-        exp = (
-            '# ### example: identity with metadata column get mdc ###',
-            'qiime dummy-plugin identity-with-metadata-column \\',
-            '    --i-ints ints.qza \\',
-            '    --m-metadata-file md.tsv \\',
-            '    --m-metadata-column \'a\' \\',
-            '    --o-out out.qza\n'
-        )
-
-        self.assertEqual(result.exit_code, 0)
-        self.assertEqual(result.output, '\n'.join(exp))
 
     def test_no_examples(self):
         qiime_cli = RootCommand()
