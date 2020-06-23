@@ -10,10 +10,6 @@ import collections
 import textwrap
 
 from qiime2.sdk import usage, util
-from qiime2.sdk.util import (
-    is_metadata_type,
-    is_visualization_type,
-)
 
 from q2cli.util import to_cli_name
 
@@ -47,7 +43,7 @@ class CLIUsage(usage.Usage):
         return sorted([r.ref for r in records])
 
     def _get_metadata_column_(self, column_name, record):
-        return (record.ref, column_name)
+        return [record.ref, column_name]
 
     def _comment_(self, text):
         self._add_cache_record(source='comment', value=text)
@@ -85,7 +81,7 @@ class CLIUsage(usage.Usage):
             inputs[param_name] = distill_spec(spec)
 
         for param_name, spec in action_sig.parameters.items():
-            if is_metadata_type(spec.qiime_type):
+            if util.is_metadata_type(spec.qiime_type):
                 mds[param_name] = distill_spec(spec)
             else:
                 params[param_name] = distill_spec(spec)
@@ -184,14 +180,15 @@ class CLIRenderer:
 
     def _template_metadata(self, md_opts):
         mds = []
-        for opt_name, (ref, _) in md_opts.items():
-            ref = tuple(ref) if "Column" in _ else ref
+        for opt_name, (ref, qiime_type) in md_opts.items():
+            qiime_type = util.parse_type(qiime_type)
+            is_mdc = util.is_metadata_column_type(qiime_type)
+            # Make this into a tuple to differentiate in the following loop
+            ref = tuple(ref) if is_mdc else ref
             refs = ref if isinstance(ref, list) else [ref]
             for ref in refs:
                 opt_name = to_cli_name(opt_name)
-                col = None
-                if isinstance(ref, tuple):
-                    ref, col = ref
+                ref, col = ref if is_mdc else (ref, None)
                 mds.append(f'--m-{opt_name}-file {ref}.tsv')
                 if col is not None:
                     mds.append(f'--m-{opt_name}-column \'{col}\'')
@@ -202,7 +199,7 @@ class CLIRenderer:
         for opt_name, (ref, qiime_type) in output_opts.items():
             opt_name = to_cli_name(opt_name)
             qiime_type = util.parse_type(qiime_type)
-            ext = 'qzv' if is_visualization_type(qiime_type) else 'qza'
+            ext = 'qzv' if util.is_visualization_type(qiime_type) else 'qza'
             outputs.append(f'--o-{opt_name} {ref}.{ext}')
         return outputs
 
