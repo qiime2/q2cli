@@ -318,7 +318,7 @@ class CliTests(unittest.TestCase):
         viz_path = os.path.join(self.tempdir, 'viz')
 
         with unittest.mock.patch('qiime2.sdk.Result.load',
-                                  side_effect=SyntaxError):
+                                 side_effect=SyntaxError):
             result = self.runner.invoke(
                 command, ['most-common-viz', '--i-ints', self.artifact1_path,
                           '--o-visualization', viz_path, '--verbose'])
