@@ -126,10 +126,11 @@ class QIIME2Type(click.ParamType):
                 else:
                     raise ControlFlowException
             except Exception as e:
-                # If we made it here, QIIME 2 was confident that the thing we are
-                # trying to load is a QIIME 2 Result, however, we have run into
-                # some kind of catastrophic error.
-                header = 'There was a problem loading %s as a QIIME 2 Result:' % value
+                # If we made it here, QIIME 2 was confident that the thing we
+                # are trying to load is a QIIME 2 Result, however, we have run
+                # into some kind of catastrophic error.
+                header = ('There was a problem loading %s as a '
+                          'QIIME 2 Result:' % value)
                 q2cli.util.exit_with_error(e, header=header)
         except ControlFlowException:
             self.fail('%r is not a QIIME 2 Artifact (.qza)' % value, param,
