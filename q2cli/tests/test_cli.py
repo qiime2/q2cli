@@ -311,6 +311,22 @@ class CliTests(unittest.TestCase):
                                         f'{temp!r}'):
                 obj._convert_input(self.artifact1_path, None, None)
 
+    def test_syntax_error_in_env(self):
+        qiime_cli = RootCommand()
+        command = qiime_cli.get_command(ctx=None, name='dummy-plugin')
+
+        viz_path = os.path.join(self.tempdir, 'viz')
+
+        with unittest.mock.patch('qiime2.sdk.Result.load',
+                                  side_effect=SyntaxError):
+            result = self.runner.invoke(
+                command, ['most-common-viz', '--i-ints', self.artifact1_path,
+                          '--o-visualization', viz_path, '--verbose'])
+
+        self.assertEqual(result.exit_code, 1)
+        self.assertTrue('problem loading' in result.output)
+        self.assertTrue(self.artifact1_path in result.output)
+
     def test_deprecated_help_text(self):
         qiime_cli = RootCommand()
         command = qiime_cli.get_command(ctx=None, name='dummy-plugin')
