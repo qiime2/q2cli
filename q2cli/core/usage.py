@@ -6,7 +6,6 @@
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 
-import collections
 import textwrap
 
 from qiime2.sdk import usage, util
@@ -14,35 +13,38 @@ from qiime2.sdk import usage, util
 from q2cli.util import to_cli_name
 
 
-def is_iterable(val):
-    return isinstance(val, collections.abc.Iterable)
+def is_collection(val):
+    return isinstance(val, list) or isinstance(val, set)
 
 
 class CLIUsage(usage.Usage):
     def __init__(self):
         super().__init__()
         self._cache_recorder = []
-        self._init_data_refs = dict()
+
+    def cache(self):
+        return self._cache_recorder
 
     def _add_cache_record(self, source, value):
         record = dict(source=source, value=value)
         self._cache_recorder.append(record)
 
     def _init_data_(self, ref, factory):
-        self._init_data_refs[ref] = factory
         return ref
 
     def _init_metadata_(self, ref, factory):
-        self._init_data_refs[ref] = factory
         return ref
 
     def _init_data_collection_(self, ref, collection_type, *records):
+        # All collection types are saved as a list, for ordering,
+        # and for JSON serialization.
         return sorted([r.ref for r in records])
 
     def _merge_metadata_(self, ref, records):
         return sorted([r.ref for r in records])
 
     def _get_metadata_column_(self, column_name, record):
+        # Returns a list for JSON serialization.
         return [record.ref, column_name]
 
     def _comment_(self, text):
@@ -60,16 +62,14 @@ class CLIUsage(usage.Usage):
         return output_opts
 
     def _assert_has_line_matching_(self, ref, label, path, expression):
+        # TODO: implement this method - we can model the
+        # `assert_has_line_matching` behavior that @thermokarst added
+        # to galaxy.
         pass
 
-    def cache(self):
-        return self._cache_recorder
-
-    def get_example_data(self):
-        return {r: f() for r, f in self._init_data_refs.items()}
-
     def _destructure_signature(self, action_sig):
-        # In the future this should return a more robust spec subset
+        # In the future this could return a more robust spec subset,
+        # if necessary.
         def distill_spec(spec):
             return str(spec.qiime_type)
 
@@ -96,7 +96,9 @@ class CLIUsage(usage.Usage):
             if opt_name in signature['inputs'].keys():
                 inputs[opt_name] = (val, signature['inputs'][opt_name])
             elif opt_name in signature['params'].keys():
-                if is_iterable(val):
+                # Coerce all collection types into lists, to
+                # allow for JSON serialization.
+                if is_collection(val):
                     val = list(val)
                 params[opt_name] = (val, signature['params'][opt_name])
             elif opt_name in signature['mds'].keys():
@@ -134,7 +136,7 @@ class CLIRenderer:
                 record['value']['outputs'],
             )
         else:
-            raise Exception('uh oh')
+            raise Exception
 
     def template_comment(self, comment):
         return f'# {comment}'
@@ -142,10 +144,10 @@ class CLIRenderer:
     def template_action(self, plugin_id, action_id,
                         inputs, params, mds, outputs):
         templates = [
-            *self._template_inputs(inputs),
-            *self._template_parameters(params),
-            *self._template_metadata(mds),
-            *self._template_outputs(outputs),
+            *list(self._template_inputs(inputs)),
+            *list(self._template_parameters(params)),
+            *list(self._template_metadata(mds)),
+            *list(self._template_outputs(outputs)),
         ]
 
         base_cmd = to_cli_name(f'qiime {plugin_id} {action_id}')
@@ -155,31 +157,23 @@ class CLIRenderer:
     def _format_templates(self, command, templates):
         wrapper = textwrap.TextWrapper(initial_indent=' ' * 4)
         templates = [command] + [wrapper.fill(t) for t in templates]
-        # TODO: double-check that string escaping is working
         return ' \\\n'.join(templates)
 
     def _template_inputs(self, input_opts):
-        inputs = []
         for opt_name, (ref, _) in input_opts.items():
             refs = ref if isinstance(ref, list) else [ref]
             for ref in refs:
                 opt_name = to_cli_name(opt_name)
-                inputs.append(f'--i-{opt_name} {ref}.qza')
-        return inputs
+                yield f'--i-{opt_name} {ref}.qza'
 
     def _template_parameters(self, param_opts):
-        params = []
         for opt_name, (val, _) in param_opts.items():
-            # TODO: circle back on sets
-            # TODO: need to test parameter collections in test_usage.py
-            vals = val if is_iterable(val) else [val]
+            vals = val if is_collection(val) else [val]
             for val in sorted(vals):
                 opt_name = to_cli_name(opt_name)
-                params.append(f'--p-{opt_name} {val}')
-        return params
+                yield f'--p-{opt_name} {val}'
 
     def _template_metadata(self, md_opts):
-        mds = []
         for opt_name, (ref, qiime_type) in md_opts.items():
             qiime_type = util.parse_type(qiime_type)
             is_mdc = util.is_metadata_column_type(qiime_type)
@@ -189,19 +183,16 @@ class CLIRenderer:
             for ref in refs:
                 opt_name = to_cli_name(opt_name)
                 ref, col = ref if is_mdc else (ref, None)
-                mds.append(f'--m-{opt_name}-file {ref}.tsv')
+                yield f'--m-{opt_name}-file {ref}.tsv'
                 if col is not None:
-                    mds.append(f'--m-{opt_name}-column \'{col}\'')
-        return mds
+                    yield f'--m-{opt_name}-column \'{col}\''
 
     def _template_outputs(self, output_opts):
-        outputs = []
         for opt_name, (ref, qiime_type) in output_opts.items():
             opt_name = to_cli_name(opt_name)
             qiime_type = util.parse_type(qiime_type)
             ext = 'qzv' if util.is_visualization_type(qiime_type) else 'qza'
-            outputs.append(f'--o-{opt_name} {ref}.{ext}')
-        return outputs
+            yield f'--o-{opt_name} {ref}.{ext}'
 
 
 def cache_examples(action):
