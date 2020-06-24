@@ -340,6 +340,26 @@ class CliTests(unittest.TestCase):
 
         self.assertTrue('deprecated' in result.output)
 
+    def test_examples(self):
+        qiime_cli = RootCommand()
+        command = qiime_cli.get_command(ctx=None, name='dummy-plugin')
+        result = self.runner.invoke(
+            command, ['typical-pipeline', '--examples']
+        )
+        self.assertEqual(result.exit_code, 0)
+
+    def test_no_examples(self):
+        qiime_cli = RootCommand()
+        command = qiime_cli.get_command(ctx=None, name='dummy-plugin')
+        result = self.runner.invoke(
+            command, ['unioned-primitives', '--examples']
+        )
+        self.assertEqual(result.exit_code, 0)
+        self.assertEqual(
+            result.output,
+            "No examples have been registered for this action yet.\n"
+        )
+
 
 class TestOptionalArtifactSupport(unittest.TestCase):
     def setUp(self):

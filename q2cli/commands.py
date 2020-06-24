@@ -219,6 +219,7 @@ class ActionCommand(BaseCommandMixin, click.Command):
                               'during execution of this action. Or silence '
                               'output if execution is successful (silence is '
                               'golden).'),
+            q2cli.util.usage_example_option(self._get_action),
             q2cli.util.citations_option(self._get_citation_records)
         ]
 

@@ -36,6 +36,10 @@ def to_cli_name(name):
     return name.replace('_', '-')
 
 
+def to_snake_case(name):
+    return name.replace('-', '_')
+
+
 def exit_with_error(e, header='An error has been encountered:',
                     traceback='stderr', status=1):
     import sys
@@ -178,3 +182,23 @@ def citations_option(get_citation_records):
     return click.Option(['--citations'], is_flag=True, expose_value=False,
                         is_eager=True, callback=callback,
                         help='Show citations and exit.')
+
+
+def usage_example_option(action):
+    import click
+    from q2cli.core.usage import examples
+
+    def callback(ctx, param, value):
+        if not value or ctx.resilient_parsing:
+            return
+
+        action = ctx.command._get_action()
+
+        for line in examples(action):
+            click.secho(line)
+
+        ctx.exit()
+
+    return click.Option(['--examples'], is_flag=True, expose_value=False,
+                        is_eager=True, callback=callback,
+                        help='Show usage examples and exit.')

@@ -18,6 +18,8 @@ requirements:
   host:
     - python  {{ python }}
     - setuptools
+    # q2cli leverages pytest functionality
+    - pytest
 
   run:
     - python  {{ python }}
