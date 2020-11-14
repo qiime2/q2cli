@@ -35,7 +35,7 @@ class CLIUsage(usage.Usage):
     def _init_metadata_(self, ref, factory):
         return ref
 
-    def _init_data_collection_(self, ref, collection_type, *records):
+    def _init_data_collection_(self, ref, collection_type, records):
         # All collection types are saved as a list, for ordering,
         # and for JSON serialization.
         return sorted([r.ref for r in records])
