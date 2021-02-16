@@ -22,12 +22,24 @@ class CLIUsage(usage.Usage):
         super().__init__()
         self._cache_recorder = []
 
+    @property
     def cache(self):
         return self._cache_recorder
+
+    @classmethod
+    def from_cache(cls, cache):
+        instance = cls()
+        instance._cache_recorder = cache
+        return instance
 
     def _add_cache_record(self, source, value):
         record = dict(source=source, value=value)
         self._cache_recorder.append(record)
+
+    def render(self):
+        renderer = CLIRenderer(self._cache_recorder)
+        for rendered in renderer.render():
+            yield rendered
 
     def _init_data_(self, ref, factory):
         return ref
@@ -202,8 +214,7 @@ def cache_examples(action):
         header = str(example).replace('_', ' ')
         use._comment_(f'### example: {header} ###')
         action.examples[example](use)
-        cache = use.cache()
-        all_examples.extend(cache)
+        all_examples.extend(use.cache)
     return all_examples
 
 
@@ -215,6 +226,6 @@ def examples(action):
     cached_action = cached_plugin['actions'][action.id]
     cached_examples = cached_action['examples']
 
-    cache_render = CLIRenderer(cached_examples)
-    for rendered in cache_render.render():
+    use = CLIUsage.from_cache(cached_examples)
+    for rendered in use.render():
         yield rendered
