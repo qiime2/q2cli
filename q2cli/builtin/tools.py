@@ -203,15 +203,17 @@ def peek(path):
                cls=ToolCommand)
 @click.option('--tsv/--no-tsv', default=False,
               help='Print as machine-readable TSV instead of text.')
+@click.option('--show-hashes/--no-show-hashes', default=False,
+              help='Print hash(es) for metadata being inspected.')
 @click.argument('paths', nargs=-1, required=True, metavar='METADATA...',
                 type=click.Path(exists=True, file_okay=True, dir_okay=False,
                                 readable=True))
 @q2cli.util.pretty_failure(traceback=None)
-def inspect_metadata(paths, tsv, failure):
-    m = [_load_metadata(p) for p in paths]
-    metadata = m[0]
-    if m[1:]:
-        metadata = metadata.merge(*m[1:])
+def inspect_metadata(paths, tsv, show_hashes, failure):
+    mds = [_load_metadata(p) for p in paths]
+    metadata = mds[0]
+    if mds[1:]:
+        metadata = metadata.merge(*mds[1:])
 
     # we aren't expecting errors below this point, so set traceback to default
     failure.traceback = 'stderr'
@@ -254,6 +256,28 @@ def inspect_metadata(paths, tsv, failure):
         click.secho(("{0:>%d}  " % max_name_len).format("COLUMNS:"),
                     bold=True, nl=False)
         click.echo(metadata.column_count)
+
+        if metadata.contains_renamed_columns and show_hashes:
+            COLUMN_PATH = 'PATH'
+            COLUMN_HASH = 'HASH'
+
+            max_path_len = max([len(os.path.relpath(p)) for p in paths] +
+                               [len(COLUMN_PATH)])
+            max_hash_len = max([len(md.id) for md in mds] +
+                               [len(COLUMN_HASH)])
+
+            formatter = ("{0:>%d}  {1:%d}" % (max_path_len,
+                                              max_hash_len)).format
+            click.secho(formatter(COLUMN_PATH, COLUMN_HASH), bold=True)
+
+            click.secho(formatter("=" * max_path_len, "=" * max_hash_len),
+                        bold=True)
+
+            for path, md in zip(paths, mds):
+                click.echo(formatter(os.path.relpath(path), md.id))
+
+            click.secho(formatter("=" * max_path_len, "=" * max_hash_len),
+                        bold=True)
 
 
 def _load_metadata(path):
