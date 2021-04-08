@@ -25,7 +25,10 @@ To enable tab completion in Bash, run the following command or add it to your \
 To enable tab completion in ZSH, run the following commands or add them to \
 your .zshrc:
 
-    autoload bashcompinit && bashcompinit && source tab-qiime
+\b
+    autoload -Uz compinit && compinit
+    autoload bashcompinit && bashcompinit
+    source tab-qiime
 
 """
 
