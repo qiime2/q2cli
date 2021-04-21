@@ -181,6 +181,7 @@ class CLIRenderer:
     def _template_parameters(self, param_opts):
         for opt_name, (val, _) in param_opts.items():
             vals = val if is_collection(val) else [val]
+            vals = [str(val) for val in vals]
             for val in sorted(vals):
                 opt_name = to_cli_name(opt_name)
                 yield f'--p-{opt_name} {val}'
