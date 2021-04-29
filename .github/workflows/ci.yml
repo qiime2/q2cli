@@ -51,5 +51,5 @@ jobs:
       with:
         package-name: q2cli
         build-target: tested
-        # additional-tests: QIIMETEST= py.test --pyargs q2cli
+        additional-tests: QIIMETEST= py.test --pyargs q2cli
         library-token: ${{ secrets.LIBRARY_TOKEN }}
