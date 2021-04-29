@@ -182,6 +182,8 @@ class CLIRenderer:
         for opt_name, (val, _) in param_opts.items():
             vals = map(str, val) if is_collection(val) else [str(val)]
             for val in sorted(vals):
+                if val == 'None':
+                    continue
                 opt_name = to_cli_name(opt_name)
                 yield f'--p-{opt_name} {val}'
 
