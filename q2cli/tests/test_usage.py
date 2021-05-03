@@ -59,13 +59,13 @@ qiime dummy-plugin concatenate-ints \\
 # ### example: identity with metadata simple ###
 qiime dummy-plugin identity-with-metadata \\
     --i-ints ints.qza \\
-    --m-metadata-file md.tsv \\
+    --m-metadata-file md.qza \\
     --o-out out.qza
 # ### example: identity with metadata merging ###
 qiime dummy-plugin identity-with-metadata \\
     --i-ints ints.qza \\
-    --m-metadata-file md1.tsv \\
-    --m-metadata-file md2.tsv \\
+    --m-metadata-file md1.qza \\
+    --m-metadata-file md2.qza \\
     --o-out out.qza""",
     ),
     (
@@ -74,7 +74,7 @@ qiime dummy-plugin identity-with-metadata \\
 # ### example: identity with metadata column get mdc ###
 qiime dummy-plugin identity-with-metadata-column \\
     --i-ints ints.qza \\
-    --m-metadata-file md.tsv \\
+    --m-metadata-file md.qza \\
     --m-metadata-column 'a' \\
     --o-out out.qza""",
     ),

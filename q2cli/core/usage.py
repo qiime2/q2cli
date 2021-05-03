@@ -199,7 +199,7 @@ class CLIRenderer:
             for ref in refs:
                 opt_name = to_cli_name(opt_name)
                 ref, col = ref if is_mdc else (ref, None)
-                yield f'--m-{opt_name}-file {ref}.tsv'
+                yield f'--m-{opt_name}-file {ref}.qza'
                 if col is not None:
                     yield f'--m-{opt_name}-column \'{col}\''
 
