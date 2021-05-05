@@ -180,13 +180,17 @@ class CLIRenderer:
 
     def _template_parameters(self, param_opts):
         for opt_name, (val, _) in param_opts.items():
-            vals = val if is_collection(val) else [val]
+            vals = map(str, val) if is_collection(val) else [str(val)]
             for val in sorted(vals):
+                if val == 'None':
+                    continue
                 opt_name = to_cli_name(opt_name)
                 yield f'--p-{opt_name} {val}'
 
     def _template_metadata(self, md_opts):
         for opt_name, (ref, qiime_type) in md_opts.items():
+            if ref is None:
+                continue
             qiime_type = util.parse_type(qiime_type)
             is_mdc = util.is_metadata_column_type(qiime_type)
             # Make this into a tuple to differentiate in the following loop

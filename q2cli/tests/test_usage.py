@@ -127,7 +127,6 @@ qiime dummy-plugin optional-artifacts-method \\
 qiime dummy-plugin optional-artifacts-method \\
     --i-ints ints.qza \\
     --p-num1 1 \\
-    --p-num2 None \\
     --o-output ints_b.qza
 qiime dummy-plugin optional-artifacts-method \\
     --i-ints ints.qza \\
