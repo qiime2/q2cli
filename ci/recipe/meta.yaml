@@ -24,7 +24,7 @@ requirements:
   run:
     - python  {{ python }}
     - pip
-    - click
+    - click >=8
     - qiime2 {{ release }}.*
 
 test:

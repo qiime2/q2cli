@@ -123,8 +123,8 @@ class Q2Parser(parser.OptionParser):
         elif action == 'append_greedy':
             nargs = 0
 
-        option = Q2Option(opts, dest, action=action, nargs=nargs,
-                          const=const, obj=obj)
+        option = Q2Option(obj=obj, opts=opts, dest=dest, action=action,
+                          nargs=nargs, const=const)
         # END MODIFICATIONS
         self._opt_prefixes.update(option.prefixes)
         for opt in option._short_opts:
