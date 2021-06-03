@@ -51,6 +51,9 @@ qiime dummy-plugin concatenate-ints \\
     --o-concatenated-ints concatenated_ints.qza
 # ### example: comments only ###
 # comment 1
+# comment 2
+# ### example: comments only factory ###
+# comment 1
 # comment 2""",
     ),
     (
