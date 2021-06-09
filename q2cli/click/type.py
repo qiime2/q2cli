@@ -1,5 +1,5 @@
 # ----------------------------------------------------------------------------
-# Copyright (c) 2016-2019, QIIME 2 development team.
+# Copyright (c) 2016-2021, QIIME 2 development team.
 #
 # Distributed under the terms of the Modified BSD License.
 #
@@ -91,6 +91,10 @@ class QIIME2Type(click.ParamType):
                 self.fail('%r is already a directory.' % (value,), param, ctx)
 
         directory = os.path.dirname(value)
+        if directory and not os.path.exists(directory):
+            self.fail('Directory %r does not exist, cannot save %r into it.'
+                      % (directory, os.path.basename(value)), param, ctx)
+
         if not is_writable_dir(directory):
             self.fail('%r is not a writable directory, cannot write output'
                       ' to it.' % (directory,), param, ctx)
@@ -101,6 +105,7 @@ class QIIME2Type(click.ParamType):
         import tempfile
         import qiime2.sdk
         import qiime2.sdk.util
+        import q2cli.util
 
         try:
             try:
@@ -120,8 +125,13 @@ class QIIME2Type(click.ParamType):
                     self.fail(f'{value!r} is not a valid filepath', param, ctx)
                 else:
                     raise ControlFlowException
-            except Exception:
-                raise ControlFlowException
+            except Exception as e:
+                # If we made it here, QIIME 2 was confident that the thing we
+                # are trying to load is a QIIME 2 Result, however, we have run
+                # into some kind of catastrophic error.
+                header = ('There was a problem loading %s as a '
+                          'QIIME 2 Result:' % value)
+                q2cli.util.exit_with_error(e, header=header)
         except ControlFlowException:
             self.fail('%r is not a QIIME 2 Artifact (.qza)' % value, param,
                       ctx)
@@ -181,7 +191,7 @@ class QIIME2Type(click.ParamType):
                 metadata_column = metadata.get_column(column)
             except Exception:
                 self.fail("There was an issue with retrieving column %r from "
-                          "the metadata:" % column)
+                          "the metadata." % column)
 
             if metadata_column not in self.type_expr:
                 self.fail("Metadata column is of type %r, but expected %r."
@@ -192,7 +202,14 @@ class QIIME2Type(click.ParamType):
     def _convert_primitive(self, value, param, ctx):
         import qiime2.sdk.util
 
-        return qiime2.sdk.util.parse_primitive(self.type_expr, value)
+        try:
+            return qiime2.sdk.util.parse_primitive(self.type_expr, value)
+        except ValueError:
+            expr = qiime2.sdk.util.type_from_ast(self.type_ast)
+            raise click.BadParameter(
+                'received <%s> as an argument, which is incompatible'
+                ' with parameter type: %r' % (value, expr),
+                ctx=ctx)
 
     @property
     def name(self):

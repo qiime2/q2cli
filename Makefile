@@ -10,7 +10,7 @@ lint:
 	flake8
 
 test: all
-	QIIMETEST= nosetests
+	QIIMETEST= pytest
 
 install: all
 	$(PYTHON) setup.py install && \

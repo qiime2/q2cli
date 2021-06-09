@@ -1,5 +1,5 @@
 # ----------------------------------------------------------------------------
-# Copyright (c) 2016-2019, QIIME 2 development team.
+# Copyright (c) 2016-2021, QIIME 2 development team.
 #
 # Distributed under the terms of the Modified BSD License.
 #
@@ -265,12 +265,15 @@ class DeploymentCache:
 
     def _get_action_state(self, action):
         import itertools
+        from q2cli.core.usage import cache_examples
 
         state = {
             'id': action.id,
             'name': action.name,
             'description': action.description,
-            'signature': []
+            'signature': [],
+            'deprecated': action.deprecated,
+            'examples': cache_examples(action)
         }
 
         sig = action.signature
@@ -341,7 +344,8 @@ class DeploymentCache:
         type_repr = repr(type)
         style = qiime2.sdk.util.interrogate_collection_type(type)
 
-        if not qiime2.sdk.util.is_semantic_type(type):
+        if not qiime2.sdk.util.is_semantic_type(type) and \
+                not qiime2.sdk.util.is_union(type):
             if style.style is None:
                 if style.expr.predicate is not None:
                     type_repr = repr(style.expr.predicate)
@@ -379,6 +383,8 @@ class DeploymentCache:
         elif qiime2.sdk.util.is_metadata_type(type):
             metavar = 'METADATA'
         elif style.style is not None and style.style != 'simple':
+            metavar = 'VALUE'
+        elif qiime2.sdk.util.is_union(type):
             metavar = 'VALUE'
         else:
             metavar = name_to_var[inner_type.name]

@@ -18,11 +18,13 @@ requirements:
   host:
     - python  {{ python }}
     - setuptools
+    # q2cli leverages pytest functionality
+    - pytest
 
   run:
     - python  {{ python }}
     - pip
-    - click
+    - click >=7,<8
     - qiime2 {{ release }}.*
 
 test:

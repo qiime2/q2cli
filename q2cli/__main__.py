@@ -1,5 +1,5 @@
 # ----------------------------------------------------------------------------
-# Copyright (c) 2016-2019, QIIME 2 development team.
+# Copyright (c) 2016-2021, QIIME 2 development team.
 #
 # Distributed under the terms of the Modified BSD License.
 #
@@ -25,7 +25,10 @@ To enable tab completion in Bash, run the following command or add it to your \
 To enable tab completion in ZSH, run the following commands or add them to \
 your .zshrc:
 
-    autoload bashcompinit && bashcompinit && source tab-qiime
+\b
+    autoload -Uz compinit && compinit
+    autoload bashcompinit && bashcompinit
+    source tab-qiime
 
 """
 

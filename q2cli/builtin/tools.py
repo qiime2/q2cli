@@ -1,5 +1,5 @@
 # ----------------------------------------------------------------------------
-# Copyright (c) 2016-2019, QIIME 2 development team.
+# Copyright (c) 2016-2021, QIIME 2 development team.
 #
 # Distributed under the terms of the Modified BSD License.
 #
@@ -46,6 +46,7 @@ def export_data(input_path, output_path, output_format):
     import qiime2.util
     import qiime2.sdk
     import distutils
+    from q2cli.core.config import CONFIG
     result = qiime2.sdk.Result.load(input_path)
     if output_format is None:
         if isinstance(result, qiime2.sdk.Artifact):
@@ -56,14 +57,18 @@ def export_data(input_path, output_path, output_format):
     else:
         if isinstance(result, qiime2.sdk.Visualization):
             error = '--output-format cannot be used with visualizations'
-            click.secho(error, fg='red', bold=True, err=True)
+            click.echo(CONFIG.cfg_style('error', error), err=True)
             click.get_current_context().exit(1)
         else:
             source = result.view(qiime2.sdk.parse_format(output_format))
             if os.path.isfile(str(source)):
                 if os.path.isfile(output_path):
                     os.remove(output_path)
-                else:
+                elif os.path.dirname(output_path) == '':
+                    # This allows the user to pass a filename as a path if they
+                    # want their output in the current working directory
+                    output_path = os.path.join('.', output_path)
+                if os.path.dirname(output_path) != '':
                     # create directory (recursively) if it doesn't exist yet
                     os.makedirs(os.path.dirname(output_path), exist_ok=True)
                 qiime2.util.duplicate(str(source), output_path)
@@ -73,7 +78,7 @@ def export_data(input_path, output_path, output_format):
     output_type = 'file' if os.path.isfile(output_path) else 'directory'
     success = 'Exported %s as %s to %s %s' % (input_path, output_format,
                                               output_type, output_path)
-    click.secho(success, fg='green')
+    click.echo(CONFIG.cfg_style('success', success))
 
 
 def show_importable_types(ctx, param, value):
@@ -147,6 +152,7 @@ def show_importable_formats(ctx, param, value):
 def import_data(type, input_path, output_path, input_format):
     import qiime2.sdk
     import qiime2.plugin
+    from q2cli.core.config import CONFIG
     try:
         artifact = qiime2.sdk.Artifact.import_data(type, input_path,
                                                    view_type=input_format)
@@ -163,7 +169,7 @@ def import_data(type, input_path, output_path, input_format):
     success = 'Imported %s as %s to %s' % (input_path,
                                            input_format,
                                            output_path)
-    click.secho(success, fg='green')
+    click.echo(CONFIG.cfg_style('success', success))
 
 
 @tools.command(short_help='Take a peek at a QIIME 2 Artifact or '
@@ -176,16 +182,17 @@ def import_data(type, input_path, output_path, input_format):
                 metavar=_COMBO_METAVAR)
 def peek(path):
     import qiime2.sdk
+    from q2cli.core.config import CONFIG
 
     metadata = qiime2.sdk.Result.peek(path)
 
-    click.secho("UUID:        ", fg="green", nl=False)
-    click.secho(metadata.uuid)
-    click.secho("Type:        ", fg="green", nl=False)
-    click.secho(metadata.type)
+    click.echo(CONFIG.cfg_style('type', "UUID")+":        ", nl=False)
+    click.echo(metadata.uuid)
+    click.echo(CONFIG.cfg_style('type', "Type")+":        ", nl=False)
+    click.echo(metadata.type)
     if metadata.format is not None:
-        click.secho("Data format: ", fg="green", nl=False)
-        click.secho(metadata.format)
+        click.echo(CONFIG.cfg_style('type', "Data format")+": ", nl=False)
+        click.echo(metadata.format)
 
 
 @tools.command('inspect-metadata',
@@ -309,6 +316,7 @@ def _load_metadata(path):
 def view(visualization_path, index_extension):
     # Guard headless envs from having to import anything large
     import sys
+    from q2cli.core.config import CONFIG
     if not os.getenv("DISPLAY") and sys.platform != "darwin":
         raise click.UsageError(
             'Visualization viewing is currently not supported in headless '
@@ -334,15 +342,16 @@ def view(visualization_path, index_extension):
 
     if index_extension not in index_paths:
         raise click.BadParameter(
-            'No index %s file with is present in the archive. Available index '
+            'No index %s file is present in the archive. Available index '
             'extensions are: %s' % (index_extension,
                                     ', '.join(index_paths.keys())))
     else:
         index_path = index_paths[index_extension]
         launch_status = click.launch(index_path)
         if launch_status != 0:
-            click.echo('Viewing visualization failed while attempting to '
-                       'open %s' % index_path, err=True)
+            click.echo(CONFIG.cfg_style('error', 'Viewing visualization '
+                                        'failed while attempting to open '
+                                        f'{index_path}'), err=True)
         else:
             while True:
                 click.echo(
@@ -386,6 +395,7 @@ def view(visualization_path, index_extension):
 def extract(input_path, output_path):
     import zipfile
     import qiime2.sdk
+    from q2cli.core.config import CONFIG
 
     try:
         extracted_dir = qiime2.sdk.Result.extract(input_path, output_path)
@@ -395,7 +405,7 @@ def extract(input_path, output_path):
             'Visualizations can be extracted.' % input_path)
     else:
         success = 'Extracted %s to directory %s' % (input_path, extracted_dir)
-        click.secho(success, fg='green')
+        click.echo(CONFIG.cfg_style('success', success))
 
 
 @tools.command(short_help='Validate data in a QIIME 2 Artifact.',
@@ -417,6 +427,7 @@ def extract(input_path, output_path):
               default='max', show_default=True)
 def validate(path, level):
     import qiime2.sdk
+    from q2cli.core.config import CONFIG
 
     try:
         result = qiime2.sdk.Result.load(path)
@@ -435,8 +446,8 @@ def validate(path, level):
                   'validate result %s:' % path)
         q2cli.util.exit_with_error(e, header=header)
     else:
-        click.secho('Result %s appears to be valid at level=%s.'
-                    % (path, level), fg="green")
+        click.echo(CONFIG.cfg_style('success', f'Result {path} appears to be '
+                                    f'valid at level={level}.'))
 
 
 @tools.command(short_help='Print citations for a QIIME 2 result.',
@@ -449,6 +460,7 @@ def validate(path, level):
 def citations(path):
     import qiime2.sdk
     import io
+    from q2cli.core.config import CONFIG
     ctx = click.get_current_context()
 
     try:
@@ -463,5 +475,6 @@ def citations(path):
             click.echo(fh.getvalue(), nl=False)
         ctx.exit(0)
     else:
-        click.secho('No citations found.', fg='yellow', err=True)
+        click.echo(CONFIG.cfg_style('problem', 'No citations found.'),
+                   err=True)
         ctx.exit(1)
