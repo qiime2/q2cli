@@ -195,7 +195,40 @@ def peek(path):
         click.echo(metadata.format)
 
 
-@tools.command('inspect-metadata',
+@tools.command(name='cast-metadata',
+               short_help='Designate metadata columns as numerical'
+                          ' or categorical.',
+               help='Designating the column types within a metadata file.'
+                    ' Supported column types are numerical or categorical.'
+                    ' Providing multiple file paths to this command will merge'
+                    ' the metadata.',
+               cls=ToolCommand)
+#TODO: Figure out how to allow NAME:TYPE as the input format for this cmd
+#TODO: Figure out how to allow for multiple cast flags to be included as a
+# list without having to include --cast for each flag
+@click.option('--cast', required=True,
+              help='Cast flags for each metadata column that should be specified'
+              ' as either categorical or numeric column types.')
+@click.option('--ignore-extra-cast-flags', default=True,
+              help='Cast flags provided inline that do not exist within the'
+              ' metadata provided will be ignored. Enabled by default.'
+              ' If this flag is disabled and extra flags are provided,'
+              ' an error will be raised.')
+@click.option('--ignore-missing-cast-flags', default=True,
+              help='Cast flags not provided inline that exist within the'
+              ' metadata provided will be ignored. Enabled by default.'
+              ' If this flag is disabled and not all column flags'
+              ' are provided, an error will be raised.')
+@click.option('--output-file', required=True,
+              type=click.Path(exists=False, file_okay=True, dir_okay=True,
+                              writable=True),
+              help='Path to file or directory where the'
+              ' modified metdata should be written to.')
+# def cast_metadata(paths,):
+#     metadata = _merge_metadata(paths)
+
+
+@tools.command(name='inspect-metadata',
                short_help='Inspect columns available in metadata.',
                help='Inspect metadata files or artifacts viewable as metadata.'
                     ' Providing multiple file paths to this command will merge'
@@ -208,10 +241,7 @@ def peek(path):
                                 readable=True))
 @q2cli.util.pretty_failure(traceback=None)
 def inspect_metadata(paths, tsv, failure):
-    m = [_load_metadata(p) for p in paths]
-    metadata = m[0]
-    if m[1:]:
-        metadata = metadata.merge(*m[1:])
+    metadata = _merge_metadata(paths)
 
     # we aren't expecting errors below this point, so set traceback to default
     failure.traceback = 'stderr'
@@ -276,6 +306,12 @@ def _load_metadata(path):
                             " QIIME 2 metadata:\n%r" % (artifact.type, path))
 
     return metadata
+
+def _merge_metadata(paths):
+    m = [_load_metadata(p) for p in paths]
+    metadata = m[0]
+    if m[1:]:
+        metadata = metadata.merge(*m[1:])
 
 
 @tools.command(short_help='View a QIIME 2 Visualization.',
