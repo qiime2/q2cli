@@ -224,8 +224,10 @@ def peek(path):
                               writable=True),
               help='Path to file or directory where the'
               ' modified metdata should be written to.')
-# def cast_metadata(paths,):
-#     metadata = _merge_metadata(paths)
+def cast_metadata(paths,):
+    metadata = _merge_metadata(paths)
+
+
 @tools.command(name='inspect-metadata',
                short_help='Inspect columns available in metadata.',
                help='Inspect metadata files or artifacts viewable as metadata.'
