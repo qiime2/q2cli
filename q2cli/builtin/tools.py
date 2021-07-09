@@ -203,12 +203,12 @@ def peek(path):
                     ' Providing multiple file paths to this command will merge'
                     ' the metadata.',
                cls=ToolCommand)
-#TODO: Figure out how to allow NAME:TYPE as the input format for this cmd
-#TODO: Figure out how to allow for multiple cast flags to be included as a
+# TODO: Figure out how to allow NAME:TYPE as the input format for this cmd
+# TODO: Figure out how to allow for multiple cast flags to be included as a
 # list without having to include --cast for each flag
 @click.option('--cast', required=True,
-              help='Cast flags for each metadata column that should be specified'
-              ' as either categorical or numeric column types.')
+              help='Cast flags for each metadata column that should be'
+              ' specified as either categorical or numeric column types.')
 @click.option('--error-on-extra-cast-flags', default=True,
               help='Cast flags provided inline that do not exist within the'
               ' metadata provided will result in a raised error.'
@@ -226,8 +226,6 @@ def peek(path):
               ' modified metdata should be written to.')
 # def cast_metadata(paths,):
 #     metadata = _merge_metadata(paths)
-
-
 @tools.command(name='inspect-metadata',
                short_help='Inspect columns available in metadata.',
                help='Inspect metadata files or artifacts viewable as metadata.'
@@ -306,6 +304,7 @@ def _load_metadata(path):
                             " QIIME 2 metadata:\n%r" % (artifact.type, path))
 
     return metadata
+
 
 def _merge_metadata(paths):
     m = [_load_metadata(p) for p in paths]
