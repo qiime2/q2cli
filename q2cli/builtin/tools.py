@@ -224,7 +224,11 @@ def peek(path):
                               writable=True),
               help='Path to file or directory where the'
               ' modified metdata should be written to.')
-def cast_metadata(paths,):
+@click.argument('paths', nargs=-1, required=True, metavar='METADATA...',
+                type=click.Path(exists=True, file_okay=True, dir_okay=False,
+                                readable=True))
+def cast_metadata(paths, cast, output_file, error_on_extra_cast_flags,
+                  ignore_missing_cast_flags):
     metadata = _merge_metadata(paths)
 
 
