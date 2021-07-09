@@ -209,11 +209,11 @@ def peek(path):
 @click.option('--cast', required=True,
               help='Cast flags for each metadata column that should be specified'
               ' as either categorical or numeric column types.')
-@click.option('--ignore-extra-cast-flags', default=True,
+@click.option('--error-on-extra-cast-flags', default=True,
               help='Cast flags provided inline that do not exist within the'
-              ' metadata provided will be ignored. Enabled by default.'
-              ' If this flag is disabled and extra flags are provided,'
-              ' an error will be raised.')
+              ' metadata provided will result in a raised error.'
+              ' Enabled by default. If this flag is disabled and'
+              ' extra flags are provided, they will be ignored.')
 @click.option('--ignore-missing-cast-flags', default=True,
               help='Cast flags not provided inline that exist within the'
               ' metadata provided will be ignored. Enabled by default.'
