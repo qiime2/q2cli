@@ -203,18 +203,17 @@ def peek(path):
                     ' Providing multiple file paths to this command will merge'
                     ' the metadata.',
                cls=ToolCommand)
-# TODO: Figure out how to allow NAME:TYPE as the input format for this cmd
-# TODO: Figure out how to allow for multiple cast flags to be included as a
-# list without having to include --cast for each flag
-@click.option('--cast', required=True,
+# NOTE: # This gives a potential way to avoid multiple --cast calls but it's
+# fiddely https://stackoverflow.com/a/47730333
+@click.option('--cast', required=True, multiple=True,
               help='Cast flags for each metadata column that should be'
               ' specified as either categorical or numeric column types.')
-@click.option('--error-on-extra-cast-flags', default=True,
+@click.option('--ignore-extra', is_flag=True,
               help='Cast flags provided inline that do not exist within the'
               ' metadata provided will result in a raised error.'
               ' Enabled by default. If this flag is disabled and'
               ' extra flags are provided, they will be ignored.')
-@click.option('--ignore-missing-cast-flags', default=True,
+@click.option('--error-on-missing', is_flag=True,
               help='Cast flags not provided inline that exist within the'
               ' metadata provided will be ignored. Enabled by default.'
               ' If this flag is disabled and not all column flags'
@@ -227,9 +226,34 @@ def peek(path):
 @click.argument('paths', nargs=-1, required=True, metavar='METADATA...',
                 type=click.Path(exists=True, file_okay=True, dir_okay=False,
                                 readable=True))
-def cast_metadata(paths, cast, output_file, error_on_extra_cast_flags,
-                  ignore_missing_cast_flags):
+def cast_metadata(paths, cast, output_file, ignore_extra,
+                  error_on_missing):
     metadata = _merge_metadata(paths)
+
+    try:
+        cast_dict = {k: v for k, v in (elem.split(':') for elem in cast)}
+    except Exception as e:
+        header = \
+            'Could not parse provided cast arguments into key: value pairs.'
+        ' Please make sure all castes are of the format --cast COLUMN:TYPE'
+        q2cli.util.exit_with_error(e, header=header)
+
+    column_names = set(metadata.columns.keys())
+    cast_names = set(cast_dict.keys())
+
+    if not ignore_extra:
+        if not cast_names.issubset(column_names):
+            raise click.BadParameter(
+                message='One or more cast columns were not found within the'
+                ' metadata.',
+                param_hint='cast')
+
+    if error_on_missing:
+        if not column_names.issubset(cast_names):
+            raise click.BadParameter(
+                message='One or more columns within the metadata'
+                ' were not provided in the cast.',
+                param_hint='cast')
 
 
 @tools.command(name='inspect-metadata',
@@ -317,6 +341,8 @@ def _merge_metadata(paths):
     metadata = m[0]
     if m[1:]:
         metadata = metadata.merge(*m[1:])
+
+    return metadata
 
 
 @tools.command(short_help='View a QIIME 2 Visualization.',
