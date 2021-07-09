@@ -228,6 +228,10 @@ def peek(path):
                                 readable=True))
 def cast_metadata(paths, cast, output_file, ignore_extra,
                   error_on_missing):
+    import tempfile
+
+    import qiime2
+
     metadata = _merge_metadata(paths)
 
     try:
@@ -254,6 +258,17 @@ def cast_metadata(paths, cast, output_file, ignore_extra,
                 message='One or more columns within the metadata'
                 ' were not provided in the cast.',
                 param_hint='cast')
+
+    # Remove entries from the cast dict that are not in the metadata to avoid
+    # errors further down the road
+    for cast in cast_names:
+        if cast not in column_names:
+            cast_dict.pop(cast)
+
+    with tempfile.NamedTemporaryFile() as temp:
+        metadata.save(temp.name)
+        cast_md = qiime2.Metadata.load(temp.name, cast_dict)
+        cast_md.save(output_file)
 
 
 @tools.command(name='inspect-metadata',
