@@ -208,12 +208,12 @@ def peek(path):
 @click.option('--cast', required=True, multiple=True,
               help='Cast flags for each metadata column that should be'
               ' specified as either categorical or numeric column types.')
-@click.option('--ignore-extra', is_flag=True,
+@click.option('--error-on-extra', is_flag=True,
               help='Cast flags provided inline that do not exist within the'
               ' metadata provided will result in a raised error.'
               ' Enabled by default. If this flag is disabled and'
               ' extra flags are provided, they will be ignored.')
-@click.option('--error-on-missing', is_flag=True,
+@click.option('--ignore-missing', is_flag=True,
               help='Cast flags not provided inline that exist within the'
               ' metadata provided will be ignored. Enabled by default.'
               ' If this flag is disabled and not all column flags'
@@ -226,33 +226,32 @@ def peek(path):
 @click.argument('paths', nargs=-1, required=True, metavar='METADATA...',
                 type=click.Path(exists=True, file_okay=True, dir_okay=False,
                                 readable=True))
-def cast_metadata(paths, cast, output_file, ignore_extra,
-                  error_on_missing):
+def cast_metadata(paths, cast, output_file, error_on_extra,
+                  ignore_missing):
     import tempfile
-
     import qiime2
 
     metadata = _merge_metadata(paths)
 
     try:
         cast_dict = {k: v for k, v in (elem.split(':') for elem in cast)}
-    except Exception as e:
+    except Exception as err:
         header = \
-            'Could not parse provided cast arguments into key: value pairs.'
+            'Could not parse provided cast arguments into key:value pairs.'
         ' Please make sure all castes are of the format --cast COLUMN:TYPE'
-        q2cli.util.exit_with_error(e, header=header)
+        q2cli.util.exit_with_error(err, header=header)
 
     column_names = set(metadata.columns.keys())
     cast_names = set(cast_dict.keys())
 
-    if not ignore_extra:
+    if not error_on_extra:
         if not cast_names.issubset(column_names):
             raise click.BadParameter(
                 message='One or more cast columns were not found within the'
                 ' metadata.',
                 param_hint='cast')
 
-    if error_on_missing:
+    if ignore_missing:
         if not column_names.issubset(cast_names):
             raise click.BadParameter(
                 message='One or more columns within the metadata'
