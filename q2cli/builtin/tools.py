@@ -233,6 +233,8 @@ def cast_metadata(paths, cast, output_file, error_on_extra,
 
     metadata = _merge_metadata(paths)
 
+    # TODO: Refactor into separate function
+    # Parsing cast arguments into key:value pairs
     try:
         cast_dict = {k: v for k, v in (elem.split(':') for elem in cast)}
     except Exception as err:
@@ -244,6 +246,8 @@ def cast_metadata(paths, cast, output_file, error_on_extra,
     column_names = set(metadata.columns.keys())
     cast_names = set(cast_dict.keys())
 
+    # TODO: Refactor into separate function
+    # Cast flag handling
     if not error_on_extra:
         if not cast_names.issubset(column_names):
             raise click.BadParameter(
@@ -257,6 +261,9 @@ def cast_metadata(paths, cast, output_file, error_on_extra,
                 message='One or more columns within the metadata'
                 ' were not provided in the cast.',
                 param_hint='cast')
+
+    # TODO: Refactor into separate function
+    # Casted metadata: writing to a new file
 
     # Remove entries from the cast dict that are not in the metadata to avoid
     # errors further down the road
