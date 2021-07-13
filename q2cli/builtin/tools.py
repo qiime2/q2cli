@@ -15,6 +15,7 @@ from q2cli.click.command import ToolCommand, ToolGroupCommand
 
 
 _COMBO_METAVAR = 'ARTIFACT/VISUALIZATION'
+_COMBO_CASTVAR = 'COLUMN:TYPE'
 
 
 @click.group(help='Tools for working with QIIME 2 files.',
@@ -205,14 +206,18 @@ def peek(path):
                cls=ToolCommand)
 # NOTE: # This gives a potential way to avoid multiple --cast calls but it's
 # fiddely https://stackoverflow.com/a/47730333
-@click.option('--cast', required=True, multiple=True,
+@click.option('--cast', required=True, metavar= _COMBO_CASTVAR, multiple=True,
               help='Cast flags for each metadata column that should be'
-              ' specified as either categorical or numeric column types.')
+              ' specified as either categorical or numeric column types.'
+              ' The required formatting for this parameter is COLUMN:TYPE'
+              ' for each column and the associated data type it should'
+              ' be cast to in the resultant output.')
 @click.option('--error-on-extra', is_flag=True,
-              help='Cast flags provided inline that do not exist within the'
-              ' metadata provided will result in a raised error.'
-              ' Enabled by default. If this flag is disabled and'
-              ' extra flags are provided, they will be ignored.')
+              help='Cast flags provided inline that do not correspond to'
+              ' any of the column names within the provided metadata'
+              ' will result in a raised error. Enabled by default.'
+              ' If this flag is disabled and extra flags are provided,'
+              ' they will be ignored.')
 @click.option('--ignore-missing', is_flag=True,
               help='Cast flags not provided inline that exist within the'
               ' metadata provided will be ignored. Enabled by default.'
@@ -240,7 +245,7 @@ def cast_metadata(paths, cast, output_file, error_on_extra,
     except Exception as err:
         header = \
             'Could not parse provided cast arguments into key:value pairs.'
-        ' Please make sure all castes are of the format --cast COLUMN:TYPE'
+        ' Please make sure all cast flags are of the format --cast COLUMN:TYPE'
         q2cli.util.exit_with_error(err, header=header)
 
     column_names = set(metadata.columns.keys())
