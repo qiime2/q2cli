@@ -206,7 +206,7 @@ def peek(path):
                cls=ToolCommand)
 # NOTE: # This gives a potential way to avoid multiple --cast calls but it's
 # fiddely https://stackoverflow.com/a/47730333
-@click.option('--cast', required=True, metavar= _COMBO_CASTVAR, multiple=True,
+@click.option('--cast', required=True, metavar=_COMBO_CASTVAR, multiple=True,
               help='Cast flags for each metadata column that should be'
               ' specified as either categorical or numeric column types.'
               ' The required formatting for this parameter is COLUMN:TYPE'
