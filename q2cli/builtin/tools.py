@@ -210,13 +210,13 @@ def peek(path):
               ' The required formatting for this parameter is COLUMN:TYPE'
               ' for each column and the associated data type it should'
               ' be cast to in the resultant output.')
-@click.option('--error-on-extra/--no-error-on-extra', default=True,
+@click.option('--no-error-on-extra', is_flag=True,
               help='Cast flags provided inline that do not correspond to'
               ' any of the column names within the provided metadata'
               ' will result in a raised error. Enabled by default.'
               ' If this flag is disabled and extra flags are provided,'
               ' they will be ignored.')
-@click.option('--ignore-missing/--no-ignore-missing', default=True,
+@click.option('--no-ignore-missing', is_flag=True,
               help='Cast flags not provided inline that exist within the'
               ' metadata provided will be ignored. Enabled by default.'
               ' If this flag is disabled and not all column flags'
@@ -229,8 +229,8 @@ def peek(path):
 @click.argument('paths', nargs=-1, required=True, metavar='METADATA...',
                 type=click.Path(exists=True, file_okay=True, dir_okay=False,
                                 readable=True))
-def cast_metadata(paths, cast, output_file, error_on_extra,
-                  ignore_missing):
+def cast_metadata(paths, cast, output_file, no_error_on_extra,
+                  no_ignore_missing):
     import tempfile
     import qiime2
 
@@ -264,14 +264,14 @@ def cast_metadata(paths, cast, output_file, error_on_extra,
     column_names = set(metadata.columns.keys())
     cast_names = set(cast_dict.keys())
 
-    if error_on_extra:
+    if not no_error_on_extra:
         if not cast_names.issubset(column_names):
             raise click.BadParameter(
                 message='One or more cast columns were not found within the'
                 ' metadata.',
                 param_hint='cast')
 
-    if not ignore_missing:
+    if no_ignore_missing:
         if not column_names.issubset(cast_names):
             raise click.BadParameter(
                 message='One or more columns within the metadata'

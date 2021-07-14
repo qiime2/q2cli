@@ -106,14 +106,6 @@ class TestCastMetadata(unittest.TestCase):
         self.assertEqual('categorical',
                          casted_metadata.columns['numbers'].type)
 
-    def test_with_ignore_missing(self):
-        result = self.runner.invoke(
-            tools, ['cast-metadata', self.metadata_file, '--cast',
-                    'numbers:categorical', '--ignore-missing',
-                    '--output-file', self.output_file])
-
-        self.assertEqual(result.exit_code, 0)
-
 
 class TestInspectMetadata(unittest.TestCase):
     def setUp(self):
