@@ -204,8 +204,6 @@ def peek(path):
                     ' Providing multiple file paths to this command will merge'
                     ' the metadata.',
                cls=ToolCommand)
-# NOTE: # This gives a potential way to avoid multiple --cast calls but it's
-# fiddely https://stackoverflow.com/a/47730333
 @click.option('--cast', required=True, metavar=_COMBO_CASTVAR, multiple=True,
               help='Cast flags for each metadata column that should be'
               ' specified as either categorical or numeric column types.'
@@ -218,7 +216,7 @@ def peek(path):
               ' will result in a raised error. Enabled by default.'
               ' If this flag is disabled and extra flags are provided,'
               ' they will be ignored.')
-@click.option('--ignore-missing/--no-ignore-missing', default=True, 
+@click.option('--ignore-missing/--no-ignore-missing', default=True,
               help='Cast flags not provided inline that exist within the'
               ' metadata provided will be ignored. Enabled by default.'
               ' If this flag is disabled and not all column flags'
@@ -238,8 +236,6 @@ def cast_metadata(paths, cast, output_file, error_on_extra,
 
     metadata = _merge_metadata(paths)
 
-    # TODO: Refactor into separate function
-    # Parsing cast arguments into key:value pairs
     try:
         cast_dict = {k: v for k, v in (elem.split(':') for elem in cast)}
     except Exception as err:
@@ -251,24 +247,19 @@ def cast_metadata(paths, cast, output_file, error_on_extra,
     column_names = set(metadata.columns.keys())
     cast_names = set(cast_dict.keys())
 
-    # TODO: Refactor into separate function
-    # Cast flag handling
-    if not error_on_extra:
+    if error_on_extra:
         if not cast_names.issubset(column_names):
             raise click.BadParameter(
                 message='One or more cast columns were not found within the'
                 ' metadata.',
                 param_hint='cast')
 
-    if ignore_missing:
+    if not ignore_missing:
         if not column_names.issubset(cast_names):
             raise click.BadParameter(
                 message='One or more columns within the metadata'
                 ' were not provided in the cast.',
                 param_hint='cast')
-
-    # TODO: Refactor into separate function
-    # Casted metadata: writing to a new file
 
     # Remove entries from the cast dict that are not in the metadata to avoid
     # errors further down the road
