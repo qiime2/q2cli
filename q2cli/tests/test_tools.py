@@ -15,7 +15,7 @@ from click.testing import CliRunner
 from qiime2 import Artifact
 from qiime2.core.testing.util import get_dummy_plugin
 
-from q2cli.builtin.tools import tools
+from q2cli.builtin.tools import tools, _load_metadata
 from q2cli.commands import RootCommand
 
 
@@ -29,36 +29,88 @@ class TestCastMetadata(unittest.TestCase):
         with open(self.metadata_file, 'w') as f:
             f.write('id\tnumbers\tstrings\n0\t42\tabc\n1\t-1.5\tdef\n')
 
-    # Error on invalid --cast column:type input
-    def test_validate_input(self):
+        self.output_file = os.path.join(
+                self.tempdir, 'test_output.tsv')
 
-        # Invalid column type provided in --cast COL:TYPE
+    def test_input_invalid_column_type(self):
         result = self.runner.invoke(
             tools, ['cast-metadata', self.metadata_file, '--cast', 'id:foo',
-                    '--output-file', 'test-output.tsv'])
+                    '--output-file', self.output_file])
 
         self.assertNotEqual(result.exit_code, 0)
         self.assertIn('Invalid column type provided.', result.output)
 
-        # Duplicate columns
+    def test_input_duplicate_columns(self):
         result = self.runner.invoke(
             tools, ['cast-metadata', self.metadata_file, '--cast',
                     'id:numerical', '--cast', 'id:categorical',
-                    '--output-file', 'test-output.tsv'])
+                    '--output-file', self.output_file])
 
         self.assertNotEqual(result.exit_code, 0)
         self.assertIn('appears in cast more than once.', result.output)
 
-        # Cast that cannot be parsed into dict
+    def test_input_invalid_cast_format(self):
         result = self.runner.invoke(
             tools, ['cast-metadata', self.metadata_file, '--cast', 'id',
-                    '--output-file', 'test-output.tsv'])
+                    '--output-file', self.output_file])
 
         self.assertNotEqual(result.exit_code, 0)
         self.assertIn(
             'Could not parse provided cast arguments into unique key:value'
             ' pairs.',
             result.output)
+
+    def test_error_on_extra(self):
+        result = self.runner.invoke(
+            tools, ['cast-metadata', self.metadata_file, '--cast',
+                    'extra:numeric', '--output-file', self.output_file])
+
+        self.assertNotEqual(result.exit_code, 0)
+        self.assertIn(
+            'One or more cast columns were not found within the metadata.',
+            result.output)
+
+    def test_error_on_missing(self):
+        result = self.runner.invoke(
+            tools, ['cast-metadata', self.metadata_file, '--cast',
+                    'numbers:categorical', '--no-ignore-missing',
+                    '--output-file', self.output_file])
+
+        self.assertNotEqual(result.exit_code, 0)
+        self.assertIn(
+            'One or more columns within the metadata'
+            ' were not provided in the cast.',
+            result.output)
+
+    def test_extra_columns_removed(self):
+        result = self.runner.invoke(
+            tools, ['cast-metadata', self.metadata_file, '--cast',
+                    'numbers:categorical', '--cast', 'extra:numeric',
+                    '--no-error-on-extra', '--output-file', self.output_file])
+
+        casted_metadata = _load_metadata(self.output_file)
+        self.assertNotIn('extra', casted_metadata.columns.keys())
+
+    def test_complete_successful_run(self):
+        result = self.runner.invoke(
+            tools, ['cast-metadata', self.metadata_file, '--cast',
+                    'numbers:categorical',
+                    '--output-file', self.output_file])
+
+        input_metadata = _load_metadata(self.metadata_file)
+        self.assertEqual('numeric', input_metadata.columns['numbers'].type)
+
+        casted_metadata = _load_metadata(self.output_file)
+        self.assertEqual('categorical',
+                         casted_metadata.columns['numbers'].type)
+
+    def test_with_ignore_missing(self):
+        result = self.runner.invoke(
+            tools, ['cast-metadata', self.metadata_file, '--cast',
+                    'numbers:categorical', '--ignore-missing',
+                    '--output-file', self.output_file])
+
+        self.assertEqual(result.exit_code, 0)
 
 
 class TestInspectMetadata(unittest.TestCase):
