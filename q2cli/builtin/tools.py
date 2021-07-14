@@ -236,13 +236,30 @@ def cast_metadata(paths, cast, output_file, error_on_extra,
 
     metadata = _merge_metadata(paths)
 
+    cast_dict = {}
     try:
-        cast_dict = {k: v for k, v in (elem.split(':') for elem in cast)}
+        for casting in cast:
+            k, v = casting.split(':')
+            if k in cast_dict:
+                raise click.BadParameter(
+                    message=(f'Column name "{k}" appears in cast more than'
+                             ' once.'),
+                    param_hint='cast')
+            cast_dict[k] = v
     except Exception as err:
         header = \
-            'Could not parse provided cast arguments into key:value pairs.'
-        ' Please make sure all cast flags are of the format --cast COLUMN:TYPE'
+            ('Could not parse provided cast arguments into unique key:value'
+             ' pairs. Please make sure all cast flags are of the format --cast'
+             ' COLUMN:TYPE')
         q2cli.util.exit_with_error(err, header=header)
+
+    valid_types = qiime2.metadata.base.SUPPORTED_COLUMN_TYPES
+    types = set(cast_dict.values())
+    if not types.issubset(valid_types):
+        raise click.BadParameter(
+            message='Invalid column type provided. Please make sure all'
+            ' casted columns include a valid column type.',
+            param_hint='cast')
 
     column_names = set(metadata.columns.keys())
     cast_names = set(cast_dict.keys())

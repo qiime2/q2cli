@@ -19,6 +19,48 @@ from q2cli.builtin.tools import tools
 from q2cli.commands import RootCommand
 
 
+class TestCastMetadata(unittest.TestCase):
+    def setUp(self):
+        self.runner = CliRunner()
+        self.tempdir = tempfile.mkdtemp(prefix='qiime2-q2cli-test-temp-')
+
+        self.metadata_file = os.path.join(
+                self.tempdir, 'metadata.tsv')
+        with open(self.metadata_file, 'w') as f:
+            f.write('id\tnumbers\tstrings\n0\t42\tabc\n1\t-1.5\tdef\n')
+
+    # Error on invalid --cast column:type input
+    def test_validate_input(self):
+
+        # Invalid column type provided in --cast COL:TYPE
+        result = self.runner.invoke(
+            tools, ['cast-metadata', self.metadata_file, '--cast', 'id:foo',
+                    '--output-file', 'test-output.tsv'])
+
+        self.assertNotEqual(result.exit_code, 0)
+        self.assertIn('Invalid column type provided.', result.output)
+
+        # Duplicate columns
+        result = self.runner.invoke(
+            tools, ['cast-metadata', self.metadata_file, '--cast',
+                    'id:numerical', '--cast', 'id:categorical',
+                    '--output-file', 'test-output.tsv'])
+
+        self.assertNotEqual(result.exit_code, 0)
+        self.assertIn('appears in cast more than once.', result.output)
+
+        # Cast that cannot be parsed into dict
+        result = self.runner.invoke(
+            tools, ['cast-metadata', self.metadata_file, '--cast', 'id',
+                    '--output-file', 'test-output.tsv'])
+
+        self.assertNotEqual(result.exit_code, 0)
+        self.assertIn(
+            'Could not parse provided cast arguments into unique key:value'
+            ' pairs.',
+            result.output)
+
+
 class TestInspectMetadata(unittest.TestCase):
     def setUp(self):
         dummy_plugin = get_dummy_plugin()
