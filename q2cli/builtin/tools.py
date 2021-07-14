@@ -197,10 +197,10 @@ def peek(path):
 
 
 @tools.command(name='cast-metadata',
-               short_help='Designate metadata columns as numerical'
-                          ' or categorical.',
-               help='Designating the column types within a metadata file.'
-                    ' Supported column types are numerical or categorical.'
+               short_help='Designate metadata column types.',
+               # TODO: docs syntax for column types
+               help='Designate metadata column types.'
+                    ' Supported column types can be found here.'
                     ' Providing multiple file paths to this command will merge'
                     ' the metadata.',
                cls=ToolCommand)
@@ -212,19 +212,19 @@ def peek(path):
               ' The required formatting for this parameter is COLUMN:TYPE'
               ' for each column and the associated data type it should'
               ' be cast to in the resultant output.')
-@click.option('--error-on-extra', is_flag=True,
+@click.option('--error-on-extra/--no-error-on-extra', default=True,
               help='Cast flags provided inline that do not correspond to'
               ' any of the column names within the provided metadata'
               ' will result in a raised error. Enabled by default.'
               ' If this flag is disabled and extra flags are provided,'
               ' they will be ignored.')
-@click.option('--ignore-missing', is_flag=True,
+@click.option('--ignore-missing/--no-ignore-missing', default=True, 
               help='Cast flags not provided inline that exist within the'
               ' metadata provided will be ignored. Enabled by default.'
               ' If this flag is disabled and not all column flags'
               ' are provided, an error will be raised.')
 @click.option('--output-file', required=True,
-              type=click.Path(exists=False, file_okay=True, dir_okay=True,
+              type=click.Path(exists=False, file_okay=True, dir_okay=False,
                               writable=True),
               help='Path to file or directory where the'
               ' modified metdata should be written to.')
