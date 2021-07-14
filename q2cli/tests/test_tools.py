@@ -88,6 +88,7 @@ class TestCastMetadata(unittest.TestCase):
                     'numbers:categorical', '--cast', 'extra:numeric',
                     '--no-error-on-extra', '--output-file', self.output_file])
 
+        self.assertEqual(result.exit_code, 0)
         casted_metadata = _load_metadata(self.output_file)
         self.assertNotIn('extra', casted_metadata.columns.keys())
 
@@ -97,6 +98,7 @@ class TestCastMetadata(unittest.TestCase):
                     'numbers:categorical',
                     '--output-file', self.output_file])
 
+        self.assertEqual(result.exit_code, 0)
         input_metadata = _load_metadata(self.metadata_file)
         self.assertEqual('numeric', input_metadata.columns['numbers'].type)
 
