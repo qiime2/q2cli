@@ -198,29 +198,26 @@ def peek(path):
 
 @tools.command(name='cast-metadata',
                short_help='Designate metadata column types.',
-               # TODO: docs syntax for column types
                help='Designate metadata column types.'
-                    ' Supported column types can be found here.'
+                    ' Supported column types can be found on docs.qiime2.org.'
                     ' Providing multiple file paths to this command will merge'
                     ' the metadata.',
                cls=ToolCommand)
 @click.option('--cast', required=True, metavar=_COMBO_CASTVAR, multiple=True,
-              help='Cast flags for each metadata column that should be'
-              ' specified as either categorical or numeric column types.'
-              ' The required formatting for this parameter is COLUMN:TYPE'
-              ' for each column and the associated data type it should'
-              ' be cast to in the resultant output.')
+              help='Cast parameter for each metadata column that should'
+              ' contain a specified column type (supported types can be'
+              ' found on docs.qiime2.org). The required formatting for this'
+              ' parameter is --cast COLUMN:TYPE, repeated for each column'
+              ' and the associated column type it should be cast to in'
+              ' the resultant output.')
 @click.option('--no-error-on-extra', is_flag=True,
-              help='Cast flags provided inline that do not correspond to'
-              ' any of the column names within the provided metadata'
-              ' will result in a raised error. Enabled by default.'
-              ' If this flag is disabled and extra flags are provided,'
-              ' they will be ignored.')
+              help='Cast parameters that do not correspond to any of the'
+              ' column names within the provided metadata will result in'
+              ' a raised error unless this flag is enabled.')
 @click.option('--no-ignore-missing', is_flag=True,
-              help='Cast flags not provided inline that exist within the'
-              ' metadata provided will be ignored. Enabled by default.'
-              ' If this flag is disabled and not all column flags'
-              ' are provided, an error will be raised.')
+              help='If this flag is enabled, failing to include cast'
+              ' parameters for all columns in the provided metadata will'
+              ' result in an error.')
 @click.option('--output-file', required=True,
               type=click.Path(exists=False, file_okay=True, dir_okay=False,
                               writable=True),
