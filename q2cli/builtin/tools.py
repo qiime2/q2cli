@@ -7,7 +7,7 @@
 # ----------------------------------------------------------------------------
 
 import os
-
+import qiime2
 import click
 
 import q2cli.util
@@ -15,7 +15,7 @@ from q2cli.click.command import ToolCommand, ToolGroupCommand
 
 
 _COMBO_METAVAR = 'ARTIFACT/VISUALIZATION'
-_COMBO_CASTVAR = 'COLUMN:TYPE'
+_COLUMN_TYPES = qiime2.metadata.base.SUPPORTED_COLUMN_TYPES
 
 
 @click.group(help='Tools for working with QIIME 2 files.',
@@ -203,18 +203,18 @@ def peek(path):
                     ' Providing multiple file paths to this command will merge'
                     ' the metadata.',
                cls=ToolCommand)
-@click.option('--cast', required=True, metavar=_COMBO_CASTVAR, multiple=True,
+@click.option('--cast', required=True, metavar='COLUMN:TYPE', multiple=True,
               help='Cast parameter for each metadata column that should'
               ' contain a specified column type (supported types can be'
               ' found on docs.qiime2.org). The required formatting for this'
               ' parameter is --cast COLUMN:TYPE, repeated for each column'
               ' and the associated column type it should be cast to in'
               ' the resultant output.')
-@click.option('--no-error-on-extra', is_flag=True,
+@click.option('--ignore-extra', is_flag=True,
               help='Cast parameters that do not correspond to any of the'
               ' column names within the provided metadata will result in'
               ' a raised error unless this flag is enabled.')
-@click.option('--no-ignore-missing', is_flag=True,
+@click.option('--error-on-missing', is_flag=True,
               help='If this flag is enabled, failing to include cast'
               ' parameters for all columns in the provided metadata will'
               ' result in an error.')
@@ -226,53 +226,59 @@ def peek(path):
 @click.argument('paths', nargs=-1, required=True, metavar='METADATA...',
                 type=click.Path(exists=True, file_okay=True, dir_okay=False,
                                 readable=True))
-def cast_metadata(paths, cast, output_file, no_error_on_extra,
-                  no_ignore_missing):
+def cast_metadata(paths, cast, output_file, ignore_extra,
+                  error_on_missing):
     import tempfile
     import qiime2
+    import numpy as np
 
     metadata = _merge_metadata(paths)
 
     cast_dict = {}
     try:
         for casting in cast:
-            k, v = casting.split(':')
-            if k in cast_dict:
+            col, type = casting.split(':')
+            if col in cast_dict:
                 raise click.BadParameter(
-                    message=(f'Column name "{k}" appears in cast more than'
+                    message=(f'Column name "{col}" appears in cast more than'
                              ' once.'),
                     param_hint='cast')
-            cast_dict[k] = v
+            cast_dict[col] = type
     except Exception as err:
         header = \
-            ('Could not parse provided cast arguments into unique key:value'
+            ('Could not parse provided cast arguments into unique COLUMN:TYPE'
              ' pairs. Please make sure all cast flags are of the format --cast'
              ' COLUMN:TYPE')
         q2cli.util.exit_with_error(err, header=header)
 
-    valid_types = qiime2.metadata.base.SUPPORTED_COLUMN_TYPES
     types = set(cast_dict.values())
-    if not types.issubset(valid_types):
+    if not types.issubset(_COLUMN_TYPES):
         raise click.BadParameter(
-            message='Invalid column type provided. Please make sure all'
-            ' casted columns include a valid column type.',
+            message=('Unknown column type provided. Please make sure all'
+                     ' columns included in your cast contain a valid column'
+                     ' type. Valid types: %s' %
+                     (sorted(_COLUMN_TYPES))),
             param_hint='cast')
 
     column_names = set(metadata.columns.keys())
     cast_names = set(cast_dict.keys())
 
-    if not no_error_on_extra:
+    if not ignore_extra:
         if not cast_names.issubset(column_names):
+            cast = np.setdiff1d(cast_names, column_names)
             raise click.BadParameter(
-                message='One or more cast columns were not found within the'
-                ' metadata.',
+                message=('The following cast columns were not found'
+                         ' within the metadata: %s' %
+                         (sorted(cast))),
                 param_hint='cast')
 
-    if no_ignore_missing:
+    if error_on_missing:
         if not column_names.issubset(cast_names):
+            cols = np.setdiff1d(column_names, cast_names)
             raise click.BadParameter(
-                message='One or more columns within the metadata'
-                ' were not provided in the cast.',
+                message='The following columns within the metadata'
+                        ' were not provided in the cast: %s' %
+                        (sorted(cols)),
                 param_hint='cast')
 
     # Remove entries from the cast dict that are not in the metadata to avoid
