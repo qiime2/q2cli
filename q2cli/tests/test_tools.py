@@ -27,7 +27,11 @@ class TestCastMetadata(unittest.TestCase):
         self.metadata_file = os.path.join(
                 self.tempdir, 'metadata.tsv')
         with open(self.metadata_file, 'w') as f:
-            f.write('id\tnumbers\tstrings\n0\t42\tabc\n1\t-1.5\tdef\n')
+            f.write('id\tnumbers\tstrings\n0\t42\tabc\n1\t-1.5\tdef')
+
+        self.cast_metadata_dump = \
+            ('id\tnumbers\tstrings\n#q2:types\tcategorical\tcategorical\n0\t42'
+             '\tabc\n1\t-1.5\tdef\n')
 
         self.output_file = os.path.join(
                 self.tempdir, 'test_output.tsv')
@@ -47,7 +51,8 @@ class TestCastMetadata(unittest.TestCase):
                     '--output-file', self.output_file])
 
         self.assertNotEqual(result.exit_code, 0)
-        self.assertIn('appears in cast more than once.', result.output)
+        self.assertIn(
+            '"numbers" appears in cast more than once.', result.output)
 
     def test_input_invalid_cast_format(self):
         result = self.runner.invoke(
@@ -57,8 +62,7 @@ class TestCastMetadata(unittest.TestCase):
         self.assertNotEqual(result.exit_code, 0)
         self.assertIn(
             'Could not parse provided cast arguments into unique COLUMN:TYPE'
-            ' pairs.',
-            result.output)
+            ' pairs.', result.output)
 
     def test_error_on_extra(self):
         result = self.runner.invoke(
@@ -67,8 +71,8 @@ class TestCastMetadata(unittest.TestCase):
 
         self.assertNotEqual(result.exit_code, 0)
         self.assertIn(
-            'The following cast columns were not found within the metadata:',
-            result.output)
+            "The following cast columns were not found within the"
+            " metadata: ['extra']", result.output)
 
     def test_error_on_missing(self):
         result = self.runner.invoke(
@@ -78,8 +82,8 @@ class TestCastMetadata(unittest.TestCase):
 
         self.assertNotEqual(result.exit_code, 0)
         self.assertIn(
-            'The following columns within the metadata'
-            ' were not provided in the cast:',
+            "The following columns within the metadata"
+            " were not provided in the cast: ['strings']",
             result.output)
 
     def test_extra_columns_removed(self):
@@ -104,6 +108,14 @@ class TestCastMetadata(unittest.TestCase):
         casted_metadata = _load_metadata(self.output_file)
         self.assertEqual('categorical',
                          casted_metadata.columns['numbers'].type)
+
+    def test_write_to_stdout(self):
+        result = self.runner.invoke(
+            tools, ['cast-metadata', self.metadata_file, '--cast',
+                    'numbers:categorical'])
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertEqual(self.cast_metadata_dump, result.output)
 
 
 class TestInspectMetadata(unittest.TestCase):

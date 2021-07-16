@@ -199,26 +199,26 @@ def peek(path):
 @tools.command(name='cast-metadata',
                short_help='Designate metadata column types.',
                help='Designate metadata column types.'
-                    ' Supported column types can be found on docs.qiime2.org.'
+                    ' Supported column types are as follows: %s.'
                     ' Providing multiple file paths to this command will merge'
-                    ' the metadata.',
+                    ' the metadata.' % (sorted(_COLUMN_TYPES)),
                cls=ToolCommand)
 @click.option('--cast', required=True, metavar='COLUMN:TYPE', multiple=True,
-              help='Cast parameter for each metadata column that should'
-              ' contain a specified column type (supported types can be'
-              ' found on docs.qiime2.org). The required formatting for this'
+              help='Parameter for each metadata column that should'
+              ' be cast as a specified column type (supported types are as'
+              ' follows: %s). The required formatting for this'
               ' parameter is --cast COLUMN:TYPE, repeated for each column'
               ' and the associated column type it should be cast to in'
-              ' the resultant output.')
+              ' the output.' % (sorted(_COLUMN_TYPES)))
 @click.option('--ignore-extra', is_flag=True,
-              help='Cast parameters that do not correspond to any of the'
-              ' column names within the provided metadata will result in'
-              ' a raised error unless this flag is enabled.')
+              help='If this flag is enabled, cast parameters that do not'
+              ' correspond to any of the column names within the provided'
+              ' metadata will be ignored.')
 @click.option('--error-on-missing', is_flag=True,
               help='If this flag is enabled, failing to include cast'
               ' parameters for all columns in the provided metadata will'
               ' result in an error.')
-@click.option('--output-file', required=True,
+@click.option('--output-file', required=False,
               type=click.Path(exists=False, file_okay=True, dir_okay=False,
                               writable=True),
               help='Path to file or directory where the'
@@ -230,7 +230,6 @@ def cast_metadata(paths, cast, output_file, ignore_extra,
                   error_on_missing):
     import tempfile
     import qiime2
-    import numpy as np
 
     metadata = _merge_metadata(paths)
 
@@ -265,7 +264,7 @@ def cast_metadata(paths, cast, output_file, ignore_extra,
 
     if not ignore_extra:
         if not cast_names.issubset(column_names):
-            cast = np.setdiff1d(cast_names, column_names)
+            cast = cast_names.difference(column_names)
             raise click.BadParameter(
                 message=('The following cast columns were not found'
                          ' within the metadata: %s' %
@@ -274,7 +273,7 @@ def cast_metadata(paths, cast, output_file, ignore_extra,
 
     if error_on_missing:
         if not column_names.issubset(cast_names):
-            cols = np.setdiff1d(column_names, cast_names)
+            cols = column_names.difference(cast_names)
             raise click.BadParameter(
                 message='The following columns within the metadata'
                         ' were not provided in the cast: %s' %
@@ -290,7 +289,13 @@ def cast_metadata(paths, cast, output_file, ignore_extra,
     with tempfile.NamedTemporaryFile() as temp:
         metadata.save(temp.name)
         cast_md = qiime2.Metadata.load(temp.name, cast_dict)
+
+    if output_file:
         cast_md.save(output_file)
+    else:
+        with tempfile.NamedTemporaryFile(mode='w+') as stdout_temp:
+            cast_md.save(stdout_temp.name)
+            print(stdout_temp.read(), end='')
 
 
 @tools.command(name='inspect-metadata',
