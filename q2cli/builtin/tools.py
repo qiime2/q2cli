@@ -7,6 +7,7 @@
 # ----------------------------------------------------------------------------
 
 import os
+from sys import stdout
 import qiime2
 import click
 
@@ -230,6 +231,7 @@ def cast_metadata(paths, cast, output_file, ignore_extra,
                   error_on_missing):
     import tempfile
     import qiime2
+    import sys
 
     metadata = _merge_metadata(paths)
 
@@ -295,7 +297,8 @@ def cast_metadata(paths, cast, output_file, ignore_extra,
     else:
         with tempfile.NamedTemporaryFile(mode='w+') as stdout_temp:
             cast_md.save(stdout_temp.name)
-            print(stdout_temp.read(), end='')
+            stdout_str = stdout_temp.read()
+            sys.stdout.write(stdout_str)
 
 
 @tools.command(name='inspect-metadata',
