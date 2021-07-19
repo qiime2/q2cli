@@ -229,7 +229,6 @@ def cast_metadata(paths, cast, output_file, ignore_extra,
                   error_on_missing):
     import tempfile
     import qiime2
-    import sys
 
     metadata = _merge_metadata(paths)
 

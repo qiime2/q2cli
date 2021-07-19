@@ -31,7 +31,7 @@ class TestCastMetadata(unittest.TestCase):
 
         self.cast_metadata_dump = \
             ('id\tnumbers\tstrings\n#q2:types\tcategorical\tcategorical\n0\t42'
-             '\tabc\n1\t-1.5\tdef\n')
+             '\tabc\n1\t-1.5\tdef\n\n')
 
         self.output_file = os.path.join(
                 self.tempdir, 'test_output.tsv')
