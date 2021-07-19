@@ -7,7 +7,6 @@
 # ----------------------------------------------------------------------------
 
 import os
-from sys import stdout
 import qiime2
 import click
 
