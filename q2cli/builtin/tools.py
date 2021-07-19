@@ -219,8 +219,7 @@ def peek(path):
               ' parameters for all columns in the provided metadata will'
               ' result in an error.')
 @click.option('--output-file', required=False,
-              type=click.Path(exists=False, file_okay=True, dir_okay=False,
-                              writable=True),
+              type=click.Path(exists=False, file_okay=True, dir_okay=False),
               help='Path to file or directory where the'
               ' modified metdata should be written to.')
 @click.argument('paths', nargs=-1, required=True, metavar='METADATA...',
@@ -289,7 +288,10 @@ def cast_metadata(paths, cast, output_file, ignore_extra,
 
     with tempfile.NamedTemporaryFile() as temp:
         metadata.save(temp.name)
-        cast_md = qiime2.Metadata.load(temp.name, cast_dict)
+        try:
+            cast_md = qiime2.Metadata.load(temp.name, cast_dict)
+        except qiime2.metadata.io.MetadataFileError as e:
+            raise click.BadParameter(message=e, param_hint='cast') from e
 
     if output_file:
         cast_md.save(output_file)
@@ -297,7 +299,7 @@ def cast_metadata(paths, cast, output_file, ignore_extra,
         with tempfile.NamedTemporaryFile(mode='w+') as stdout_temp:
             cast_md.save(stdout_temp.name)
             stdout_str = stdout_temp.read()
-            sys.stdout.write(stdout_str)
+            click.echo(stdout_str)
 
 
 @tools.command(name='inspect-metadata',
