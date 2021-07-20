@@ -7,16 +7,15 @@
 # ----------------------------------------------------------------------------
 
 import os
-import qiime2
 import click
+# from qiime2.metadata.base import SUPPORTED_COLUMN_TYPES as _COLUMN_TYPES
 
 import q2cli.util
+from q2cli.core import cache
 from q2cli.click.command import ToolCommand, ToolGroupCommand
 
-
+_COLUMN_TYPES = cache.get_column_types()
 _COMBO_METAVAR = 'ARTIFACT/VISUALIZATION'
-_COLUMN_TYPES = qiime2.metadata.base.SUPPORTED_COLUMN_TYPES
-
 
 @click.group(help='Tools for working with QIIME 2 files.',
              cls=ToolGroupCommand)
@@ -229,7 +228,7 @@ def peek(path):
 def cast_metadata(paths, cast, output_file, ignore_extra,
                   error_on_missing):
     import tempfile
-    import qiime2
+    from qiime2 import Metadata, metadata
 
     metadata = _merge_metadata(paths)
 
@@ -289,8 +288,8 @@ def cast_metadata(paths, cast, output_file, ignore_extra,
     with tempfile.NamedTemporaryFile() as temp:
         metadata.save(temp.name)
         try:
-            cast_md = qiime2.Metadata.load(temp.name, cast_dict)
-        except qiime2.metadata.io.MetadataFileError as e:
+            cast_md = Metadata.load(temp.name, cast_dict)
+        except metadata.io.MetadataFileError as e:
             raise click.BadParameter(message=e, param_hint='cast') from e
 
     if output_file:

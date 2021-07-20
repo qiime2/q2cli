@@ -401,6 +401,10 @@ class DeploymentCache:
 
         return metavar
 
+    def get_column_types(self):
+        from qiime2.metadata.base import SUPPORTED_COLUMN_TYPES
+        return SUPPORTED_COLUMN_TYPES
+
 
 # Singleton. Import and use this instance as necessary.
 CACHE = DeploymentCache()
