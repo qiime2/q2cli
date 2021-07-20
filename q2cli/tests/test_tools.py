@@ -72,7 +72,7 @@ class TestCastMetadata(unittest.TestCase):
         self.assertNotEqual(result.exit_code, 0)
         self.assertIn(
             "The following cast columns were not found within the"
-            " metadata: ['extra']", result.output)
+            " metadata: extra", result.output)
 
     def test_error_on_missing(self):
         result = self.runner.invoke(
@@ -83,7 +83,7 @@ class TestCastMetadata(unittest.TestCase):
         self.assertNotEqual(result.exit_code, 0)
         self.assertIn(
             "The following columns within the metadata"
-            " were not provided in the cast: ['strings']",
+            " were not provided in the cast: strings",
             result.output)
 
     def test_extra_columns_removed(self):

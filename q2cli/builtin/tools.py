@@ -201,7 +201,7 @@ def peek(path):
                help='Designate metadata column types.'
                     ' Supported column types are as follows: %s.'
                     ' Providing multiple file paths to this command will merge'
-                    ' the metadata.' % (sorted(_COLUMN_TYPES)),
+                    ' the metadata.' % (', '.join(_COLUMN_TYPES)),
                cls=ToolCommand)
 @click.option('--cast', required=True, metavar='COLUMN:TYPE', multiple=True,
               help='Parameter for each metadata column that should'
@@ -209,7 +209,7 @@ def peek(path):
               ' follows: %s). The required formatting for this'
               ' parameter is --cast COLUMN:TYPE, repeated for each column'
               ' and the associated column type it should be cast to in'
-              ' the output.' % (sorted(_COLUMN_TYPES)))
+              ' the output.' % (', '.join(_COLUMN_TYPES)))
 @click.option('--ignore-extra', is_flag=True,
               help='If this flag is enabled, cast parameters that do not'
               ' correspond to any of the column names within the provided'
@@ -219,9 +219,10 @@ def peek(path):
               ' parameters for all columns in the provided metadata will'
               ' result in an error.')
 @click.option('--output-file', required=False,
-              type=click.Path(exists=False, file_okay=True, dir_okay=False),
-              help='Path to file or directory where the'
-              ' modified metdata should be written to.')
+              type=click.Path(exists=False, file_okay=True, dir_okay=False,
+                              writable=True),
+              help='Path to file where the modified metadata should be'
+              ' written to.')
 @click.argument('paths', nargs=-1, required=True, metavar='METADATA...',
                 type=click.Path(exists=True, file_okay=True, dir_okay=False,
                                 readable=True))
@@ -255,7 +256,7 @@ def cast_metadata(paths, cast, output_file, ignore_extra,
             message=('Unknown column type provided. Please make sure all'
                      ' columns included in your cast contain a valid column'
                      ' type. Valid types: %s' %
-                     (sorted(_COLUMN_TYPES))),
+                     (', '.join(_COLUMN_TYPES))),
             param_hint='cast')
 
     column_names = set(metadata.columns.keys())
@@ -267,7 +268,7 @@ def cast_metadata(paths, cast, output_file, ignore_extra,
             raise click.BadParameter(
                 message=('The following cast columns were not found'
                          ' within the metadata: %s' %
-                         (sorted(cast))),
+                         (', '.join(cast))),
                 param_hint='cast')
 
     if error_on_missing:
@@ -276,7 +277,7 @@ def cast_metadata(paths, cast, output_file, ignore_extra,
             raise click.BadParameter(
                 message='The following columns within the metadata'
                         ' were not provided in the cast: %s' %
-                        (sorted(cols)),
+                        (', '.join(cols)),
                 param_hint='cast')
 
     # Remove entries from the cast dict that are not in the metadata to avoid
