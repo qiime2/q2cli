@@ -10,10 +10,10 @@ import os
 import click
 
 import q2cli.util
-import q2cli.core.cache
+from q2cli.core.cache import CACHE
 from q2cli.click.command import ToolCommand, ToolGroupCommand
 
-_COLUMN_TYPES = q2cli.core.cache.CACHE.column_types
+_COLUMN_TYPES = CACHE.column_types
 _COMBO_METAVAR = 'ARTIFACT/VISUALIZATION'
 
 
