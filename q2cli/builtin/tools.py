@@ -16,6 +16,7 @@ from q2cli.click.command import ToolCommand, ToolGroupCommand
 _COLUMN_TYPES = q2cli.core.cache.CACHE.column_types
 _COMBO_METAVAR = 'ARTIFACT/VISUALIZATION'
 
+
 @click.group(help='Tools for working with QIIME 2 files.',
              cls=ToolGroupCommand)
 def tools():
@@ -229,7 +230,7 @@ def cast_metadata(paths, cast, output_file, ignore_extra,
     import tempfile
     from qiime2 import Metadata, metadata
 
-    metadata = _merge_metadata(paths)
+    md = _merge_metadata(paths)
 
     cast_dict = {}
     try:
@@ -257,7 +258,7 @@ def cast_metadata(paths, cast, output_file, ignore_extra,
                      (', '.join(_COLUMN_TYPES))),
             param_hint='cast')
 
-    column_names = set(metadata.columns.keys())
+    column_names = set(md.columns.keys())
     cast_names = set(cast_dict.keys())
 
     if not ignore_extra:
@@ -285,7 +286,7 @@ def cast_metadata(paths, cast, output_file, ignore_extra,
             cast_dict.pop(cast)
 
     with tempfile.NamedTemporaryFile() as temp:
-        metadata.save(temp.name)
+        md.save(temp.name)
         try:
             cast_md = Metadata.load(temp.name, cast_dict)
         except metadata.io.MetadataFileError as e:

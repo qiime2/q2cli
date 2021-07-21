@@ -7,7 +7,6 @@
 # ----------------------------------------------------------------------------
 
 
-
 class DeploymentCache:
     """Cached CLI state for a QIIME deployment.
 
@@ -409,6 +408,7 @@ class DeploymentCache:
             metavar += '...'
 
         return metavar
+
 
 # Singleton. Import and use this instance as necessary.
 CACHE = DeploymentCache()
