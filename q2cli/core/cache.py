@@ -232,7 +232,7 @@ class DeploymentCache:
         import qiime2.sdk
 
         state = {
-            'plugins': {},
+            'plugins': {}
         }
 
         plugin_manager = qiime2.sdk.PluginManager()

@@ -14,6 +14,7 @@ import tempfile
 from click.testing import CliRunner
 from qiime2 import Artifact
 from qiime2.core.testing.util import get_dummy_plugin
+from qiime2.metadata.base import SUPPORTED_COLUMN_TYPES
 
 from q2cli.builtin.tools import tools, _load_metadata
 from q2cli.commands import RootCommand
@@ -116,6 +117,11 @@ class TestCastMetadata(unittest.TestCase):
 
         self.assertEqual(result.exit_code, 0)
         self.assertEqual(self.cast_metadata_dump, result.output)
+
+    def test_valid_column_types(self):
+        result = self.runner.invoke(tools, ['cast-metadata', '--help'])
+        for col_type in SUPPORTED_COLUMN_TYPES:
+            self.assertIn(col_type, result.output)
 
 
 class TestInspectMetadata(unittest.TestCase):
