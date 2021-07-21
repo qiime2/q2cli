@@ -7,8 +7,6 @@
 # ----------------------------------------------------------------------------
 
 
-import qiime2
-
 
 class DeploymentCache:
     """Cached CLI state for a QIIME deployment.
@@ -70,7 +68,7 @@ class DeploymentCache:
 
     @property
     def column_types(self):
-        return self._state['col-types']
+        return self._state['col_types']
 
     def refresh(self):
         """Trigger a forced refresh of the cache.
@@ -238,11 +236,14 @@ class DeploymentCache:
         """
         import qiime2.sdk
         import qiime2.metadata.base
+        import json
+
+        col_types = json.dumps(qiime2.metadata.base.SUPPORTED_COLUMN_TYPES)
 
         state = {
             'plugins': {},
             # Need to change set to JSON
-            'col-types': {qiime2.metadata.base.SUPPORTED_COLUMN_TYPES}
+            'col_types': {col_types}
         }
 
         plugin_manager = qiime2.sdk.PluginManager()
