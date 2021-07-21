@@ -65,10 +65,6 @@ class DeploymentCache:
         """Decoded JSON object representing CLI state on a per-plugin basis."""
         return self._state['plugins']
 
-    @property
-    def column_types(self):
-        return self._state['col_types']
-
     def refresh(self):
         """Trigger a forced refresh of the cache.
 
@@ -234,13 +230,9 @@ class DeploymentCache:
 
         """
         import qiime2.sdk
-        import qiime2.metadata.base
-
-        col_types = list(qiime2.metadata.base.SUPPORTED_COLUMN_TYPES)
 
         state = {
             'plugins': {},
-            'col_types': col_types
         }
 
         plugin_manager = qiime2.sdk.PluginManager()

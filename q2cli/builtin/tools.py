@@ -10,10 +10,8 @@ import os
 import click
 
 import q2cli.util
-from q2cli.core.cache import CACHE
 from q2cli.click.command import ToolCommand, ToolGroupCommand
 
-_COLUMN_TYPES = CACHE.column_types
 _COMBO_METAVAR = 'ARTIFACT/VISUALIZATION'
 
 
@@ -193,6 +191,9 @@ def peek(path):
     if metadata.format is not None:
         click.echo(CONFIG.cfg_style('type', "Data format")+": ", nl=False)
         click.echo(metadata.format)
+
+
+_COLUMN_TYPES = ['categorical', 'numeric']
 
 
 @tools.command(name='cast-metadata',

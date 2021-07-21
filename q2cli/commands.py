@@ -8,12 +8,12 @@
 
 import click
 
+from q2cli.click.command import BaseCommandMixin
+from q2cli.core.config import CONFIG
+
 import q2cli.builtin.dev
 import q2cli.builtin.info
 import q2cli.builtin.tools
-
-from q2cli.click.command import BaseCommandMixin
-from q2cli.core.config import CONFIG
 
 
 class RootCommand(BaseCommandMixin, click.MultiCommand):
