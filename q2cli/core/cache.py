@@ -69,7 +69,7 @@ class DeploymentCache:
         return self._state['plugins']
 
     @property
-    def _get_column_types(self):
+    def column_types(self):
         return self._state['col-types']
 
     def refresh(self):
@@ -241,15 +241,13 @@ class DeploymentCache:
 
         state = {
             'plugins': {},
-            'col-types': {}
+            # Need to change set to JSON
+            'col-types': {qiime2.metadata.base.SUPPORTED_COLUMN_TYPES}
         }
 
         plugin_manager = qiime2.sdk.PluginManager()
         for name, plugin in plugin_manager.plugins.items():
             state['plugins'][name] = self._get_plugin_state(plugin)
-
-        for column in qiime2.metadata.base.SUPPORTED_COLUMN_TYPES:
-            state['col-types'][column] = self._get_column_types()
 
         return state
 

@@ -8,13 +8,12 @@
 
 import os
 import click
-# from qiime2.metadata.base import SUPPORTED_COLUMN_TYPES as _COLUMN_TYPES
 
 import q2cli.util
-from q2cli.core import cache
+import q2cli.core.cache
 from q2cli.click.command import ToolCommand, ToolGroupCommand
 
-_COLUMN_TYPES = cache.get_column_types()
+_COLUMN_TYPES = q2cli.core.cache.CACHE.column_types
 _COMBO_METAVAR = 'ARTIFACT/VISUALIZATION'
 
 @click.group(help='Tools for working with QIIME 2 files.',
