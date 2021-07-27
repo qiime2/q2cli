@@ -13,7 +13,6 @@ import click
 import q2cli.util
 from q2cli.click.command import ToolCommand, ToolGroupCommand
 
-
 _COMBO_METAVAR = 'ARTIFACT/VISUALIZATION'
 
 
@@ -195,7 +194,127 @@ def peek(path):
         click.echo(metadata.format)
 
 
-@tools.command('inspect-metadata',
+_COLUMN_TYPES = ['categorical', 'numeric']
+
+
+@tools.command(name='cast-metadata',
+               short_help='Designate metadata column types.',
+               help='Designate metadata column types.'
+                    ' Supported column types are as follows: %s.'
+                    ' Providing multiple file paths to this command will merge'
+                    ' the metadata.' % (', '.join(_COLUMN_TYPES)),
+               cls=ToolCommand)
+@click.option('--cast', required=True, metavar='COLUMN:TYPE', multiple=True,
+              help='Parameter for each metadata column that should'
+              ' be cast as a specified column type (supported types are as'
+              ' follows: %s). The required formatting for this'
+              ' parameter is --cast COLUMN:TYPE, repeated for each column'
+              ' and the associated column type it should be cast to in'
+              ' the output.' % (', '.join(_COLUMN_TYPES)))
+@click.option('--ignore-extra', is_flag=True,
+              help='If this flag is enabled, cast parameters that do not'
+              ' correspond to any of the column names within the provided'
+              ' metadata will be ignored.')
+@click.option('--error-on-missing', is_flag=True,
+              help='If this flag is enabled, failing to include cast'
+              ' parameters for all columns in the provided metadata will'
+              ' result in an error.')
+@click.option('--output-file', required=False,
+              type=click.Path(exists=False, file_okay=True, dir_okay=False,
+                              writable=True),
+              help='Path to file where the modified metadata should be'
+              ' written to.')
+@click.argument('paths', nargs=-1, required=True, metavar='METADATA...',
+                type=click.Path(exists=True, file_okay=True, dir_okay=False,
+                                readable=True))
+def cast_metadata(paths, cast, output_file, ignore_extra,
+                  error_on_missing):
+    import tempfile
+    from qiime2 import Metadata, metadata
+
+    md = _merge_metadata(paths)
+
+    cast_dict = {}
+    try:
+        for casting in cast:
+            if ':' not in casting:
+                raise click.BadParameter(
+                    message=f'Missing `:` in --cast {casting}',
+                    param_hint='cast')
+            splitter = casting.split(':')
+            if len(splitter) != 2:
+                raise click.BadParameter(
+                    message=f'Incorrect number of fields in --cast {casting}.'
+                            f' Observed {len(splitter)}'
+                            f' {tuple(splitter)}, expected 2.',
+                    param_hint='cast')
+            col, type_ = splitter
+            if col in cast_dict:
+                raise click.BadParameter(
+                    message=(f'Column name "{col}" appears in cast more than'
+                             ' once.'),
+                    param_hint='cast')
+            cast_dict[col] = type_
+    except Exception as err:
+        header = \
+            ('Could not parse provided cast arguments into unique COLUMN:TYPE'
+             ' pairs. Please make sure all cast flags are of the format --cast'
+             ' COLUMN:TYPE')
+        q2cli.util.exit_with_error(err, header=header)
+
+    types = set(cast_dict.values())
+    if not types.issubset(_COLUMN_TYPES):
+        raise click.BadParameter(
+            message=('Unknown column type provided. Please make sure all'
+                     ' columns included in your cast contain a valid column'
+                     ' type. Valid types: %s' %
+                     (', '.join(_COLUMN_TYPES))),
+            param_hint='cast')
+
+    column_names = set(md.columns.keys())
+    cast_names = set(cast_dict.keys())
+
+    if not ignore_extra:
+        if not cast_names.issubset(column_names):
+            cast = cast_names.difference(column_names)
+            raise click.BadParameter(
+                message=('The following cast columns were not found'
+                         ' within the metadata: %s' %
+                         (', '.join(cast))),
+                param_hint='cast')
+
+    if error_on_missing:
+        if not column_names.issubset(cast_names):
+            cols = column_names.difference(cast_names)
+            raise click.BadParameter(
+                message='The following columns within the metadata'
+                        ' were not provided in the cast: %s' %
+                        (', '.join(cols)),
+                param_hint='cast')
+
+    # Remove entries from the cast dict that are not in the metadata to avoid
+    # errors further down the road
+    for cast in cast_names:
+        if cast not in column_names:
+            cast_dict.pop(cast)
+
+    with tempfile.NamedTemporaryFile() as temp:
+        md.save(temp.name)
+        try:
+            cast_md = Metadata.load(temp.name, cast_dict)
+        except metadata.io.MetadataFileError as e:
+            raise click.BadParameter(message=e, param_hint='cast') from e
+
+    if output_file:
+        cast_md.save(output_file)
+    else:
+        with tempfile.NamedTemporaryFile(mode='w+') as stdout_temp:
+            cast_md.save(stdout_temp.name)
+            stdout_str = stdout_temp.read()
+            click.echo(stdout_str)
+
+
+@tools.command(name='inspect-metadata',
                short_help='Inspect columns available in metadata.',
                help='Inspect metadata files or artifacts viewable as metadata.'
                     ' Providing multiple file paths to this command will merge'
@@ -208,10 +327,7 @@ def peek(path):
                                 readable=True))
 @q2cli.util.pretty_failure(traceback=None)
 def inspect_metadata(paths, tsv, failure):
-    m = [_load_metadata(p) for p in paths]
-    metadata = m[0]
-    if m[1:]:
-        metadata = metadata.merge(*m[1:])
+    metadata = _merge_metadata(paths)
 
     # we aren't expecting errors below this point, so set traceback to default
     failure.traceback = 'stderr'
@@ -274,6 +390,15 @@ def _load_metadata(path):
         else:
             raise Exception("Artifacts with type %r cannot be viewed as"
                             " QIIME 2 metadata:\n%r" % (artifact.type, path))
+
+    return metadata
+
+
+def _merge_metadata(paths):
+    m = [_load_metadata(p) for p in paths]
+    metadata = m[0]
+    if m[1:]:
+        metadata = metadata.merge(*m[1:])
 
     return metadata
 
