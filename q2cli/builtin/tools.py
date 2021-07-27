@@ -237,13 +237,24 @@ def cast_metadata(paths, cast, output_file, ignore_extra,
     cast_dict = {}
     try:
         for casting in cast:
-            col, type = casting.split(':')
+            if ':' not in casting:
+                raise click.BadParameter(
+                    message=f'Missing `:` in --cast {casting}',
+                    param_hint='cast')
+            splitter = casting.split(':')
+            if len(splitter) != 2:
+                raise click.BadParameter(
+                    message=f'Incorrect number of fields in --cast {casting}.'
+                            f' Observed {len(splitter)}'
+                            f' {tuple(splitter)}, expected 2.',
+                    param_hint='cast')
+            col, type_ = splitter
             if col in cast_dict:
                 raise click.BadParameter(
                     message=(f'Column name "{col}" appears in cast more than'
                              ' once.'),
                     param_hint='cast')
-            cast_dict[col] = type
+            cast_dict[col] = type_
     except Exception as err:
         header = \
             ('Could not parse provided cast arguments into unique COLUMN:TYPE'

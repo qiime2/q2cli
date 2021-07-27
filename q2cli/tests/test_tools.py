@@ -55,15 +55,23 @@ class TestCastMetadata(unittest.TestCase):
         self.assertIn(
             '"numbers" appears in cast more than once.', result.output)
 
-    def test_input_invalid_cast_format(self):
+    def test_input_invalid_cast_format_missing_colon(self):
         result = self.runner.invoke(
             tools, ['cast-metadata', self.metadata_file, '--cast', 'numbers',
                     '--output-file', self.output_file])
 
         self.assertNotEqual(result.exit_code, 0)
-        self.assertIn(
-            'Could not parse provided cast arguments into unique COLUMN:TYPE'
-            ' pairs.', result.output)
+        self.assertIn('Missing `:` in --cast numbers', result.output)
+
+    def test_input_invalid_cast_format_extra_colon(self):
+        result = self.runner.invoke(
+            tools, ['cast-metadata', self.metadata_file, '--cast', 'numbers::',
+                    '--output-file', self.output_file])
+
+        self.assertNotEqual(result.exit_code, 0)
+        self.assertIn('Incorrect number of fields in --cast numbers::',
+                      result.output)
+        self.assertIn('Observed 3', result.output)
 
     def test_error_on_extra(self):
         result = self.runner.invoke(
