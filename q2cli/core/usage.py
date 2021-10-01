@@ -202,6 +202,9 @@ class CLIRenderer:
     def _template_outputs(self, output_opts):
         for opt_name, (ref, qiime_type) in output_opts.items():
             opt_name = to_cli_name(opt_name)
+            # Remove the superscript characters introduced for TypeMap
+            qiime_type = qiime_type.translate(
+                str.maketrans('', '', '⁰¹²³⁴⁵⁶⁷⁸⁹'))
             qiime_type = util.parse_type(qiime_type)
             ext = 'qzv' if util.is_visualization_type(qiime_type) else 'qza'
             yield f'--o-{opt_name} {ref}.{ext}'
