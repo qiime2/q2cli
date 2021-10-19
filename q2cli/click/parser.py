@@ -59,7 +59,6 @@ class Q2Option(parser.Option):
                 state.opts[self.dest] = value
             state.order.append(self.obj)  # can't forget this
         elif self.action == 'append_maybe':
-            assert value == ()
             value = self._maybe_take(state)
             if value is None:
                 state.opts.setdefault(self.dest, []).append(self.const)

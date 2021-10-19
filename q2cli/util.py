@@ -184,21 +184,53 @@ def citations_option(get_citation_records):
                         help='Show citations and exit.')
 
 
-def usage_example_option(action):
+def example_data_option(get_plugin, action_name=None):
     import click
-    from q2cli.core.usage import examples
+    from q2cli.click.type import OutDirType
 
     def callback(ctx, param, value):
         if not value or ctx.resilient_parsing:
             return
+        else:
+            import q2cli.core.usage as usage
 
-        action = ctx.command._get_action()
+        plugin = get_plugin()
+        if action_name is not None:
+            action = plugin.actions[action_name]
+            generator = usage.write_example_data(action, value)
+        else:
+            generator = usage.write_plugin_example_data(plugin, value)
 
-        for line in examples(action):
-            click.secho(line)
+        ran = False
+        for hint, path in generator:
+            click.secho('Saved %s to: %s' % (hint, path), fg='green')
+            ran = True
 
-        ctx.exit()
+        if ran:
+            ctx.exit()
+        else:
+            click.secho('No example data found.', fg='yellow', err=True)
+            ctx.exit(1)
 
-    return click.Option(['--examples'], is_flag=True, expose_value=False,
-                        is_eager=True, callback=callback,
-                        help='Show usage examples and exit.')
+    return click.Option(['--example-data'], type=OutDirType(), is_eager=True,
+                        expose_value=False, callback=callback,
+                        help='Write example data and exit.')
+
+
+def get_plugin_manager():
+    import qiime2.sdk
+
+    try:
+        return qiime2.sdk.PluginManager.reuse_existing()
+    except qiime2.sdk.UninitializedPluginManagerError:
+        import os
+
+        if 'MYSTERY_STEW' in os.environ:
+            from q2_mystery_stew.plugin_setup import create_plugin
+
+            the_stew = create_plugin()
+            pm = qiime2.sdk.PluginManager(add_plugins=False)
+            pm.add_plugin(the_stew)
+            return pm
+
+        return qiime2.sdk.PluginManager()

@@ -144,6 +144,11 @@ class GeneratedOption(click.Option):
         else:
             super().add_to_parser(parser, ctx)
 
+    def get_default(self, ctx):
+        if self.required:
+            raise click.MissingParameter(ctx=ctx, param=self)
+        return super().get_default(ctx)
+
     def full_process_value(self, ctx, value):
         try:
             return super().full_process_value(ctx, value)

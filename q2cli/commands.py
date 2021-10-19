@@ -138,6 +138,7 @@ class PluginCommand(BaseCommandMixin, click.MultiCommand):
             click.Option(('--version',), is_flag=True, expose_value=False,
                          is_eager=True, callback=self._get_version,
                          help='Show the version and exit.'),
+            q2cli.util.example_data_option(self._get_plugin),
             q2cli.util.citations_option(self._get_citation_records)
         ]
 
@@ -148,12 +149,12 @@ class PluginCommand(BaseCommandMixin, click.MultiCommand):
         if not value or ctx.resilient_parsing:
             return
 
-        import qiime2.sdk
-        for entrypoint in qiime2.sdk.PluginManager.iter_entry_points():
-            plugin = entrypoint.load()
+        import q2cli.util
+        pm = q2cli.util.get_plugin_manager()
+        for plugin in pm.plugins.values():
             if (self._plugin['name'] == plugin.name):
-                pkg_name = entrypoint.dist.project_name
-                pkg_version = entrypoint.dist.version
+                pkg_name = plugin.project_name
+                pkg_version = plugin.version
                 break
         else:
             pkg_name = pkg_version = "[UNKNOWN]"
@@ -166,9 +167,14 @@ class PluginCommand(BaseCommandMixin, click.MultiCommand):
         ctx.exit()
 
     def _get_citation_records(self):
-        import qiime2.sdk
-        pm = qiime2.sdk.PluginManager()
+        import q2cli.util
+        pm = q2cli.util.get_plugin_manager()
         return pm.plugins[self._plugin['name']].citations
+
+    def _get_plugin(self):
+        import q2cli.util
+        pm = q2cli.util.get_plugin_manager()
+        return pm.plugins[self._plugin['name']]
 
     def list_commands(self, ctx):
         return sorted(self._action_lookup)
@@ -219,7 +225,8 @@ class ActionCommand(BaseCommandMixin, click.Command):
                               'during execution of this action. Or silence '
                               'output if execution is successful (silence is '
                               'golden).'),
-            q2cli.util.usage_example_option(self._get_action),
+            q2cli.util.example_data_option(
+                self._get_plugin, self.action['id']),
             q2cli.util.citations_option(self._get_citation_records)
         ]
 
@@ -266,10 +273,13 @@ class ActionCommand(BaseCommandMixin, click.Command):
     def _get_citation_records(self):
         return self._get_action().citations
 
+    def _get_plugin(self):
+        import q2cli.util
+        pm = q2cli.util.get_plugin_manager()
+        return pm.plugins[self.plugin['name']]
+
     def _get_action(self):
-        import qiime2.sdk
-        pm = qiime2.sdk.PluginManager()
-        plugin = pm.plugins[self.plugin['name']]
+        plugin = self._get_plugin()
         return plugin.actions[self.action['id']]
 
     def __call__(self, **kwargs):
@@ -361,3 +371,11 @@ class ActionCommand(BaseCommandMixin, click.Command):
             if item['type'] == 'output':
                 ordered.append(outputs[item['name']])
         return ordered
+
+    def format_epilog(self, ctx, formatter):
+        if self.action['epilog']:
+            with formatter.section(click.style('Examples', bold=True)):
+                for line in self.action['epilog']:
+                    formatter.write(' ' * formatter.current_indent)
+                    formatter.write(line)
+                    formatter.write('\n')

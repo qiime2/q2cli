@@ -84,9 +84,9 @@ def show_importable_types(ctx, param, value):
     if not value or ctx.resilient_parsing:
         return
 
-    import qiime2.sdk
+    import q2cli.util
 
-    importable_types = sorted(qiime2.sdk.PluginManager().importable_types,
+    importable_types = sorted(q2cli.util.get_plugin_manager().importable_types,
                               key=repr)
 
     if importable_types:
@@ -102,9 +102,10 @@ def show_importable_formats(ctx, param, value):
     if not value or ctx.resilient_parsing:
         return
 
-    import qiime2.sdk
+    import q2cli.util
 
-    importable_formats = sorted(qiime2.sdk.PluginManager().importable_formats)
+    importable_formats = sorted(
+            q2cli.util.get_plugin_manager().importable_formats)
 
     if importable_formats:
         for format in importable_formats:
