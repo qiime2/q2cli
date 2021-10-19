@@ -139,3 +139,59 @@ def reset_theme():
         click.echo('Theme reset.')
     else:
         click.echo('Theme was already default.')
+
+
+@dev.command(name='assert-output-type',
+             short_help='lorem ipsum',
+             help='lorem ipsum',
+             cls=ToolCommand)
+@click.option('--input-path', required=True, metavar='ARTIFACT/VISUALIZATION',
+              type=click.Path(exists=True, file_okay=True,
+                              dir_okay=False, readable=True),
+              help='Lorem Ipsum')
+@click.option('--qiime-type', required=True,
+              help='Lorem Ipsum')
+def assert_output_type(input_path, qiime_type):
+    import q2cli.util
+    import qiime2.sdk
+
+    q2cli.util.get_plugin_manager()
+    result = qiime2.sdk.Result.load(input_path)
+
+    if str(result.type) == qiime_type:
+        click.echo("Good to go")
+    else:
+        raise Exception("Expected %s, observed %s" % (qiime_type,
+                                                      result.type))
+
+
+@dev.command(name='assert-has-line',
+             short_help='Checks that provided line is present in input file',
+             help='Lorem Ipsum',
+             cls=ToolCommand)
+@click.option('--input-path', required=True, metavar='ARTIFACT/VISUALIZATION',
+              type=click.Path(exists=True, file_okay=True,
+                              dir_okay=False, readable=True),
+              help='Lorem Ipsum')
+@click.option('--target-path', required=True,
+              help='The path to the target file')
+@click.option('--expression', required=True,
+              help='The line to match')
+def assert_has_line(input_path, target_path, expression):
+    import re
+    import q2cli.util
+    import qiime2.sdk
+
+    q2cli.util.get_plugin_manager()
+    result = qiime2.sdk.Result.load(input_path)
+
+    hits = sorted(result._archiver.data_dir.glob(target_path))
+    if len(hits) != 1:
+        raise ValueError('Value provided for target_path (%s) did not produce '
+                         'exactly one hit: %s' % (target_path, hits))
+
+    target = hits[0].read_text()
+    match = re.search(expression, target, flags=re.MULTILINE)
+    if match is None:
+        raise AssertionError('Expression %r not found in %s.' %
+                             (expression, target_path))

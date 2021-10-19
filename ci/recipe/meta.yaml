@@ -28,6 +28,8 @@ test:
   requires:
     - qiime2 >={{ qiime2 }}
     - pytest
+    - pytest-xdist
+    - q2-mystery-stew
 
   imports:
     - q2cli

@@ -112,15 +112,20 @@ class DeploymentCache:
         elif not os.path.exists(completion_path):
             self._cache_current_state(current_requirements)
 
+        def decoder(obj):
+            if obj.get('__q2type__', None) == 'set':
+                return set(obj['value'])
+            return obj
+
         # Now that the cache is up-to-date, read it.
         try:
             with open(state_path, 'r') as fh:
-                return json.load(fh)
+                return json.load(fh, object_hook=decoder)
         except json.JSONDecodeError:
             # 5) The cached state file can't be read as JSON.
             self._cache_current_state(current_requirements)
             with open(state_path, 'r') as fh:
-                return json.load(fh)
+                return json.load(fh, object_hook=decoder)
 
     # NOTE: The private methods below are all used internally within
     # `_get_cached_state`.
@@ -200,8 +205,18 @@ class DeploymentCache:
         state = self._get_current_state()
 
         path = os.path.join(cache_dir, 'state.json')
+
+        class Q2JSONEncoder(json.JSONEncoder):
+            def default(self, obj):
+                if isinstance(obj, set):
+                    return {
+                        '__q2type__': 'set',
+                        'value': list(obj),
+                    }
+                return super().default(obj)
+
         with open(path, 'w') as fh:
-            json.dump(state, fh)
+            json.dump(state, fh, cls=Q2JSONEncoder)
 
         q2cli.core.completion.write_bash_completion_script(
             state['plugins'], q2cli.util.get_completion_path())
@@ -229,177 +244,41 @@ class DeploymentCache:
         cache needs to be refreshed.
 
         """
-        import qiime2.sdk
+        import q2cli.util
 
         state = {
             'plugins': {}
         }
 
-        plugin_manager = qiime2.sdk.PluginManager()
+        plugin_manager = q2cli.util.get_plugin_manager()
         for name, plugin in plugin_manager.plugins.items():
             state['plugins'][name] = self._get_plugin_state(plugin)
 
         return state
 
     def _get_plugin_state(self, plugin):
-        state = {
-            # TODO this conversion also happens in the framework
-            # (qiime2/plugins.py) to generate an importable module name from a
-            # plugin's `.name` attribute. Centralize this knowledge in the
-            # framework, ideally as a machine-friendly plugin ID (similar to
-            # `Action.id`).
-            'id': plugin.name.replace('-', '_'),
-            'name': plugin.name,
-            'version': plugin.version,
-            'website': plugin.website,
-            'user_support_text': plugin.user_support_text,
-            'description': plugin.description,
-            'short_description': plugin.short_description,
-            'actions': {}
-        }
+        import q2cli.core.state
 
+        state = q2cli.core.state.get_plugin_state(plugin)
         for id, action in plugin.actions.items():
-            state['actions'][id] = self._get_action_state(action)
+            state['actions'][id]['epilog'] = self._get_action_epilog(action)
 
         return state
 
-    def _get_action_state(self, action):
-        import itertools
-        from q2cli.core.usage import cache_examples
+    def _get_action_epilog(self, action):
+        import q2cli.core.usage
 
-        state = {
-            'id': action.id,
-            'name': action.name,
-            'description': action.description,
-            'signature': [],
-            'deprecated': action.deprecated,
-            'examples': cache_examples(action)
-        }
+        lines = []
+        for name, example in action.examples.items():
+            use = q2cli.core.usage.CLIUsageFormatter()
 
-        sig = action.signature
-        for name, spec in itertools.chain(sig.signature_order.items(),
-                                          sig.outputs.items()):
-            data = {'name': name, 'repr': self._get_type_repr(spec.qiime_type),
-                    'ast': spec.qiime_type.to_ast()}
+            use.comment('### example: %s\n' % (name.replace('_', ' '),))
+            example(use)
+            use.lines.append('')
 
-            if name in sig.inputs:
-                type = 'input'
-            elif name in sig.parameters:
-                type = 'parameter'
-            else:
-                type = 'output'
-            data['type'] = type
+            lines += use.lines
 
-            if spec.has_description():
-                data['description'] = spec.description
-            if spec.has_default():
-                data['default'] = spec.default
-
-            data['metavar'] = self._get_metavar(spec.qiime_type)
-            data['multiple'], data['is_bool_flag'], data['metadata'] = \
-                self._special_option_flags(spec.qiime_type)
-
-            state['signature'].append(data)
-
-        return state
-
-    def _special_option_flags(self, type):
-        import qiime2.sdk.util
-        import itertools
-
-        multiple = None
-        is_bool_flag = False
-        metadata = None
-
-        style = qiime2.sdk.util.interrogate_collection_type(type)
-
-        if style.style is not None:
-            multiple = style.view.__name__
-            if style.style == 'simple':
-                names = {style.members.name, }
-            elif style.style == 'complex':
-                names = {m.name for m in
-                         itertools.chain.from_iterable(style.members)}
-            else:  # composite or monomorphic
-                names = {v.name for v in style.members}
-
-            if 'Bool' in names:
-                is_bool_flag = True
-        else:  # not collection
-            expr = style.expr
-
-            if expr.name == 'Metadata':
-                multiple = 'list'
-                metadata = 'file'
-            elif expr.name == 'MetadataColumn':
-                metadata = 'column'
-            elif expr.name == 'Bool':
-                is_bool_flag = True
-
-        return multiple, is_bool_flag, metadata
-
-    def _get_type_repr(self, type):
-        import qiime2.sdk.util
-
-        type_repr = repr(type)
-        style = qiime2.sdk.util.interrogate_collection_type(type)
-
-        if not qiime2.sdk.util.is_semantic_type(type) and \
-                not qiime2.sdk.util.is_union(type):
-            if style.style is None:
-                if style.expr.predicate is not None:
-                    type_repr = repr(style.expr.predicate)
-                elif not type.fields:
-                    type_repr = None
-            elif style.style == 'simple':
-                if style.members.predicate is not None:
-                    type_repr = repr(style.members.predicate)
-
-        return type_repr
-
-    def _get_metavar(self, type):
-        import qiime2.sdk.util
-
-        name_to_var = {
-            'Visualization': 'VISUALIZATION',
-            'Int': 'INTEGER',
-            'Str': 'TEXT',
-            'Float': 'NUMBER',
-            'Bool': '',
-        }
-
-        style = qiime2.sdk.util.interrogate_collection_type(type)
-
-        multiple = style.style is not None
-        if style.style == 'simple':
-            inner_type = style.members
-        elif not multiple:
-            inner_type = type
-        else:
-            inner_type = None
-
-        if qiime2.sdk.util.is_semantic_type(type):
-            metavar = 'ARTIFACT'
-        elif qiime2.sdk.util.is_metadata_type(type):
-            metavar = 'METADATA'
-        elif style.style is not None and style.style != 'simple':
-            metavar = 'VALUE'
-        elif qiime2.sdk.util.is_union(type):
-            metavar = 'VALUE'
-        else:
-            metavar = name_to_var[inner_type.name]
-        if (metavar == 'NUMBER' and inner_type is not None
-                and inner_type.predicate is not None
-                and inner_type.predicate.template.start == 0
-                and inner_type.predicate.template.end == 1):
-            metavar = 'PROPORTION'
-
-        if multiple or type.name == 'Metadata':
-            if metavar != 'TEXT' and metavar != '' and metavar != 'METADATA':
-                metavar += 'S'
-            metavar += '...'
-
-        return metavar
+        return lines
 
 
 # Singleton. Import and use this instance as necessary.

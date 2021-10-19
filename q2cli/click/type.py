@@ -109,6 +109,7 @@ class QIIME2Type(click.ParamType):
 
         try:
             try:
+                q2cli.util.get_plugin_manager()
                 result = qiime2.sdk.Result.load(value)
             except OSError as e:
                 if e.errno == 28:

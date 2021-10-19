@@ -12,6 +12,9 @@ lint:
 test: all
 	QIIMETEST= pytest
 
+mystery-stew: all
+	MYSTERY_STEW= pytest -k mystery_stew -n auto
+
 install: all
 	$(PYTHON) setup.py install && \
 	mkdir -p $(PREFIX)/etc/conda/activate.d && \
