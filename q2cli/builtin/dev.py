@@ -142,15 +142,16 @@ def reset_theme():
 
 
 @dev.command(name='assert-output-type',
-             short_help='lorem ipsum',
-             help='lorem ipsum',
+             short_help='Assert a specific output data type.',
+             help='Assert a specific output data type. If enabled, the input'
+                  ' must be either Artifact or Visualization.',
              cls=ToolCommand)
 @click.option('--input-path', required=True, metavar='ARTIFACT/VISUALIZATION',
               type=click.Path(exists=True, file_okay=True,
                               dir_okay=False, readable=True),
-              help='Lorem Ipsum')
+              help='The path to the input file.')
 @click.option('--qiime-type', required=True,
-              help='Lorem Ipsum')
+              help='QIIME 2 datatype.')
 def assert_output_type(input_path, qiime_type):
     import q2cli.util
     import qiime2.sdk
@@ -166,17 +167,19 @@ def assert_output_type(input_path, qiime_type):
 
 
 @dev.command(name='assert-has-line',
-             short_help='Checks that provided line is present in input file',
-             help='Lorem Ipsum',
+             short_help='Checks that provided line is present in input file.',
+             help='Checks that provided line is present in input file.'
+                  'If enabled, a search will be performed within the input file'
+                  ' to assert that a given line or expression is present.',
              cls=ToolCommand)
 @click.option('--input-path', required=True, metavar='ARTIFACT/VISUALIZATION',
               type=click.Path(exists=True, file_okay=True,
                               dir_okay=False, readable=True),
-              help='Lorem Ipsum')
+              help='The path to the input file.')
 @click.option('--target-path', required=True,
-              help='The path to the target file')
+              help='The path to the target file.')
 @click.option('--expression', required=True,
-              help='The line to match')
+              help='The line or expression to match.')
 def assert_has_line(input_path, target_path, expression):
     import re
     import q2cli.util
