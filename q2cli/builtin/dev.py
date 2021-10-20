@@ -168,8 +168,8 @@ def assert_output_type(input_path, qiime_type):
 
 @dev.command(name='assert-has-line',
              short_help='Checks that provided line is present in input file.',
-             help='Checks that provided line is present in input file.'
-                  'If enabled, a search will be performed within the input file'
+             help='Checks that provided line is present in input file. If'
+                  ' enabled, a search will be performed within the input file'
                   ' to assert that a given line or expression is present.',
              cls=ToolCommand)
 @click.option('--input-path', required=True, metavar='ARTIFACT/VISUALIZATION',
