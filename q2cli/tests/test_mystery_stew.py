@@ -35,7 +35,6 @@ def get_tests():
     return tests
 
 
-@pytest.mark.mystery_stew
 @pytest.mark.parametrize('action,example', get_tests(), ids=_labeler)
 def test_mystery_stew(action, example):
     example_f = action.examples[example]

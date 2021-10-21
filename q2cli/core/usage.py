@@ -171,8 +171,7 @@ class CLIUsageFormatter(usage.Usage):
         # METADATA COLUMN
         if state['metadata'] == 'column':
             # md cols are special, we have pre-computed the interface-specific
-            # names and stashed them in the factory, so run execute()
-            # to get the values
+            # names and stashed them in an attr, so unpack to get the values
             fn, col_name = value
             return [(option, fn), (opt.q2_extra_opts[0], col_name)]
 
