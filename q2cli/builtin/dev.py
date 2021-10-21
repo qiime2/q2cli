@@ -174,7 +174,6 @@ def assert_type(input_path, qiime_type):
                    ' match.' % (str(input_path), str(qiime_type)))
 
 
-
 @dev.command(name='assert-has-line',
              short_help='Checks that provided expression is present in input'
                         ' file.',
@@ -199,9 +198,10 @@ def assert_has_line(input_path, target_path, expression):
     q2cli.util.get_plugin_manager()
 
     try:
-        result = qiime2.sdk.Result.load(path)
+        result = qiime2.sdk.Result.load(input_path)
     except Exception as e:
-        header = 'There was a problem loading %s as a QIIME 2 result:' % path
+        header = 'There was a problem loading %s as a QIIME 2 result:' % \
+                input_path
         q2cli.util.exit_with_error(e, header=header)
 
     hits = sorted(result._archiver.data_dir.glob(target_path))
@@ -215,4 +215,4 @@ def assert_has_line(input_path, target_path, expression):
         raise AssertionError('Expression %r not found in %s.' %
                              (expression, target_path))
 
-    echo.click('%s was found in %s.' % (str(expression), str(target_path)))
+    click.echo('%s was found in %s.' % (str(expression), str(target_path)))
