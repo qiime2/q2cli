@@ -6,226 +6,221 @@
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 
+import os
+import shlex
 import textwrap
 
-from qiime2.sdk import usage, util
-
-from q2cli.util import to_cli_name
-
-
-def is_collection(val):
-    return isinstance(val, list) or isinstance(val, set)
+import qiime2.sdk.usage as usage
+import q2cli.util as util
+from q2cli.core.state import get_action_state
+import q2cli.click.option
 
 
-class CLIUsage(usage.Usage):
-    def __init__(self):
+def write_example_data(action, output_dir):
+    for example_name, example in action.examples.items():
+        cli_name = util.to_cli_name(example_name)
+        example_path = os.path.join(output_dir, cli_name)
+
+        use = CLIUsageFormatter()
+        example(use)
+
+        for fn, val in use.get_example_data():
+            os.makedirs(example_path, exist_ok=True)
+            path = os.path.join(example_path, fn)
+            val.save(path)
+            try:
+                hint = repr(val.type)
+            except AttributeError:
+                hint = 'Metadata'
+
+            yield hint, path
+
+
+def write_plugin_example_data(plugin, output_dir):
+    for name, action in plugin.actions.items():
+        path = os.path.join(output_dir, util.to_cli_name(name))
+
+        yield from write_example_data(action, path)
+
+
+class CLIUsageVariable(usage.UsageVariable):
+    def to_interface_name(self):
+        ext = {
+            'artifact': '.qza',
+            'visualization': '.qzv',
+            'metadata': '.tsv',
+            'column': '',
+        }[self.var_type]
+
+        cli_name = util.to_cli_name(self.name)
+        fn = '%s%s' % (cli_name, ext)
+        return shlex.quote(fn)
+
+    def assert_has_line_matching(self, path, expression):
+        if self.use.enable_assertions:
+            self.use.lines.append(
+                'qiime dev assert-has-line --input-path %s --target-path %s'
+                ' --expression %s' %
+                (self.to_interface_name(), path, shlex.quote(expression)))
+
+    def assert_output_type(self, semantic_type):
+        if self.use.enable_assertions:
+            self.use.lines.append(
+                'qiime dev assert-output-type --input-path %s'
+                ' --qiime-type %s' %
+                (self.to_interface_name(), shlex.quote(str(semantic_type))))
+
+
+class CLIUsageFormatter(usage.Usage):
+    INDENT = ' ' * 2
+
+    def __init__(self, enable_assertions=False):
         super().__init__()
-        self._cache_recorder = []
+        self.lines = []
+        self.init_data = []
+        self.enable_assertions = enable_assertions
 
-    @property
-    def cache(self):
-        return self._cache_recorder
+    def get_example_data(self):
+        for val in self.init_data:
+            yield val.to_interface_name(), val.execute()
 
-    @classmethod
-    def from_cache(cls, cache):
-        instance = cls()
-        instance._cache_recorder = cache
-        return instance
+    def variable_factory(self, name, factory, var_type):
+        return CLIUsageVariable(
+            name,
+            factory,
+            var_type,
+            self,
+        )
 
-    def _add_cache_record(self, source, value):
-        record = dict(source=source, value=value)
-        self._cache_recorder.append(record)
+    def init_artifact(self, name, factory):
+        variable = super().init_artifact(name, factory)
+        self.init_data.append(variable)
+        return variable
 
-    def render(self):
-        renderer = CLIRenderer(self._cache_recorder)
-        for rendered in renderer.render():
-            yield rendered
+    def init_metadata(self, name, factory):
+        variable = super().init_metadata(name, factory)
+        self.init_data.append(variable)
+        return variable
 
-    def _init_data_(self, ref, factory):
-        return ref
+    def comment(self, text: str):
+        self.lines += ['# ' + line for line in textwrap.wrap(text, width=74)]
 
-    def _init_metadata_(self, ref, factory):
-        return ref
+    # TODO: add example for viewing qza as md
+    def merge_metadata(self, name, *variables):
+        _ = super().merge_metadata(name, *variables)
+        # rather than returning a new CLIUsageVariable, we return the
+        # collection of CLIUsageVariables that represent the constituent
+        # elements, that way `_make_param` can handle the merging for us!
+        return variables
 
-    def _init_data_collection_(self, ref, collection_type, records):
-        # All collection types are saved as a list, for ordering,
-        # and for JSON serialization.
-        return sorted([r.ref for r in records])
+    def get_metadata_column(self, name, column_name, variable):
+        _ = super().get_metadata_column(name, column_name, variable)
 
-    def _merge_metadata_(self, ref, records):
-        return sorted([r.ref for r in records])
+        # build tmp var to use to_interface_name()
+        tmp_var = self.variable_factory(column_name, lambda: None, 'column')
 
-    def _get_metadata_column_(self, column_name, record):
-        # Returns a list for JSON serialization.
-        return [record.ref, column_name]
+        def f():
+            return (variable.to_interface_name(), tmp_var.to_interface_name())
 
-    def _comment_(self, text):
-        self._add_cache_record(source='comment', value=text)
+        variable_new = self.variable_factory(name, f, 'column')
+        return variable_new
 
-    def _action_(self, action, input_opts, output_opts):
-        action_f, action_sig = action.get_action()
-        signature = self._destructure_signature(action_sig)
-        inputs, params, mds, outputs = self._destructure_opts(
-            signature, input_opts, output_opts)
+    def action(self, action, inputs, outputs):
+        variables = super().action(action, inputs, outputs)
 
-        value = dict(plugin_id=action_f.plugin_id, action_id=action_f.id,
-                     inputs=inputs, params=params, mds=mds, outputs=outputs)
-        self._add_cache_record(source='action', value=value)
-        return output_opts
+        plugin_name = util.to_cli_name(action.plugin_id)
+        action_name = util.to_cli_name(action.action_id)
+        self.lines.append("qiime %s %s \\" % (plugin_name, action_name))
 
-    def _assert_has_line_matching_(self, ref, label, path, expression):
-        # TODO: implement this method - we can model the
-        # `assert_has_line_matching` behavior that @thermokarst added
-        # to galaxy.
-        pass
+        action_f = action.get_action()
+        action_state = get_action_state(action_f)
 
-    def _destructure_signature(self, action_sig):
-        # In the future this could return a more robust spec subset,
-        # if necessary.
-        def distill_spec(spec):
-            return str(spec.qiime_type)
-
-        inputs = {k: distill_spec(v) for k, v in action_sig.inputs.items()}
-        outputs = {k: distill_spec(v) for k, v in action_sig.outputs.items()}
-        params, mds = {}, {}
-
-        for param_name, spec in action_sig.inputs.items():
-            inputs[param_name] = distill_spec(spec)
-
-        for param_name, spec in action_sig.parameters.items():
-            if util.is_metadata_type(spec.qiime_type):
-                mds[param_name] = distill_spec(spec)
+        output_vals = {v.name: v for v in variables}
+        input_signature, output_signature = dict(), dict()
+        for sig in action_state['signature']:
+            if sig['type'] == 'output':
+                output_signature[sig['name']] = sig
             else:
-                params[param_name] = distill_spec(spec)
+                input_signature[sig['name']] = sig
 
-        return {'inputs': inputs, 'params': params,
-                'mds': mds, 'outputs': outputs}
+        self._write_param(input_signature, inputs)
+        self._write_param(output_signature, outputs, output_vals=output_vals)
+        self.lines[-1] = self.lines[-1][:-2]  # remove trailing \
 
-    def _destructure_opts(self, signature, input_opts, output_opts):
-        inputs, params, mds, outputs = {}, {}, {}, {}
+        return variables
 
-        for opt_name, val in input_opts.items():
-            if opt_name in signature['inputs'].keys():
-                inputs[opt_name] = (val, signature['inputs'][opt_name])
-            elif opt_name in signature['params'].keys():
-                # Coerce all collection types into lists, to
-                # allow for JSON serialization.
-                if is_collection(val):
-                    val = list(val)
-                params[opt_name] = (val, signature['params'][opt_name])
-            elif opt_name in signature['mds'].keys():
-                mds[opt_name] = (val, signature['mds'][opt_name])
+    def _write_param(self, signature, params, output_vals=None):
+        for param_name, value in params.values.items():
+            param_state = signature[param_name]
+            if output_vals is not None:
+                value = output_vals[value]
+            if value is not None:
+                for opt, val in self._make_param(value, param_state):
+                    line = self.INDENT + opt
+                    if val is not None:
+                        line += ' ' + val
+                    line += ' \\'
 
-        for opt_name, val in output_opts.items():
-            outputs[opt_name] = (val, signature['outputs'][opt_name])
+                    self.lines.append(line)
 
-        return inputs, params, mds, outputs
+    def _make_param(self, value, state):
+        state = state.copy()
+        type_ = state.pop('type')
 
+        opt = q2cli.click.option.GeneratedOption(prefix=type_[0], **state)
+        option = opt.opts[0]
 
-class CLIRenderer:
-    def __init__(self, records):
-        self.cache_records = records
+        # INPUTS AND OUTPUTS
+        if type_ in ('input', 'output'):
+            if isinstance(value, CLIUsageVariable):
+                return [(option, value.to_interface_name())]
+            else:
+                if isinstance(value, set):
+                    value = sorted(value, key=lambda x: x.to_interface_name())
+                value = [v.to_interface_name() for v in value]
+                return [(option, ' '.join(value))]
 
-    def render(self):
-        if len(self.cache_records) == 0:
-            yield 'No examples have been registered for this action yet.'
-        else:
-            for record in self.cache_records:
-                yield self.dispatch(record)
+        # METADATA FILE
+        if state['metadata'] == 'file':
+            if isinstance(value, CLIUsageVariable):
+                return [(option, value.to_interface_name())]
+            else:
+                value = [v.to_interface_name() for v in value]
+                return [(option, ' '.join(value))]
 
-    def dispatch(self, record):
-        source = record['source']
+        # METADATA COLUMN
+        if state['metadata'] == 'column':
+            # md cols are special, we have pre-computed the interface-specific
+            # names and stashed them in the factory, so run execute()
+            # to get the values
+            fn, col_name = value.execute()
+            return [(option, fn), (opt.q2_extra_opts[0], col_name)]
 
-        if source == 'comment':
-            return self.template_comment(record['value'])
-        elif source == 'action':
-            return self.template_action(
-                record['value']['plugin_id'],
-                record['value']['action_id'],
-                record['value']['inputs'],
-                record['value']['params'],
-                record['value']['mds'],
-                record['value']['outputs'],
-            )
-        else:
-            raise Exception
+        # PARAMETERS
+        if type_ == 'parameter':
+            if isinstance(value, set):
+                value = [shlex.quote(str(v)) for v in value]
 
-    def template_comment(self, comment):
-        return f'# {comment}'
+                return [(option, ' '.join(sorted(value)))]
 
-    def template_action(self, plugin_id, action_id,
-                        inputs, params, mds, outputs):
-        templates = [
-            *list(self._template_inputs(inputs)),
-            *list(self._template_parameters(params)),
-            *list(self._template_metadata(mds)),
-            *list(self._template_outputs(outputs)),
-        ]
+            if isinstance(value, list):
+                return [(option, ' '.join(shlex.quote(str(v)) for v in value))]
 
-        base_cmd = to_cli_name(f'qiime {plugin_id} {action_id}')
-        action_t = self._format_templates(base_cmd, templates)
-        return action_t
+            if type(value) is bool:
+                if state['ast']['type'] == 'expression':
+                    if value:
+                        return [(option, None)]
+                    else:
+                        return [(opt.secondary_opts[0], None)]
+                else:
+                    # This is a more complicated param that can't be expressed
+                    # as a typical `--p-foo/--p-no-foo` so default to baseline
+                    # parameter handling behavior.
+                    pass
 
-    def _format_templates(self, command, templates):
-        wrapper = textwrap.TextWrapper(initial_indent=' ' * 4)
-        templates = [command] + [wrapper.fill(t) for t in templates]
-        return ' \\\n'.join(templates)
+            if type(value) is str:
+                return [(option, shlex.quote(value))]
 
-    def _template_inputs(self, input_opts):
-        for opt_name, (ref, _) in input_opts.items():
-            refs = ref if isinstance(ref, list) else [ref]
-            for ref in refs:
-                opt_name = to_cli_name(opt_name)
-                yield f'--i-{opt_name} {ref}.qza'
+            return [(option, str(value))]
 
-    def _template_parameters(self, param_opts):
-        for opt_name, (val, _) in param_opts.items():
-            vals = val if is_collection(val) else [val]
-            for val in sorted(vals):
-                opt_name = to_cli_name(opt_name)
-                yield f'--p-{opt_name} {val}'
-
-    def _template_metadata(self, md_opts):
-        for opt_name, (ref, qiime_type) in md_opts.items():
-            qiime_type = util.parse_type(qiime_type)
-            is_mdc = util.is_metadata_column_type(qiime_type)
-            # Make this into a tuple to differentiate in the following loop
-            ref = tuple(ref) if is_mdc else ref
-            refs = ref if isinstance(ref, list) else [ref]
-            for ref in refs:
-                opt_name = to_cli_name(opt_name)
-                ref, col = ref if is_mdc else (ref, None)
-                yield f'--m-{opt_name}-file {ref}.tsv'
-                if col is not None:
-                    yield f'--m-{opt_name}-column \'{col}\''
-
-    def _template_outputs(self, output_opts):
-        for opt_name, (ref, qiime_type) in output_opts.items():
-            opt_name = to_cli_name(opt_name)
-            qiime_type = util.parse_type(qiime_type)
-            ext = 'qzv' if util.is_visualization_type(qiime_type) else 'qza'
-            yield f'--o-{opt_name} {ref}.{ext}'
-
-
-def cache_examples(action):
-    all_examples = []
-    for example in action.examples:
-        use = CLIUsage()
-        header = str(example).replace('_', ' ')
-        use._comment_(f'### example: {header} ###')
-        action.examples[example](use)
-        all_examples.extend(use.cache)
-    return all_examples
-
-
-def examples(action):
-    import q2cli.core.cache
-
-    plugin_id = to_cli_name(action.plugin_id)
-    cached_plugin = q2cli.core.cache.CACHE.plugins[plugin_id]
-    cached_action = cached_plugin['actions'][action.id]
-    cached_examples = cached_action['examples']
-
-    use = CLIUsage.from_cache(cached_examples)
-    for rendered in use.render():
-        yield rendered
+        raise Exception('Something went terribly wrong!')
