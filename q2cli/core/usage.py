@@ -161,7 +161,6 @@ class CLIUsageFormatter(usage.Usage):
             else:
                 if isinstance(value, set):
                     value = sorted(value)
-                value = [v for v in value]
                 return [(option, ' '.join(value))]
 
         # METADATA FILE
