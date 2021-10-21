@@ -107,8 +107,8 @@ qiime dummy-plugin typical-pipeline \\
   --o-left-viz left-viz2.qzv \\
   --o-right-viz right-viz2.qzv
 qiime dev assert-has-line --input-path right2.qza --target-path ints.txt --expression 1
-qiime dev assert-output-type --input-path right2.qza --qiime-type IntSequence1
-qiime dev assert-output-type --input-path out-map1.qza --qiime-type Mapping"""),  # noqa: 501
+qiime dev assert-type --input-path right2.qza --qiime-type IntSequence1
+qiime dev assert-type --input-path out-map1.qza --qiime-type Mapping"""),  # noqa: 501
         ('optional_artifacts_method',
          """\
 qiime dummy-plugin optional-artifacts-method \\
