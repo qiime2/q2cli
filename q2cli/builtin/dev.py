@@ -141,43 +141,54 @@ def reset_theme():
         click.echo('Theme was already default.')
 
 
-@dev.command(name='assert-output-type',
-             short_help='Assert a specific output data type.',
-             help='Assert a specific output data type. If enabled, the input'
-                  ' must be either Artifact or Visualization.',
+@dev.command(name='assert-type',
+             short_help='Assert a specific data type.',
+             help='Checks that the QIIME2 type of a file within the Artifact'
+                  ' or Visualization matches the specified type.'
+                  ' Implemented for testing purposes.',
              cls=ToolCommand)
 @click.option('--input-path', required=True, metavar='ARTIFACT/VISUALIZATION',
               type=click.Path(exists=True, file_okay=True,
                               dir_okay=False, readable=True),
-              help='The path to the input file.')
+              help='The path to the target file within the'
+              ' Artifact/Visualization\'s `data` directory')
 @click.option('--qiime-type', required=True,
               help='QIIME 2 datatype.')
-def assert_output_type(input_path, qiime_type):
+def assert_type(input_path, qiime_type):
     import q2cli.util
     import qiime2.sdk
 
     q2cli.util.get_plugin_manager()
-    result = qiime2.sdk.Result.load(input_path)
+    try:
+        result = qiime2.sdk.Result.load(input_path)
+    except Exception as e:
+        header = 'There was a problem loading %s as a QIIME 2 result:' % \
+            input_path
+        q2cli.util.exit_with_error(e, header=header)
 
-    if str(result.type) == qiime_type:
-        click.echo("Good to go")
+    if str(result.type) != qiime_type:
+        header = 'Expected %s, observed %s' % (qiime_type, result.type)
+        q2cli.util.exit_with_error(Exception, header=header)
     else:
-        raise Exception("Expected %s, observed %s" % (qiime_type,
-                                                      result.type))
+        click.echo('The type of the target file: %s and the asserted type: %s'
+                   ' match.' % (str(input_path), str(qiime_type)))
+
 
 
 @dev.command(name='assert-has-line',
-             short_help='Checks that provided line is present in input file.',
-             help='Checks that provided line is present in input file. If'
-                  ' enabled, a search will be performed within the input file'
-                  ' to assert that a given line or expression is present.',
+             short_help='Checks that provided expression is present in input'
+                        ' file.',
+             help='Uses regex to check that the provided expression is present'
+                  ' in input file. Uses regex. Implemented for testing'
+                  ' purposes.',
              cls=ToolCommand)
 @click.option('--input-path', required=True, metavar='ARTIFACT/VISUALIZATION',
               type=click.Path(exists=True, file_okay=True,
                               dir_okay=False, readable=True),
-              help='The path to the input file.')
+              help='The file to be checked for the specified expression.')
 @click.option('--target-path', required=True,
-              help='The path to the target file.')
+              help='The path within the Artifact/Visualization\'s `data`'
+                   ' directory where the target file is located.')
 @click.option('--expression', required=True,
               help='The line or expression to match.')
 def assert_has_line(input_path, target_path, expression):
@@ -186,7 +197,12 @@ def assert_has_line(input_path, target_path, expression):
     import qiime2.sdk
 
     q2cli.util.get_plugin_manager()
-    result = qiime2.sdk.Result.load(input_path)
+
+    try:
+        result = qiime2.sdk.Result.load(path)
+    except Exception as e:
+        header = 'There was a problem loading %s as a QIIME 2 result:' % path
+        q2cli.util.exit_with_error(e, header=header)
 
     hits = sorted(result._archiver.data_dir.glob(target_path))
     if len(hits) != 1:
@@ -198,3 +214,5 @@ def assert_has_line(input_path, target_path, expression):
     if match is None:
         raise AssertionError('Expression %r not found in %s.' %
                              (expression, target_path))
+
+    echo.click('%s was found in %s.' % (str(expression), str(target_path)))

@@ -66,7 +66,7 @@ class CLIUsageVariable(usage.UsageVariable):
     def assert_output_type(self, semantic_type):
         if self.use.enable_assertions:
             self.use.lines.append(
-                'qiime dev assert-output-type --input-path %s'
+                'qiime dev assert-type --input-path %s'
                 ' --qiime-type %s' %
                 (self.to_interface_name(), shlex.quote(str(semantic_type))))
 
