@@ -128,8 +128,7 @@ class CLIUsageFormatter(usage.Usage):
         action_state = get_action_state(action_f)
 
         ins = inputs.map_variables(lambda v: v.to_interface_name())
-        tmp = {v.name: v for v in variables}
-        outs = {k: tmp[v].to_interface_name() for k, v in outputs.items()}
+        outs = {k: v.to_interface_name() for k, v in variables.items()}
         signature = {s['name']: s for s in action_state['signature']}
 
         for param_name, value in {**ins, **outs}.items():
