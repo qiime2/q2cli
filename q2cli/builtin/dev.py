@@ -143,15 +143,14 @@ def reset_theme():
 
 @dev.command(name='assert-type',
              short_help='Assert a specific data type.',
-             help='Checks that the QIIME2 type of a file within the Artifact'
-                  ' or Visualization matches the specified type.'
-                  ' Implemented for testing purposes.',
+             help='Checks that the QIIME2 type of an Artifact or '
+                  ' Visualization matches the specified type.'
+                  ' Implemented for result-testing purposes.',
              cls=ToolCommand)
 @click.option('--input-path', required=True, metavar='ARTIFACT/VISUALIZATION',
               type=click.Path(exists=True, file_okay=True,
                               dir_okay=False, readable=True),
-              help='The path to the target file within the'
-              ' Artifact/Visualization\'s `data` directory')
+              help='The path to the target Artifact/Visualization.')
 @click.option('--qiime-type', required=True,
               help='QIIME 2 datatype.')
 def assert_type(input_path, qiime_type):
@@ -178,7 +177,7 @@ def assert_type(input_path, qiime_type):
              short_help='Checks that provided expression is present in input'
                         ' file.',
              help='Uses regex to check that the provided expression is present'
-                  ' in input file. Uses regex. Implemented for testing'
+                  ' in input file. Uses regex. Implemented for result-testing'
                   ' purposes.',
              cls=ToolCommand)
 @click.option('--input-path', required=True, metavar='ARTIFACT/VISUALIZATION',
