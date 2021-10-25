@@ -10,6 +10,8 @@ import click
 
 from q2cli.click.command import ToolCommand, ToolGroupCommand
 
+_COMBO_METAVAR = 'ARTIFACT/VISUALIZATION'
+
 
 @click.group(help='Utilities for developers and advanced users.',
              cls=ToolGroupCommand)
@@ -144,14 +146,13 @@ def reset_theme():
 @dev.command(name='assert-result-type',
              short_help='Assert Result is a specific type.',
              help='Checks that the type of a Result matches an '
-                   'expected type. Intended for developer testing.',
+                  'expected type. Intended for developer testing.',
              cls=ToolCommand)
-@click.option('--input-path', required=True, metavar='ARTIFACT/VISUALIZATION',
-              type=click.Path(exists=True, file_okay=True,
-                              dir_okay=False, readable=True),
-              help='The path to the target Artifact/Visualization.')
+@click.argument('input-path', type=click.Path(exists=True, file_okay=True,
+                dir_okay=False, readable=True),
+                metavar=_COMBO_METAVAR)
 @click.option('--qiime-type', required=True,
-              help='QIIME 2 datatype.')
+              help='QIIME 2 data type.')
 def assert_type(input_path, qiime_type):
     import q2cli.util
     import qiime2.sdk
@@ -179,16 +180,15 @@ def assert_type(input_path, qiime_type):
                   ' in input file. Uses regex. Implemented for result-testing'
                   ' purposes.',
              cls=ToolCommand)
-@click.option('--input-path', required=True, metavar='ARTIFACT/VISUALIZATION',
-              type=click.Path(exists=True, file_okay=True,
-                              dir_okay=False, readable=True),
-              help='The file to be checked for the specified expression.')
+@click.argument('input-path', type=click.Path(exists=True, file_okay=True,
+                dir_okay=False, readable=True),
+                metavar=_COMBO_METAVAR)
 @click.option('--zip-data-path', required=True,
               help='The path within the zipped Result\'s data/'
                    ' directory that should be searched.')
 @click.option('--expression', required=True,
               help='The Python regular expression to match.')
-def assert_has_line(input_path, target_path, expression):
+def assert_has_line(input_path, zip_data_path, expression):
     import re
     import q2cli.util
     import qiime2.sdk
@@ -202,15 +202,26 @@ def assert_has_line(input_path, target_path, expression):
                 input_path
         q2cli.util.exit_with_error(e, header=header)
 
-    hits = sorted(result._archiver.data_dir.glob(target_path))
-    if len(hits) != 1:
-        raise ValueError('Value provided for target_path (%s) did not produce '
-                         'exactly one hit: %s' % (target_path, hits))
+    try:
+        hits = sorted(result._archiver.data_dir.glob(zip_data_path))
+        if len(hits) != 1:
+            raise ValueError('Value provided for zip_data_path (%s) did not '
+                             'produce exactly one hit: %s' %
+                             (zip_data_path, hits))
+    except Exception as e:
+        header = 'There was a problem locating the zip_data_path (%s)' % \
+                zip_data_path
+        q2cli.util.exit_with_error(e, header=header)
 
-    target = hits[0].read_text()
-    match = re.search(expression, target, flags=re.MULTILINE)
-    if match is None:
-        raise AssertionError('Expression %r not found in %s.' %
-                             (expression, target_path))
+    try:
+        target = hits[0].read_text()
+        match = re.search(expression, target, flags=re.MULTILINE)
+        if match is None:
+            raise AssertionError('Expression %r not found in %s.' %
+                                 (expression, zip_data_path))
+    except Exception as e:
+        header = 'There was a problem with the expression provided (%r)' % \
+                 expression
+        q2cli.util.exit_with_error(e, header=header)
 
-    click.echo('%s was found in %s.' % (str(expression), str(target_path)))
+    click.echo('%s was found in %s.' % (str(expression), str(zip_data_path)))
