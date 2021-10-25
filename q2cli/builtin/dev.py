@@ -177,8 +177,7 @@ def assert_result_type(input_path, qiime_type):
              short_help='Checks that provided expression is present in input'
                         ' file.',
              help='Uses regex to check that the provided expression is present'
-                  ' in input file. Uses regex. Implemented for result-testing'
-                  ' purposes.',
+                  ' in input file. Intended for developer testing.',
              cls=ToolCommand)
 @click.argument('input-path', type=click.Path(exists=True, file_okay=True,
                 dir_okay=False, readable=True),
