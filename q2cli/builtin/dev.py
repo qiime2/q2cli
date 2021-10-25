@@ -143,9 +143,8 @@ def reset_theme():
 
 @dev.command(name='assert-result-type',
              short_help='Assert Result is a specific type.',
-             help='Checks that the QIIME2 type of an Artifact or '
-                  ' Visualization matches the specified type.'
-                  ' Implemented for result-testing purposes.',
+             help='Checks that the type of a Result matches an '
+                   'expected type. Intended for developer testing.',
              cls=ToolCommand)
 @click.option('--input-path', required=True, metavar='ARTIFACT/VISUALIZATION',
               type=click.Path(exists=True, file_okay=True,
