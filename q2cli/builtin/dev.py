@@ -183,7 +183,7 @@ def assert_type(input_path, qiime_type):
               type=click.Path(exists=True, file_okay=True,
                               dir_okay=False, readable=True),
               help='The file to be checked for the specified expression.')
-@click.option('--target-path', required=True,
+@click.option('--zip-data-path', required=True,
               help='The path within the zipped Result\'s data/'
                    ' directory that should be searched.')
 @click.option('--expression', required=True,
