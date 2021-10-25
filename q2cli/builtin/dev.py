@@ -173,7 +173,7 @@ def assert_result_type(input_path, qiime_type):
                    ' match.' % (input_path, qiime_type))
 
 
-@dev.command(name='assert-has-line',
+@dev.command(name='assert-result-data',
              short_help='Checks that provided expression is present in input'
                         ' file.',
              help='Uses regex to check that the provided expression is present'
