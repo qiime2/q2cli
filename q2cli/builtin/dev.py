@@ -169,8 +169,8 @@ def assert_result_type(input_path, qiime_type):
         header = 'Expected %s, observed %s' % (qiime_type, result.type)
         q2cli.util.exit_with_error(Exception, header=header)
     else:
-        click.echo('The type of the target file: %s and the asserted type: %s'
-                   ' match.' % (str(input_path), str(qiime_type)))
+        click.echo('The type of the input file: %s and the expected type: %s'
+                   ' match.' % (input_path, qiime_type))
 
 
 @dev.command(name='assert-has-line',
