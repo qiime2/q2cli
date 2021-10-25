@@ -141,7 +141,7 @@ def reset_theme():
         click.echo('Theme was already default.')
 
 
-@dev.command(name='assert-type',
+@dev.command(name='assert-result-type',
              short_help='Assert a specific data type.',
              help='Checks that the QIIME2 type of an Artifact or '
                   ' Visualization matches the specified type.'
