@@ -153,7 +153,7 @@ def reset_theme():
                 metavar=_COMBO_METAVAR)
 @click.option('--qiime-type', required=True,
               help='QIIME 2 data type.')
-def assert_type(input_path, qiime_type):
+def assert_result_type(input_path, qiime_type):
     import q2cli.util
     import qiime2.sdk
 
