@@ -184,8 +184,8 @@ def assert_type(input_path, qiime_type):
                               dir_okay=False, readable=True),
               help='The file to be checked for the specified expression.')
 @click.option('--target-path', required=True,
-              help='The path within the Artifact/Visualization\'s `data`'
-                   ' directory where the target file is located.')
+              help='The path within the zipped Result\'s data/'
+                   ' directory that should be searched.')
 @click.option('--expression', required=True,
               help='The line or expression to match.')
 def assert_has_line(input_path, target_path, expression):
