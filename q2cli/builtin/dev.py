@@ -187,7 +187,7 @@ def assert_type(input_path, qiime_type):
               help='The path within the zipped Result\'s data/'
                    ' directory that should be searched.')
 @click.option('--expression', required=True,
-              help='The line or expression to match.')
+              help='The Python regular expression to match.')
 def assert_has_line(input_path, target_path, expression):
     import re
     import q2cli.util
