@@ -119,6 +119,7 @@ class CLIUsageFormatter(usage.Usage):
 
     def action(self, action, inputs, outputs):
         variables = super().action(action, inputs, outputs)
+        vars_dict = variables._asdict()
 
         plugin_name = util.to_cli_name(action.plugin_id)
         action_name = util.to_cli_name(action.action_id)
@@ -128,7 +129,7 @@ class CLIUsageFormatter(usage.Usage):
         action_state = get_action_state(action_f)
 
         ins = inputs.map_variables(lambda v: v.to_interface_name())
-        outs = {k: v.to_interface_name() for k, v in variables.items()}
+        outs = {k: v.to_interface_name() for k, v in vars_dict.items()}
         signature = {s['name']: s for s in action_state['signature']}
 
         for param_name, value in {**ins, **outs}.items():
