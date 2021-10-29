@@ -205,9 +205,13 @@ def assert_has_line(input_path, zip_data_path, expression):
     try:
         hits = sorted(result._archiver.data_dir.glob(zip_data_path))
         if len(hits) != 1:
+            data_dir = result._archiver.data_dir
+            all_fps = sorted(data_dir.glob('**/*'))
+            all_fps = [x.relative_to(data_dir).name for x in all_fps]
             raise ValueError('Value provided for zip_data_path (%s) did not '
-                             'produce exactly one hit: %s' %
-                             (zip_data_path, hits))
+                             'produce exactly one match.\nMatches: %s\n'
+                             'Paths observed: %s' %
+                             (zip_data_path, hits, all_fps))
     except Exception as e:
         header = 'There was a problem locating the zip_data_path (%s)' % \
                 zip_data_path
