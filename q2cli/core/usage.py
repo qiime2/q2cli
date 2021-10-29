@@ -111,8 +111,8 @@ class CLIUsageFormatter(usage.Usage):
         self.init_data.append(variable)
         return variable
 
-    def comment(self, text: str):
-        self.recorder += ['# ' + line for line in textwrap.wrap(text, width=74)]
+    def comment(self, text):
+        self.recorder += ['# ' + ln for ln in textwrap.wrap(text, width=74)]
 
     def merge_metadata(self, name, *variables):
         var = super().merge_metadata(name, *variables)
