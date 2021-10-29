@@ -166,8 +166,9 @@ def assert_result_type(input_path, qiime_type):
         q2cli.util.exit_with_error(e, header=header)
 
     if str(result.type) != qiime_type:
-        header = 'Expected %s, observed %s' % (qiime_type, result.type)
-        q2cli.util.exit_with_error(Exception, header=header)
+        msg = 'Expected %s, observed %s' % (qiime_type, result.type)
+        click.echo(CONFIG.cfg_style('error', msg), err=True)
+        click.get_current_context().exit(1)
     else:
         click.echo('The type of the input file: %s and the expected type: %s'
                    ' match.' % (input_path, qiime_type))
