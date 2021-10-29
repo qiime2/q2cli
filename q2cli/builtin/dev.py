@@ -156,6 +156,7 @@ def reset_theme():
 def assert_result_type(input_path, qiime_type):
     import q2cli.util
     import qiime2.sdk
+    from q2cli.core.config import CONFIG
 
     q2cli.util.get_plugin_manager()
     try:
@@ -193,6 +194,7 @@ def assert_has_line(input_path, zip_data_path, expression):
     import re
     import q2cli.util
     import qiime2.sdk
+    from q2cli.core.config import CONFIG
 
     q2cli.util.get_plugin_manager()
 
