@@ -161,7 +161,7 @@ def assert_result_type(input_path, qiime_type):
     try:
         result = qiime2.sdk.Result.load(input_path)
     except Exception as e:
-        header = 'There was a problem loading %s as a QIIME 2 result:' % \
+        header = 'There was a problem loading %s as a QIIME 2 Result:' % \
             input_path
         q2cli.util.exit_with_error(e, header=header)
 
