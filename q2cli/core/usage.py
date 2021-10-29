@@ -60,14 +60,14 @@ class CLIUsageVariable(usage.UsageVariable):
 
     def assert_has_line_matching(self, path, expression):
         if self.use.enable_assertions:
-            self.use.lines.append(
+            self.use.recorder.append(
                 'qiime dev assert-has-line --input-path %s --target-path %s'
                 ' --expression %s' %
                 (self.to_interface_name(), path, shlex.quote(expression)))
 
     def assert_output_type(self, semantic_type):
         if self.use.enable_assertions:
-            self.use.lines.append(
+            self.use.recorder.append(
                 'qiime dev assert-output-type --input-path %s'
                 ' --qiime-type %s' %
                 (self.to_interface_name(), shlex.quote(str(semantic_type))))
@@ -78,13 +78,20 @@ class CLIUsageFormatter(usage.Usage):
 
     def __init__(self, enable_assertions=False):
         super().__init__()
-        self.lines = []
+        self.recorder = []
         self.init_data = []
         self.enable_assertions = enable_assertions
 
     def get_example_data(self):
         for val in self.init_data:
             yield val.to_interface_name(), val.execute()
+
+    def render(self, flush=False):
+        rendered = '\n'.join(self.recorder)
+        if flush:
+            self.recorder = []
+            self.init_data = []
+        return rendered
 
     def variable_factory(self, name, factory, var_type):
         return CLIUsageVariable(
@@ -105,7 +112,7 @@ class CLIUsageFormatter(usage.Usage):
         return variable
 
     def comment(self, text: str):
-        self.lines += ['# ' + line for line in textwrap.wrap(text, width=74)]
+        self.recorder += ['# ' + line for line in textwrap.wrap(text, width=74)]
 
     def merge_metadata(self, name, *variables):
         var = super().merge_metadata(name, *variables)
@@ -123,7 +130,7 @@ class CLIUsageFormatter(usage.Usage):
 
         plugin_name = util.to_cli_name(action.plugin_id)
         action_name = util.to_cli_name(action.action_id)
-        self.lines.append("qiime %s %s \\" % (plugin_name, action_name))
+        self.recorder.append("qiime %s %s \\" % (plugin_name, action_name))
 
         action_f = action.get_action()
         action_state = get_action_state(action_f)
@@ -141,9 +148,9 @@ class CLIUsageFormatter(usage.Usage):
                         line += ' ' + val
                     line += ' \\'
 
-                    self.lines.append(line)
+                    self.recorder.append(line)
 
-        self.lines[-1] = self.lines[-1][:-2]  # remove trailing \
+        self.recorder[-1] = self.recorder[-1][:-2]  # remove trailing \
 
         return variables
 

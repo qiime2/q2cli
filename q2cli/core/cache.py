@@ -274,9 +274,9 @@ class DeploymentCache:
 
             use.comment('### example: %s\n' % (name.replace('_', ' '),))
             example(use)
-            use.lines.append('')
+            use.recorder.append('')
 
-            lines += use.lines
+            lines += use.recorder
 
         return lines
 
