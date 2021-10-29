@@ -170,8 +170,9 @@ def assert_result_type(input_path, qiime_type):
         click.echo(CONFIG.cfg_style('error', msg), err=True)
         click.get_current_context().exit(1)
     else:
-        click.echo('The type of the input file: %s and the expected type: %s'
-                   ' match.' % (input_path, qiime_type))
+        msg = 'The type of the input file: %s and the expected type: %s' \
+              ' match' % (input_path, qiime_type)
+        click.echo(CONFIG.cfg_style('success', msg))
 
 
 @dev.command(name='assert-result-data',
