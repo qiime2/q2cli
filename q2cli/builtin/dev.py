@@ -228,4 +228,5 @@ def assert_has_line(input_path, zip_data_path, expression):
                  expression
         q2cli.util.exit_with_error(e, header=header)
 
-    click.echo('%s was found in %s.' % (str(expression), str(zip_data_path)))
+    msg = '"%s" was found in %s' % (str(expression), str(zip_data_path))
+    click.echo(CONFIG.cfg_style('success', msg))
