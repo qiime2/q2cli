@@ -45,27 +45,29 @@ def write_plugin_example_data(plugin, output_dir):
 
 class CLIUsageVariable(usage.UsageVariable):
     def to_interface_name(self):
+        if hasattr(self, '_q2cli_ref'):
+            return self._q2cli_ref
+
         ext = {
-            'artifact': '.qza',
-            'visualization': '.qzv',
-            'metadata': '.tsv',
-            'column': '',
+            'artifact': 'qza',
+            'visualization': 'qzv',
+            'metadata': 'tsv',
         }[self.var_type]
 
         cli_name = util.to_cli_name(self.name)
-        fn = '%s%s' % (cli_name, ext)
+        fn = '%s.%s' % (cli_name, ext)
         return shlex.quote(fn)
 
     def assert_has_line_matching(self, path, expression):
         if self.use.enable_assertions:
-            self.use.lines.append(
+            self.use.recorder.append(
                 'qiime dev assert-has-line --input-path %s --target-path %s'
                 ' --expression %s' %
                 (self.to_interface_name(), path, shlex.quote(expression)))
 
     def assert_output_type(self, semantic_type):
         if self.use.enable_assertions:
-            self.use.lines.append(
+            self.use.recorder.append(
                 'qiime dev assert-output-type --input-path %s'
                 ' --qiime-type %s' %
                 (self.to_interface_name(), shlex.quote(str(semantic_type))))
@@ -76,13 +78,20 @@ class CLIUsageFormatter(usage.Usage):
 
     def __init__(self, enable_assertions=False):
         super().__init__()
-        self.lines = []
+        self.recorder = []
         self.init_data = []
         self.enable_assertions = enable_assertions
 
     def get_example_data(self):
         for val in self.init_data:
             yield val.to_interface_name(), val.execute()
+
+    def render(self, flush=False):
+        rendered = '\n'.join(self.recorder)
+        if flush:
+            self.recorder = []
+            self.init_data = []
+        return rendered
 
     def variable_factory(self, name, factory, var_type):
         return CLIUsageVariable(
@@ -102,58 +111,36 @@ class CLIUsageFormatter(usage.Usage):
         self.init_data.append(variable)
         return variable
 
-    def comment(self, text: str):
-        self.lines += ['# ' + line for line in textwrap.wrap(text, width=74)]
+    def comment(self, text):
+        self.recorder += ['# ' + ln for ln in textwrap.wrap(text, width=74)]
 
-    # TODO: add example for viewing qza as md
     def merge_metadata(self, name, *variables):
-        _ = super().merge_metadata(name, *variables)
-        # rather than returning a new CLIUsageVariable, we return the
-        # collection of CLIUsageVariables that represent the constituent
-        # elements, that way `_make_param` can handle the merging for us!
-        return variables
+        var = super().merge_metadata(name, *variables)
+        var._q2cli_ref = ' '.join(v.to_interface_name() for v in variables)
+        return var
 
     def get_metadata_column(self, name, column_name, variable):
-        _ = super().get_metadata_column(name, column_name, variable)
-
-        # build tmp var to use to_interface_name()
-        tmp_var = self.variable_factory(column_name, lambda: None, 'column')
-
-        def f():
-            return (variable.to_interface_name(), tmp_var.to_interface_name())
-
-        variable_new = self.variable_factory(name, f, 'column')
-        return variable_new
+        var = super().get_metadata_column(name, column_name, variable)
+        var._q2cli_ref = (variable.to_interface_name(), column_name)
+        return var
 
     def action(self, action, inputs, outputs):
         variables = super().action(action, inputs, outputs)
+        vars_dict = variables._asdict()
 
         plugin_name = util.to_cli_name(action.plugin_id)
         action_name = util.to_cli_name(action.action_id)
-        self.lines.append("qiime %s %s \\" % (plugin_name, action_name))
+        self.recorder.append("qiime %s %s \\" % (plugin_name, action_name))
 
         action_f = action.get_action()
         action_state = get_action_state(action_f)
 
-        output_vals = {v.name: v for v in variables}
-        input_signature, output_signature = dict(), dict()
-        for sig in action_state['signature']:
-            if sig['type'] == 'output':
-                output_signature[sig['name']] = sig
-            else:
-                input_signature[sig['name']] = sig
+        ins = inputs.map_variables(lambda v: v.to_interface_name())
+        outs = {k: v.to_interface_name() for k, v in vars_dict.items()}
+        signature = {s['name']: s for s in action_state['signature']}
 
-        self._write_param(input_signature, inputs)
-        self._write_param(output_signature, outputs, output_vals=output_vals)
-        self.lines[-1] = self.lines[-1][:-2]  # remove trailing \
-
-        return variables
-
-    def _write_param(self, signature, params, output_vals=None):
-        for param_name, value in params.values.items():
+        for param_name, value in {**ins, **outs}.items():
             param_state = signature[param_name]
-            if output_vals is not None:
-                value = output_vals[value]
             if value is not None:
                 for opt, val in self._make_param(value, param_state):
                     line = self.INDENT + opt
@@ -161,7 +148,11 @@ class CLIUsageFormatter(usage.Usage):
                         line += ' ' + val
                     line += ' \\'
 
-                    self.lines.append(line)
+                    self.recorder.append(line)
+
+        self.recorder[-1] = self.recorder[-1][:-2]  # remove trailing \
+
+        return variables
 
     def _make_param(self, value, state):
         state = state.copy()
@@ -172,35 +163,28 @@ class CLIUsageFormatter(usage.Usage):
 
         # INPUTS AND OUTPUTS
         if type_ in ('input', 'output'):
-            if isinstance(value, CLIUsageVariable):
-                return [(option, value.to_interface_name())]
+            if isinstance(value, str):
+                return [(option, value)]
             else:
                 if isinstance(value, set):
-                    value = sorted(value, key=lambda x: x.to_interface_name())
-                value = [v.to_interface_name() for v in value]
+                    value = sorted(value)
                 return [(option, ' '.join(value))]
 
         # METADATA FILE
         if state['metadata'] == 'file':
-            if isinstance(value, CLIUsageVariable):
-                return [(option, value.to_interface_name())]
-            else:
-                value = [v.to_interface_name() for v in value]
-                return [(option, ' '.join(value))]
+            return [(option, value)]
 
         # METADATA COLUMN
         if state['metadata'] == 'column':
             # md cols are special, we have pre-computed the interface-specific
-            # names and stashed them in the factory, so run execute()
-            # to get the values
-            fn, col_name = value.execute()
+            # names and stashed them in an attr, so unpack to get the values
+            fn, col_name = value
             return [(option, fn), (opt.q2_extra_opts[0], col_name)]
 
         # PARAMETERS
         if type_ == 'parameter':
             if isinstance(value, set):
                 value = [shlex.quote(str(v)) for v in value]
-
                 return [(option, ' '.join(sorted(value)))]
 
             if isinstance(value, list):
