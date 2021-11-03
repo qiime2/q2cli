@@ -357,17 +357,30 @@ class CliTests(unittest.TestCase):
 
         self.assertTrue('deprecated' in result.output)
 
-    def test_assert_result_type(self):
-        result = self.runner.invoke(dev, ['assert-result-type',
-           self.mapping_path, '--qiime-type', 'Mapping'])
+    def test_assert_result_type_success(self):
+        result = self.runner.invoke(dev,
+                                    ['assert-result-type',
+                                     self.mapping_path,
+                                     '--qiime-type', 'Mapping'])
         self.assertEqual(result.exit_code, 0)
 
     def test_assert_result_type_load_failure(self):
-       result = self.runner.invoke(dev, ['assert-result-type',
-                     'turkey_sandwhere.qza', '--qiime-type', 'Mapping'])
+        result = self.runner.invoke(dev,
+                                    ['assert-result-type',
+                                     'turkey_sandwhere.qza',
+                                     '--qiime-type', 'Mapping'])
 
-       self.assertRegex(result.output,
-                        r'File\s*\'turkey_sandwhere\.qza\'\s*does not exist\.')
+        self.assertRegex(result.output,
+                         r'File\s*\'turkey_sandwhere\.qza\'\s*does not exist')
+
+    def test_assert_result_type_invalid_qiime_type(self):
+        qiime_type = 'Mapping'
+        result = self.runner.invoke(dev,
+                                    ['assert-result-type',
+                                     self.mapping_path,
+                                     '--qiime-type', 'Squid'])
+        self.assertIn('Expected %s, observed %s' % ('Squid', qiime_type),
+                      result.output)
 
 
 class TestOptionalArtifactSupport(unittest.TestCase):
