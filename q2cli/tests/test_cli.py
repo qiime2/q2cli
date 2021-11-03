@@ -374,37 +374,51 @@ class CliTests(unittest.TestCase):
                          r'File\s*\'turkey_sandwhere\.qza\'\s*does not exist')
 
     def test_assert_result_type_invalid_qiime_type(self):
-        qiime_type = 'Mapping'
         result = self.runner.invoke(dev,
                                     ['assert-result-type',
                                      self.mapping_path,
                                      '--qiime-type', 'Squid'])
-        self.assertIn('Expected %s, observed %s' % ('Squid', qiime_type),
+        self.assertIn('Expected %s, observed %s' % ('Squid', 'Mapping'),
                       result.output)
 
     def test_assert_result_data_success(self):
-        pass
+        result = self.runner.invoke(dev,
+                                    ['assert-result-data',
+                                     self.mapping_path,
+                                     '--zip-data-path', 'mapping.tsv',
+                                     '--expression', '42'])
+        self.assertEqual(result.exit_code, 0)
 
     def test_assert_result_data_load_failure(self):
-        pass
+        result = self.runner.invoke(dev,
+                                    ['assert-result-data',
+                                     'turkey_sandwhen.qza',
+                                     '--zip-data-path', 'mapping.tsv',
+                                     '--expression', '42'])
+
+        self.assertRegex(result.output,
+                         r'File\s*\'turkey_sandwhen\.qza\'\s*does not exist')
 
     def test_assert_result_data_zip_data_path_zero_matches(self):
-        pass
+        self.runner.invoke(dev, ['assert-result-data', self.mapping_path,
+                                 '--zip-data-path', 'turkey_sandwhy.tsv',
+                                 '--expression', '42'])
+
+        self.assertRaisesRegex(ValueError,
+                               r'did not produce exactly one match.\n'
+                               r' Matches: \[\]\n')
 
     def test_assert_result_data_zip_data_path_multiple_matches(self):
         pass
 
-    def test_assert_result_data_zip_data_path_not_found(self):
-        pass
-
-    def test_assert_result_data_match_expression_success(self):
-        pass
-
     def test_assert_result_data_match_expression_not_found(self):
-        pass
+        self.runner.invoke(dev, ['assert-result-data', self.mapping_path,
+                                 '--zip-data-path', 'mapping.tsv',
+                                 '--expression', 'foobar'])
 
-    def test_assert_result_data_match_expression_invalid(self):
-        pass
+        self.assertRaisesRegex(AssertionError,
+                               r'Expression \'foobar\''
+                               r' not found in mapping.tsv.')
 
 
 class TestOptionalArtifactSupport(unittest.TestCase):

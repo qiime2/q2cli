@@ -190,7 +190,7 @@ def assert_result_type(input_path, qiime_type):
                    ' directory that should be searched.')
 @click.option('--expression', required=True,
               help='The Python regular expression to match.')
-def assert_has_line(input_path, zip_data_path, expression):
+def assert_result_data(input_path, zip_data_path, expression):
     import re
     import q2cli.util
     import qiime2.sdk
@@ -227,8 +227,8 @@ def assert_has_line(input_path, zip_data_path, expression):
             raise AssertionError('Expression %r not found in %s.' %
                                  (expression, zip_data_path))
     except Exception as e:
-        header = 'There was a problem with the expression provided (%r)' % \
-                 expression
+        header = 'An unexpected error occurred while running'
+        ' "assert-result-data"'
         q2cli.util.exit_with_error(e, header=header)
 
     msg = '"%s" was found in %s' % (str(expression), str(zip_data_path))
