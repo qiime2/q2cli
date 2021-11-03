@@ -151,7 +151,7 @@ def test_templated(dummy_plugin, action, exp):
     for example_f in action.examples.values():
         example_f(use)
 
-    obs = '\n'.join(use.lines)
+    obs = use.render()
     assert exp == obs
 
 
@@ -174,7 +174,7 @@ def test_round_trip(action, example):
     example_f = action.examples[example]
     use = CLIUsageFormatter(enable_assertions=True)
     example_f(use)
-    rendered = '\n'.join(use.lines)
+    rendered = use.render()
     with tempfile.TemporaryDirectory() as tmpdir:
         for ref, data in use.get_example_data():
             data.save(os.path.join(tmpdir, ref))

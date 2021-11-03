@@ -51,10 +51,10 @@ class CLIConfig():
             self.styles = self.get_default_styles()
 
     def get_default_styles(self):
-        return {'option': {'fg': 'blue'},
+        return {'option': {'fg': 'bright_blue'},
                 'type': {'fg': 'green'},
                 'default_arg': {'fg': 'magenta'},
-                'command': {'fg': 'blue'},
+                'command': {'fg': 'bright_blue'},
                 'emphasis': {'underline': True},
                 'problem': {'fg': 'yellow'},
                 'warning': {'fg': 'yellow', 'bold': True},
