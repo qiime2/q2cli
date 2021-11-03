@@ -382,6 +382,30 @@ class CliTests(unittest.TestCase):
         self.assertIn('Expected %s, observed %s' % ('Squid', qiime_type),
                       result.output)
 
+    def test_assert_result_data_success(self):
+        pass
+
+    def test_assert_result_data_load_failure(self):
+        pass
+
+    def test_assert_result_data_zip_data_path_zero_matches(self):
+        pass
+
+    def test_assert_result_data_zip_data_path_multiple_matches(self):
+        pass
+
+    def test_assert_result_data_zip_data_path_not_found(self):
+        pass
+
+    def test_assert_result_data_match_expression_success(self):
+        pass
+
+    def test_assert_result_data_match_expression_not_found(self):
+        pass
+
+    def test_assert_result_data_match_expression_invalid(self):
+        pass
+
 
 class TestOptionalArtifactSupport(unittest.TestCase):
     def setUp(self):
