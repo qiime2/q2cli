@@ -21,6 +21,7 @@ from qiime2.core.testing.util import get_dummy_plugin
 
 from q2cli.builtin.info import info
 from q2cli.builtin.tools import tools
+from q2cli.builtin.dev import dev
 from q2cli.commands import RootCommand
 from q2cli.click.type import QIIME2Type
 
@@ -355,6 +356,18 @@ class CliTests(unittest.TestCase):
         self.assertEqual(artifact.view(dict), {'foo': '43'})
 
         self.assertTrue('deprecated' in result.output)
+
+    def test_assert_result_type(self):
+        result = self.runner.invoke(dev, ['assert-result-type',
+           self.mapping_path, '--qiime-type', 'Mapping'])
+        self.assertEqual(result.exit_code, 0)
+
+    def test_assert_result_type_load_failure(self):
+       result = self.runner.invoke(dev, ['assert-result-type',
+                     'turkey_sandwhere.qza', '--qiime-type', 'Mapping'])
+
+       self.assertRegex(result.output,
+                        r'File\s*\'turkey_sandwhere\.qza\'\s*does not exist\.')
 
 
 class TestOptionalArtifactSupport(unittest.TestCase):

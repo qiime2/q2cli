@@ -12,6 +12,8 @@ import tempfile
 import configparser
 
 from click.testing import CliRunner
+from qiime2 import Artifact
+from qiime2.core.testing.util import get_dummy_plugin
 
 import q2cli.util
 from q2cli.builtin.dev import dev
