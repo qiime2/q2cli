@@ -6,7 +6,6 @@
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 
-from os import wait
 import os.path
 import unittest
 import unittest.mock
@@ -401,7 +400,7 @@ class CliTests(unittest.TestCase):
                          r'File\s*\'turkey_sandwhen\.qza\'\s*does not exist')
 
     def test_assert_result_data_zip_data_path_zero_matches(self):
-        result = self.runner.invoke(dev, 
+        result = self.runner.invoke(dev,
                                     ['assert-result-data',
                                      self.mapping_path,
                                      '--zip-data-path', 'turkey_sandwhy.tsv',
@@ -421,18 +420,20 @@ class CliTests(unittest.TestCase):
                                           'file*.txt',
                                           '--expression',
                                           '3'])
-        self.assertRegex(result.output,
-            r'Value provided for zip_data_path \(file\*\.txt\) did not'
-            r' produce exactly one match\.')
+        self.assertRegex(result.output, r'Value provided for zip_data_path'
+                                        r' \(file\*\.txt\) did not produce'
+                                        r' exactly one match\.')
 
     def test_assert_result_data_match_expression_not_found(self):
-        result = self.runner.invoke(dev, ['assert-result-data', self.mapping_path,
-                                 '--zip-data-path', 'mapping.tsv',
-                                 '--expression', 'foobar'])
+        result = self.runner.invoke(dev, ['assert-result-data',
+                                          self.mapping_path,
+                                          '--zip-data-path', 'mapping.tsv',
+                                          '--expression', 'foobar'])
 
         self.assertRegex(result.output,
-            r'Expression \'foobar\''
-            r' not found in mapping.tsv.')
+                         r'Expression \'foobar\''
+                         r' not found in mapping.tsv.')
+
 
 class TestOptionalArtifactSupport(unittest.TestCase):
     def setUp(self):
