@@ -6,6 +6,7 @@
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 
+from os import wait
 import os.path
 import unittest
 import unittest.mock
@@ -400,26 +401,38 @@ class CliTests(unittest.TestCase):
                          r'File\s*\'turkey_sandwhen\.qza\'\s*does not exist')
 
     def test_assert_result_data_zip_data_path_zero_matches(self):
-        self.runner.invoke(dev, ['assert-result-data', self.mapping_path,
-                                 '--zip-data-path', 'turkey_sandwhy.tsv',
-                                 '--expression', '42'])
+        result = self.runner.invoke(dev, 
+                                    ['assert-result-data',
+                                     self.mapping_path,
+                                     '--zip-data-path', 'turkey_sandwhy.tsv',
+                                     '--expression', '42'])
 
-        self.assertRaisesRegex(ValueError,
-                               r'did not produce exactly one match.\n'
-                               r' Matches: \[\]\n')
+        self.assertRegex(result.output,
+                         r'did not produce exactly one match.\n'
+                         r'Matches: \[\]\n')
 
     def test_assert_result_data_zip_data_path_multiple_matches(self):
-        pass
+        self.double_path = os.path.join(self.tempdir, 'double.qza')
+        double_artifact = Artifact.import_data('SingleInt', 3)
+        double_artifact.save(self.double_path)
+        result = self.runner.invoke(dev, ['assert-result-data',
+                                          self.double_path,
+                                          '--zip-data-path',
+                                          'file*.txt',
+                                          '--expression',
+                                          '3'])
+        self.assertRegex(result.output,
+            r'Value provided for zip_data_path \(file\*\.txt\) did not'
+            r' produce exactly one match\.')
 
     def test_assert_result_data_match_expression_not_found(self):
-        self.runner.invoke(dev, ['assert-result-data', self.mapping_path,
+        result = self.runner.invoke(dev, ['assert-result-data', self.mapping_path,
                                  '--zip-data-path', 'mapping.tsv',
                                  '--expression', 'foobar'])
 
-        self.assertRaisesRegex(AssertionError,
-                               r'Expression \'foobar\''
-                               r' not found in mapping.tsv.')
-
+        self.assertRegex(result.output,
+            r'Expression \'foobar\''
+            r' not found in mapping.tsv.')
 
 class TestOptionalArtifactSupport(unittest.TestCase):
     def setUp(self):
