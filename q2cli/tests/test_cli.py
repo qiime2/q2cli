@@ -21,7 +21,6 @@ from qiime2.core.testing.util import get_dummy_plugin
 
 from q2cli.builtin.info import info
 from q2cli.builtin.tools import tools
-from q2cli.builtin.dev import dev
 from q2cli.commands import RootCommand
 from q2cli.click.type import QIIME2Type
 
@@ -356,83 +355,6 @@ class CliTests(unittest.TestCase):
         self.assertEqual(artifact.view(dict), {'foo': '43'})
 
         self.assertTrue('deprecated' in result.output)
-
-    def test_assert_result_type_success(self):
-        result = self.runner.invoke(dev,
-                                    ['assert-result-type',
-                                     self.mapping_path,
-                                     '--qiime-type', 'Mapping'])
-        self.assertEqual(result.exit_code, 0)
-
-    def test_assert_result_type_load_failure(self):
-        result = self.runner.invoke(dev,
-                                    ['assert-result-type',
-                                     'turkey_sandwhere.qza',
-                                     '--qiime-type', 'Mapping'])
-
-        self.assertRegex(result.output,
-                         r'File\s*\'turkey_sandwhere\.qza\'\s*does not exist')
-
-    def test_assert_result_type_invalid_qiime_type(self):
-        result = self.runner.invoke(dev,
-                                    ['assert-result-type',
-                                     self.mapping_path,
-                                     '--qiime-type', 'Squid'])
-        self.assertIn('Expected %s, observed %s' % ('Squid', 'Mapping'),
-                      result.output)
-
-    def test_assert_result_data_success(self):
-        result = self.runner.invoke(dev,
-                                    ['assert-result-data',
-                                     self.mapping_path,
-                                     '--zip-data-path', 'mapping.tsv',
-                                     '--expression', '42'])
-        self.assertEqual(result.exit_code, 0)
-
-    def test_assert_result_data_load_failure(self):
-        result = self.runner.invoke(dev,
-                                    ['assert-result-data',
-                                     'turkey_sandwhen.qza',
-                                     '--zip-data-path', 'mapping.tsv',
-                                     '--expression', '42'])
-
-        self.assertRegex(result.output,
-                         r'File\s*\'turkey_sandwhen\.qza\'\s*does not exist')
-
-    def test_assert_result_data_zip_data_path_zero_matches(self):
-        result = self.runner.invoke(dev,
-                                    ['assert-result-data',
-                                     self.mapping_path,
-                                     '--zip-data-path', 'turkey_sandwhy.tsv',
-                                     '--expression', '42'])
-
-        self.assertRegex(result.output,
-                         r'did not produce exactly one match.\n'
-                         r'Matches: \[\]\n')
-
-    def test_assert_result_data_zip_data_path_multiple_matches(self):
-        self.double_path = os.path.join(self.tempdir, 'double.qza')
-        double_artifact = Artifact.import_data('SingleInt', 3)
-        double_artifact.save(self.double_path)
-        result = self.runner.invoke(dev, ['assert-result-data',
-                                          self.double_path,
-                                          '--zip-data-path',
-                                          'file*.txt',
-                                          '--expression',
-                                          '3'])
-        self.assertRegex(result.output, r'Value provided for zip_data_path'
-                                        r' \(file\*\.txt\) did not produce'
-                                        r' exactly one match\.')
-
-    def test_assert_result_data_match_expression_not_found(self):
-        result = self.runner.invoke(dev, ['assert-result-data',
-                                          self.mapping_path,
-                                          '--zip-data-path', 'mapping.tsv',
-                                          '--expression', 'foobar'])
-
-        self.assertRegex(result.output,
-                         r'Expression \'foobar\''
-                         r' not found in mapping.tsv.')
 
 
 class TestOptionalArtifactSupport(unittest.TestCase):
