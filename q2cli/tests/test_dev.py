@@ -13,7 +13,7 @@ import tempfile
 import configparser
 
 from click.testing import CliRunner
-from qiime2 import Artifact  # , Visualization
+from qiime2 import Artifact
 from qiime2.core.testing.type import IntSequence1
 from qiime2.core.testing.util import get_dummy_plugin
 
@@ -92,15 +92,26 @@ class TestDev(unittest.TestCase):
         self.assertEqual(result.exit_code, 0)
         self.assertRegex(result.stdout, expected_regex)
 
-#    def test_assert_result_type_visualization_succes(self):
-#        viz_path = os.path.join(self.tempdir, 'a_viz.qzv')
-#        result = self.runner.invoke(dev,
-#                                    ['assert-result-type',
-#                                     self.test_viz_pat,
-#                                     '--qiime-type',
-#                                     'Visualization'])
-#        self.assertEqual(result.exit_code, 0)
-#
+    def test_assert_result_type_visualization_succes(self):
+        dummy_plugin = get_dummy_plugin()
+
+        self.viz_path = os.path.join(self.tempdir, 'viz.qzv')
+        most_common_viz = dummy_plugin.actions['most_common_viz']
+        viz = most_common_viz(Artifact.load(self.artifact1_path))
+        viz.visualization.save(self.viz_path)
+
+        result = self.runner.invoke(dev,
+                                    ['assert-result-type',
+                                     self.viz_path,
+                                     '--qiime-type',
+                                     'Visualization'])
+
+        expected_regex = r'The type of the input file: .*viz\.qzv and the'\
+                         r' expected type: Visualization match'
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertRegex(result.stdout, expected_regex)
+
     def test_assert_result_type_load_failure(self):
         result = self.runner.invoke(dev,
                                     ['assert-result-type',
