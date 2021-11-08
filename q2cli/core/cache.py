@@ -270,7 +270,7 @@ class DeploymentCache:
 
         lines = []
         for name, example in action.examples.items():
-            use = q2cli.core.usage.CLIUsageFormatter()
+            use = q2cli.core.usage.CLIUsage()
 
             use.comment('### example: %s\n' % (name.replace('_', ' '),))
             example(use)

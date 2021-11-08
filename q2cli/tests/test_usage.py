@@ -10,7 +10,7 @@ import os
 import subprocess
 import tempfile
 
-from q2cli.core.usage import CLIUsageFormatter
+from q2cli.core.usage import CLIUsage
 
 from qiime2.core.testing.util import get_dummy_plugin
 import pytest
@@ -106,9 +106,13 @@ qiime dummy-plugin typical-pipeline \\
   --o-right right2.qza \\
   --o-left-viz left-viz2.qzv \\
   --o-right-viz right-viz2.qzv
-qiime dev assert-result-data right2.qza --zip-data-path ints.txt --expression 1
-qiime dev assert-result-type right2.qza --qiime-type IntSequence1
-qiime dev assert-result-type out-map1.qza --qiime-type Mapping"""),  # noqa: 501
+qiime dev assert-result-data right2.qza \\
+  --zip-data-path ints.txt \\
+  --expression 1
+qiime dev assert-result-type right2.qza \\
+  --qiime-type IntSequence1
+qiime dev assert-result-type out-map1.qza \\
+  --qiime-type Mapping"""),
         ('optional_artifacts_method',
          """\
 qiime dummy-plugin optional-artifacts-method \\
@@ -147,11 +151,16 @@ _templ_ids = [x[0] for x in get_templated_tests()]
 def test_templated(dummy_plugin, action, exp):
     action = dummy_plugin.actions[action]
 
-    use = CLIUsageFormatter(enable_assertions=True)
+    obs = ''
     for example_f in action.examples.values():
+        use = CLIUsage(enable_assertions=True)
         example_f(use)
+        obs += use.render()
+        obs += '\n'
 
-    obs = use.render()
+    # trim final newline
+    obs = obs[:-1]
+
     assert exp == obs
 
 
@@ -172,7 +181,7 @@ def get_rt_tests():
 @pytest.mark.parametrize('action,example', get_rt_tests(), ids=_rt_labeler)
 def test_round_trip(action, example):
     example_f = action.examples[example]
-    use = CLIUsageFormatter(enable_assertions=True)
+    use = CLIUsage(enable_assertions=True)
     example_f(use)
     rendered = use.render()
     with tempfile.TemporaryDirectory() as tmpdir:
