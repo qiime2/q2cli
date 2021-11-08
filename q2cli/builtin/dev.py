@@ -229,7 +229,7 @@ def assert_result_data(input_path, zip_data_path, expression):
             raise AssertionError('Expression %r not found in %s.' %
                                  (expression, hits[0]))
     except Exception as e:
-        header = 'There was a problem finding the expression:'
+        header = 'There was a problem finding the expression.'
         q2cli.util.exit_with_error(e, header=header)
 
     msg = '"%s" was found in %s' % (str(expression), str(zip_data_path))

@@ -86,13 +86,14 @@ class TestDev(unittest.TestCase):
                                      '--qiime-type', 'Mapping'])
 
         # single regex to account for tempdir path
-        expected_regex = r'The type of the input file: .*mapping.qza and the'\
-                         r' expected type: Mapping match'
+
+        expected_regex = r'The input file \(.*mapping.qza\) type and the'\
+                         r' expected type \(Mapping\) match'
 
         self.assertEqual(result.exit_code, 0)
         self.assertRegex(result.stdout, expected_regex)
 
-    def test_assert_result_type_visualization_succes(self):
+    def test_assert_result_type_visualization_success(self):
         dummy_plugin = get_dummy_plugin()
 
         self.viz_path = os.path.join(self.tempdir, 'viz.qzv')
@@ -106,8 +107,8 @@ class TestDev(unittest.TestCase):
                                      '--qiime-type',
                                      'Visualization'])
 
-        expected_regex = r'The type of the input file: .*viz\.qzv and the'\
-                         r' expected type: Visualization match'
+        expected_regex = r'The input file \(.*viz\.qzv\) type and the'\
+                         r' expected type \(Visualization\) match'
 
         self.assertEqual(result.exit_code, 0)
         self.assertRegex(result.stdout, expected_regex)
@@ -182,8 +183,9 @@ class TestDev(unittest.TestCase):
                                           self.mapping_path,
                                           '--zip-data-path', 'mapping.tsv',
                                           '--expression', 'foobar'])
+        print(result.stdout)
 
         self.assertEqual(result.exit_code, 1)
         self.assertRegex(result.stderr,
                          r'Expression \'foobar\''
-                         r' not found in mapping.tsv.')
+                         r' not found in .*\/data\/mapping\.tsv\.')
