@@ -177,8 +177,7 @@ def assert_result_type(input_path, qiime_type):
 
 
 @dev.command(name='assert-result-data',
-             short_help='Checks that provided expression is present in input'
-                        ' file.',
+             short_help='Assert expression in Result.',
              help='Uses regex to check that the provided expression is present'
                   ' in input file. Intended for developer testing.',
              cls=ToolCommand)
