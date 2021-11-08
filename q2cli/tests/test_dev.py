@@ -78,7 +78,7 @@ class TestDev(unittest.TestCase):
             dev, ['reset-theme'])
         self.assertNotEqual(result.exit_code, 0)
 
-# result_type & result_data tests
+    # result_type & result_data tests
     def test_assert_result_type_artifact_success(self):
         result = self.runner.invoke(dev,
                                     ['assert-result-type',
