@@ -183,7 +183,6 @@ class TestDev(unittest.TestCase):
                                           self.mapping_path,
                                           '--zip-data-path', 'mapping.tsv',
                                           '--expression', 'foobar'])
-        print(result.stdout)
 
         self.assertEqual(result.exit_code, 1)
         self.assertRegex(result.stderr,
