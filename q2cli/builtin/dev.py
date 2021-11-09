@@ -10,6 +10,8 @@ import click
 
 from q2cli.click.command import ToolCommand, ToolGroupCommand
 
+_COMBO_METAVAR = 'ARTIFACT/VISUALIZATION'
+
 
 @click.group(help='Utilities for developers and advanced users.',
              cls=ToolGroupCommand)
@@ -141,57 +143,94 @@ def reset_theme():
         click.echo('Theme was already default.')
 
 
-@dev.command(name='assert-output-type',
-             short_help='lorem ipsum',
-             help='lorem ipsum',
+@dev.command(name='assert-result-type',
+             short_help='Assert Result is a specific type.',
+             help='Checks that the type of a Result matches an '
+                  'expected type. Intended for developer testing.',
              cls=ToolCommand)
-@click.option('--input-path', required=True, metavar='ARTIFACT/VISUALIZATION',
-              type=click.Path(exists=True, file_okay=True,
-                              dir_okay=False, readable=True),
-              help='Lorem Ipsum')
+@click.argument('input-path', type=click.Path(exists=True, file_okay=True,
+                dir_okay=False, readable=True),
+                metavar=_COMBO_METAVAR)
 @click.option('--qiime-type', required=True,
-              help='Lorem Ipsum')
-def assert_output_type(input_path, qiime_type):
+              help='QIIME 2 data type.')
+def assert_result_type(input_path, qiime_type):
     import q2cli.util
     import qiime2.sdk
+    from q2cli.core.config import CONFIG
 
     q2cli.util.get_plugin_manager()
-    result = qiime2.sdk.Result.load(input_path)
+    try:
+        result = qiime2.sdk.Result.load(input_path)
+    except Exception as e:
+        header = 'There was a problem loading %s as a QIIME 2 Result:' % \
+            input_path
+        q2cli.util.exit_with_error(e, header=header)
 
-    if str(result.type) == qiime_type:
-        click.echo("Good to go")
+    if str(result.type) != qiime_type:
+        try:
+            msg = 'Expected %s, observed %s' % (qiime_type, result.type)
+            raise AssertionError(msg)
+        except Exception as e:
+            header = 'There was a problem asserting the type:'
+            q2cli.util.exit_with_error(e, header=header)
     else:
-        raise Exception("Expected %s, observed %s" % (qiime_type,
-                                                      result.type))
+        msg = 'The input file (%s) type and the expected type (%s)' \
+              ' match' % (input_path, qiime_type)
+        click.echo(CONFIG.cfg_style('success', msg))
 
 
-@dev.command(name='assert-has-line',
-             short_help='Checks that provided line is present in input file',
-             help='Lorem Ipsum',
+@dev.command(name='assert-result-data',
+             short_help='Assert expression in Result.',
+             help='Uses regex to check that the provided expression is present'
+                  ' in input file. Intended for developer testing.',
              cls=ToolCommand)
-@click.option('--input-path', required=True, metavar='ARTIFACT/VISUALIZATION',
-              type=click.Path(exists=True, file_okay=True,
-                              dir_okay=False, readable=True),
-              help='Lorem Ipsum')
-@click.option('--target-path', required=True,
-              help='The path to the target file')
+@click.argument('input-path', type=click.Path(exists=True, file_okay=True,
+                dir_okay=False, readable=True),
+                metavar=_COMBO_METAVAR)
+@click.option('--zip-data-path', required=True,
+              help='The path within the zipped Result\'s data/'
+                   ' directory that should be searched.')
 @click.option('--expression', required=True,
-              help='The line to match')
-def assert_has_line(input_path, target_path, expression):
+              help='The Python regular expression to match.')
+def assert_result_data(input_path, zip_data_path, expression):
     import re
     import q2cli.util
     import qiime2.sdk
+    from q2cli.core.config import CONFIG
 
     q2cli.util.get_plugin_manager()
-    result = qiime2.sdk.Result.load(input_path)
 
-    hits = sorted(result._archiver.data_dir.glob(target_path))
-    if len(hits) != 1:
-        raise ValueError('Value provided for target_path (%s) did not produce '
-                         'exactly one hit: %s' % (target_path, hits))
+    try:
+        result = qiime2.sdk.Result.load(input_path)
+    except Exception as e:
+        header = 'There was a problem loading %s as a QIIME 2 result:' % \
+                input_path
+        q2cli.util.exit_with_error(e, header=header)
 
-    target = hits[0].read_text()
-    match = re.search(expression, target, flags=re.MULTILINE)
-    if match is None:
-        raise AssertionError('Expression %r not found in %s.' %
-                             (expression, target_path))
+    try:
+        hits = sorted(result._archiver.data_dir.glob(zip_data_path))
+        if len(hits) != 1:
+            data_dir = result._archiver.data_dir
+            all_fps = sorted(data_dir.glob('**/*'))
+            all_fps = [x.relative_to(data_dir).name for x in all_fps]
+            raise ValueError('Value provided for zip_data_path (%s) did not '
+                             'produce exactly one match.\nMatches: %s\n'
+                             'Paths observed: %s' %
+                             (zip_data_path, hits, all_fps))
+    except Exception as e:
+        header = 'There was a problem locating the zip_data_path (%s)' % \
+                zip_data_path
+        q2cli.util.exit_with_error(e, header=header)
+
+    try:
+        target = hits[0].read_text()
+        match = re.search(expression, target, flags=re.MULTILINE)
+        if match is None:
+            raise AssertionError('Expression %r not found in %s.' %
+                                 (expression, hits[0]))
+    except Exception as e:
+        header = 'There was a problem finding the expression.'
+        q2cli.util.exit_with_error(e, header=header)
+
+    msg = '"%s" was found in %s' % (str(expression), str(zip_data_path))
+    click.echo(CONFIG.cfg_style('success', msg))

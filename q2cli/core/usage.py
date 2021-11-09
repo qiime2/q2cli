@@ -61,14 +61,14 @@ class CLIUsageVariable(usage.UsageVariable):
     def assert_has_line_matching(self, path, expression):
         if self.use.enable_assertions:
             self.use.recorder.append(
-                'qiime dev assert-has-line --input-path %s --target-path %s'
+                'qiime dev assert-result-data %s --zip-data-path %s'
                 ' --expression %s' %
                 (self.to_interface_name(), path, shlex.quote(expression)))
 
     def assert_output_type(self, semantic_type):
         if self.use.enable_assertions:
             self.use.recorder.append(
-                'qiime dev assert-output-type --input-path %s'
+                'qiime dev assert-result-type %s'
                 ' --qiime-type %s' %
                 (self.to_interface_name(), shlex.quote(str(semantic_type))))
 
