@@ -10,7 +10,7 @@ import os
 import subprocess
 import tempfile
 
-from q2cli.core.usage import CLIUsageFormatter
+from q2cli.core.usage import CLIUsage
 from q2cli.util import get_plugin_manager
 
 import pytest
@@ -38,9 +38,9 @@ def get_tests():
 @pytest.mark.parametrize('action,example', get_tests(), ids=_labeler)
 def test_mystery_stew(action, example):
     example_f = action.examples[example]
-    use = CLIUsageFormatter(enable_assertions=True)
+    use = CLIUsage(enable_assertions=True)
     example_f(use)
-    rendered = '\n'.join(use.lines)
+    rendered = '\n'.join(use.recorder)
     with tempfile.TemporaryDirectory() as tmpdir:
         for ref, data in use.get_example_data():
             data.save(os.path.join(tmpdir, ref))
