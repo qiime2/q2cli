@@ -199,9 +199,11 @@ class CLIUsage(usage.Usage):
         return var
 
     def view_as_metadata(self, name, variable):
-        # super() for validation, otherwise just pass variable through
-        super().view_as_metadata(variable.name, variable)
-        return variable
+        var = super().view_as_metadata(variable.name, variable)
+        # preserve the orginal interface name of the QZA as this will be
+        # implicitly converted to metadata when executed.
+        var._q2cli_ref = variable.to_interface_name()
+        return var
 
     def action(self, action, inputs, outputs):
         variables = super().action(action, inputs, outputs)
