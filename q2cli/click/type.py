@@ -167,6 +167,7 @@ class QIIME2Type(click.ParamType):
         fp = value
 
         try:
+            q2cli.util.get_plugin_manager()
             artifact = qiime2.Artifact.load(fp)
         except Exception:
             try:
