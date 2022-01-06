@@ -134,12 +134,12 @@ class CLIUsage(usage.Usage):
         return variable
 
     def import_from_format(self, name, semantic_type,
-                           fmt_variable, view_type=None):
-        variable = super().import_from_format(
-            name, semantic_type, fmt_variable, view_type=view_type)
+                           variable, view_type=None):
+        imported_var = super().import_from_format(
+            name, semantic_type, variable, view_type=view_type)
 
-        in_fp = fmt_variable.to_interface_name()
-        out_fp = variable.to_interface_name()
+        in_fp = variable.to_interface_name()
+        out_fp = imported_var.to_interface_name()
 
         lines = [
             'qiime tools import \\',
@@ -156,11 +156,11 @@ class CLIUsage(usage.Usage):
 
         self.recorder.extend(lines)
 
-        return variable
+        return imported_var
 
     def init_format(self, name, factory, ext=None):
         if ext is not None:
-            name = '%s.%s' % (name, ext)
+            name = '%s.%s' % (name, ext.lstrip('.'))
 
         variable = super().init_format(name, factory, ext=ext)
 
