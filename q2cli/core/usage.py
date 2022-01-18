@@ -147,6 +147,8 @@ class CLIUsage(usage.Usage):
         ]
 
         if view_type is not None:
+            if type(view_type) is not str:
+                view_type = view_type.__name__
             lines.append(self.INDENT + '--input-format %s \\' % (view_type,))
 
         lines += [
