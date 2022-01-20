@@ -12,6 +12,7 @@ lint:
 test: all
 	QIIMETEST= pytest
 
+# install pytest-xdist plugin for the `-n auto` argument.
 mystery-stew: all
 	MYSTERY_STEW= pytest -k mystery_stew -n auto
 
