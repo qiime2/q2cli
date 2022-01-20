@@ -201,7 +201,9 @@ class CLIUsage(usage.Usage):
         return var
 
     def view_as_metadata(self, name, variable):
-        var = super().view_as_metadata(variable.name, variable)
+        # use the given name so that namespace behaves as expected,
+        # then overwrite it because viewing is a no-op in q2cli
+        var = super().view_as_metadata(name, variable)
         # preserve the original interface name of the QZA as this will be
         # implicitly converted to metadata when executed.
         var._q2cli_ref = variable.to_interface_name()
