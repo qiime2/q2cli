@@ -1,5 +1,5 @@
 # ----------------------------------------------------------------------------
-# Copyright (c) 2016-2021, QIIME 2 development team.
+# Copyright (c) 2016-2022, QIIME 2 development team.
 #
 # Distributed under the terms of the Modified BSD License.
 #
@@ -14,9 +14,122 @@ import tempfile
 from click.testing import CliRunner
 from qiime2 import Artifact
 from qiime2.core.testing.util import get_dummy_plugin
+from qiime2.metadata.base import SUPPORTED_COLUMN_TYPES
 
-from q2cli.builtin.tools import tools
+from q2cli.builtin.tools import tools, _load_metadata
 from q2cli.commands import RootCommand
+
+
+class TestCastMetadata(unittest.TestCase):
+    def setUp(self):
+        self.runner = CliRunner()
+        self.tempdir = tempfile.mkdtemp(prefix='qiime2-q2cli-test-temp-')
+
+        self.metadata_file = os.path.join(
+                self.tempdir, 'metadata.tsv')
+        with open(self.metadata_file, 'w') as f:
+            f.write('id\tnumbers\tstrings\n0\t42\tabc\n1\t-1.5\tdef')
+
+        self.cast_metadata_dump = \
+            ('id\tnumbers\tstrings\n#q2:types\tcategorical\tcategorical\n0\t42'
+             '\tabc\n1\t-1.5\tdef\n\n')
+
+        self.output_file = os.path.join(
+                self.tempdir, 'test_output.tsv')
+
+    def test_input_invalid_column_type(self):
+        result = self.runner.invoke(
+            tools, ['cast-metadata', self.metadata_file, '--cast',
+                    'numbers:foo', '--output-file', self.output_file])
+
+        self.assertNotEqual(result.exit_code, 0)
+        self.assertIn('Unknown column type provided.', result.output)
+
+    def test_input_duplicate_columns(self):
+        result = self.runner.invoke(
+            tools, ['cast-metadata', self.metadata_file, '--cast',
+                    'numbers:numerical', '--cast', 'numbers:categorical',
+                    '--output-file', self.output_file])
+
+        self.assertNotEqual(result.exit_code, 0)
+        self.assertIn(
+            '"numbers" appears in cast more than once.', result.output)
+
+    def test_input_invalid_cast_format_missing_colon(self):
+        result = self.runner.invoke(
+            tools, ['cast-metadata', self.metadata_file, '--cast', 'numbers',
+                    '--output-file', self.output_file])
+
+        self.assertNotEqual(result.exit_code, 0)
+        self.assertIn('Missing `:` in --cast numbers', result.output)
+
+    def test_input_invalid_cast_format_extra_colon(self):
+        result = self.runner.invoke(
+            tools, ['cast-metadata', self.metadata_file, '--cast', 'numbers::',
+                    '--output-file', self.output_file])
+
+        self.assertNotEqual(result.exit_code, 0)
+        self.assertIn('Incorrect number of fields in --cast numbers::',
+                      result.output)
+        self.assertIn('Observed 3', result.output)
+
+    def test_error_on_extra(self):
+        result = self.runner.invoke(
+            tools, ['cast-metadata', self.metadata_file, '--cast',
+                    'extra:numeric', '--output-file', self.output_file])
+
+        self.assertNotEqual(result.exit_code, 0)
+        self.assertIn(
+            "The following cast columns were not found within the"
+            " metadata: extra", result.output)
+
+    def test_error_on_missing(self):
+        result = self.runner.invoke(
+            tools, ['cast-metadata', self.metadata_file, '--cast',
+                    'numbers:categorical', '--error-on-missing',
+                    '--output-file', self.output_file])
+
+        self.assertNotEqual(result.exit_code, 0)
+        self.assertIn(
+            "The following columns within the metadata"
+            " were not provided in the cast: strings",
+            result.output)
+
+    def test_extra_columns_removed(self):
+        result = self.runner.invoke(
+            tools, ['cast-metadata', self.metadata_file, '--cast',
+                    'numbers:categorical', '--cast', 'extra:numeric',
+                    '--ignore-extra', '--output-file', self.output_file])
+
+        self.assertEqual(result.exit_code, 0)
+        casted_metadata = _load_metadata(self.output_file)
+        self.assertNotIn('extra', casted_metadata.columns.keys())
+
+    def test_complete_successful_run(self):
+        result = self.runner.invoke(
+            tools, ['cast-metadata', self.metadata_file, '--cast',
+                    'numbers:categorical', '--output-file', self.output_file])
+
+        self.assertEqual(result.exit_code, 0)
+        input_metadata = _load_metadata(self.metadata_file)
+        self.assertEqual('numeric', input_metadata.columns['numbers'].type)
+
+        casted_metadata = _load_metadata(self.output_file)
+        self.assertEqual('categorical',
+                         casted_metadata.columns['numbers'].type)
+
+    def test_write_to_stdout(self):
+        result = self.runner.invoke(
+            tools, ['cast-metadata', self.metadata_file, '--cast',
+                    'numbers:categorical'])
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertEqual(self.cast_metadata_dump, result.output)
+
+    def test_valid_column_types(self):
+        result = self.runner.invoke(tools, ['cast-metadata', '--help'])
+        for col_type in SUPPORTED_COLUMN_TYPES:
+            self.assertIn(col_type, result.output)
 
 
 class TestInspectMetadata(unittest.TestCase):

@@ -1,5 +1,5 @@
 # ----------------------------------------------------------------------------
-# Copyright (c) 2016-2021, QIIME 2 development team.
+# Copyright (c) 2016-2022, QIIME 2 development team.
 #
 # Distributed under the terms of the Modified BSD License.
 #
@@ -59,7 +59,6 @@ class Q2Option(parser.Option):
                 state.opts[self.dest] = value
             state.order.append(self.obj)  # can't forget this
         elif self.action == 'append_maybe':
-            assert value == ()
             value = self._maybe_take(state)
             if value is None:
                 state.opts.setdefault(self.dest, []).append(self.const)

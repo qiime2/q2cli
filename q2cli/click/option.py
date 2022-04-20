@@ -1,5 +1,5 @@
 # ----------------------------------------------------------------------------
-# Copyright (c) 2016-2021, QIIME 2 development team.
+# Copyright (c) 2016-2022, QIIME 2 development team.
 #
 # Distributed under the terms of the Modified BSD License.
 #
@@ -143,6 +143,11 @@ class GeneratedOption(click.Option):
             parser.add_option(self.opts, action='append_greedy', **shared)
         else:
             super().add_to_parser(parser, ctx)
+
+    def get_default(self, ctx):
+        if self.required:
+            raise click.MissingParameter(ctx=ctx, param=self)
+        return super().get_default(ctx)
 
     def full_process_value(self, ctx, value):
         try:

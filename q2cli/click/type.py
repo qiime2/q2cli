@@ -1,5 +1,5 @@
 # ----------------------------------------------------------------------------
-# Copyright (c) 2016-2021, QIIME 2 development team.
+# Copyright (c) 2016-2022, QIIME 2 development team.
 #
 # Distributed under the terms of the Modified BSD License.
 #
@@ -109,6 +109,7 @@ class QIIME2Type(click.ParamType):
 
         try:
             try:
+                q2cli.util.get_plugin_manager()
                 result = qiime2.sdk.Result.load(value)
             except OSError as e:
                 if e.errno == 28:
@@ -166,6 +167,7 @@ class QIIME2Type(click.ParamType):
         fp = value
 
         try:
+            q2cli.util.get_plugin_manager()
             artifact = qiime2.Artifact.load(fp)
         except Exception:
             try:
