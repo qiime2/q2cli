@@ -125,33 +125,34 @@ class GeneratedOption(click.Option):
     def add_to_parser(self, parser, ctx):
         shared = dict(dest=self.name, nargs=0, obj=self)
         if self.q2_metadata == 'column':
-            parser.add_option(self.opts, action='store', dest=self.name,
+            parser.add_option(opts=self.opts, action='store', dest=self.name,
                               nargs=1, obj=self)
-            parser.add_option(self.q2_extra_opts, action='store',
+            parser.add_option(opts=self.q2_extra_opts, action='store',
                               dest=self.q2_extra_dest, nargs=1, obj=self)
         elif self.is_bool_flag:
             if self.multiple:
                 action = 'append_maybe'
             else:
                 action = 'store_maybe'
-            parser.add_option(self.opts, action=action, const=True,
+            parser.add_option(opts=self.opts, action=action, const=True,
                               **shared)
-            parser.add_option(self.secondary_opts, action=action,
+            parser.add_option(opts=self.secondary_opts, action=action,
                               const=False, **shared)
         elif self.multiple:
             action = 'append_greedy'
-            parser.add_option(self.opts, action='append_greedy', **shared)
+            parser.add_option(opts=self.opts, action='append_greedy', **shared)
         else:
             super().add_to_parser(parser, ctx)
 
-    def get_default(self, ctx):
+    def get_default(self, ctx, call=True):
         if self.required:
             raise click.MissingParameter(ctx=ctx, param=self)
-        return super().get_default(ctx)
+        return super().get_default(ctx, call=call)
 
-    def full_process_value(self, ctx, value):
+    # TODO: revisit this fella
+    def process_value(self, ctx, value):
         try:
-            return super().full_process_value(ctx, value)
+            return super().process_value(ctx, value)
         except click.MissingParameter:
             if not (self.q2_prefix == 'o'
                     and ctx.params.get('output_dir', False)):
