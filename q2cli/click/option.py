@@ -145,11 +145,11 @@ class GeneratedOption(click.Option):
             super().add_to_parser(parser, ctx)
 
     def get_default(self, ctx, call=True):
-        if self.required and not ctx.resilient_parsing:
+        if self.required and not ctx.resilient_parsing and not (
+                self.q2_prefix == 'o' and ctx.params.get('output_dir', False)):
             raise click.MissingParameter(ctx=ctx, param=self)
         return super().get_default(ctx, call=call)
 
-    # TODO: revisit this fella
     def process_value(self, ctx, value):
         try:
             return super().process_value(ctx, value)
