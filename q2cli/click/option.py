@@ -145,7 +145,7 @@ class GeneratedOption(click.Option):
             super().add_to_parser(parser, ctx)
 
     def get_default(self, ctx, call=True):
-        if self.required:
+        if self.required and not ctx.resilient_parsing:
             raise click.MissingParameter(ctx=ctx, param=self)
         return super().get_default(ctx, call=call)
 
