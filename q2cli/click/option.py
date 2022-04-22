@@ -91,10 +91,11 @@ class GeneratedOption(click.Option):
 
     def _consume_metadata(self, ctx, opts):
         # double consume
-        md_file = super().consume_value(ctx, opts)
+        md_file, source = super().consume_value(ctx, opts)
         # consume uses self.name, so mutate but backup for after
         backup, self.name = self.name, self.q2_extra_dest
-        md_col = super().consume_value(ctx, opts)
+        md_col, _ = super().consume_value(ctx, opts)
+
         self.name = backup
 
         if (md_col is None) != (md_file is None):
@@ -106,9 +107,9 @@ class GeneratedOption(click.Option):
                                              ctx=ctx, param=self)
 
         if md_col is None and md_file is None:
-            return None
+            return (None, source)
         else:
-            return (md_file, md_col)
+            return ((md_file, md_col), source)
 
     def get_help_record(self, ctx):
         record = super().get_help_record(ctx)
