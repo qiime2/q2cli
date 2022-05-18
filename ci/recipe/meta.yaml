@@ -21,7 +21,7 @@ requirements:
   run:
     - python  {{ python }}
     - pip
-    - click >=7,<8
+    - click >=8.1
     - qiime2 {{ qiime2_epoch }}.*
 
 test:

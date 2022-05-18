@@ -95,8 +95,7 @@ class Q2Parser(parser.OptionParser):
     # < https://github.com/pallets/click/blob/
     #   ic6042bf2607c5be22b1efef2e42a94ffd281434c/click/parser.py#L228 >
     # Copyright (c) 2014 by the Pallets team.
-    def add_option(self, opts, dest, action=None, nargs=1, const=None,
-                   obj=None):
+    def add_option(self, obj, opts, dest, action=None, nargs=1, const=None):
         """Adds a new option named `dest` to the parser.  The destination
         is not inferred (unlike with optparse) and needs to be explicitly
         provided.  Action can be any of ``store``, ``store_const``,
@@ -104,8 +103,6 @@ class Q2Parser(parser.OptionParser):
         The `obj` can be used to identify the option in the order list
         that is returned from the parser.
         """
-        if obj is None:
-            obj = dest
         opts = [parser.normalize_opt(opt, self.ctx) for opt in opts]
 
         # BEGIN MODIFICATIONS
@@ -122,8 +119,8 @@ class Q2Parser(parser.OptionParser):
         elif action == 'append_greedy':
             nargs = 0
 
-        option = Q2Option(opts, dest, action=action, nargs=nargs,
-                          const=const, obj=obj)
+        option = Q2Option(obj=obj, opts=opts, dest=dest, action=action,
+                          nargs=nargs, const=const)
         # END MODIFICATIONS
         self._opt_prefixes.update(option.prefixes)
         for opt in option._short_opts:
