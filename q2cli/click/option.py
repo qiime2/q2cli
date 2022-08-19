@@ -54,7 +54,18 @@ class GeneratedOption(click.Option):
         else:
             attrs['type'] = None
 
+        # This nonsense:
+        # https://github.com/pallets/click/blob
+        # /08f71b08e2b7ee9b1ea27daf6d3040999fc68551
+        # /src/click/core.py#L2576-L2584
+        if is_bool_flag and multiple is not None:
+            to_add_multiple = attrs.pop('multiple')
+
         super().__init__(**attrs)
+
+        if is_bool_flag and multiple is not None:
+            self.multiple = to_add_multiple
+
         # put things back the way they _should_ be after evading __DEBUG__
         self.is_bool_flag = is_bool_flag
         self.type = click_type
