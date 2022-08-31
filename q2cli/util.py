@@ -73,6 +73,20 @@ def exit_with_error(e, header='An error has been encountered:',
     click.get_current_context().exit(status)
 
 
+def output_in_cache(value):
+    """Determines if an output path follows the format
+    /path_to_extant_cache:key
+    """
+    from pathlib import Path
+    from qiime2.core.cache import Cache
+
+    if ':' not in value:
+        return False
+
+    cache_path = Path(value.split(':')[0])
+    return Cache.is_cache(cache_path)
+
+
 def get_close_matches(name, possibilities):
     import difflib
 

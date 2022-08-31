@@ -84,7 +84,13 @@ class QIIME2Type(click.ParamType):
 
     def _convert_output(self, value, param, ctx):
         import os
+        from q2cli.util import output_in_cache
         # Click path fails to validate writability on new paths
+
+        # Check if our output path is actually in a cache and if it is skip our
+        # other checks
+        if output_in_cache(value):
+            return value
 
         if os.path.exists(value):
             if os.path.isdir(value):
@@ -111,6 +117,18 @@ class QIIME2Type(click.ParamType):
             try:
                 q2cli.util.get_plugin_manager()
                 result = qiime2.sdk.Result.load(value)
+            except ValueError as e:
+                if 'does not exist' in str(e):
+                    try:
+                        result = self._convert_to_cache_input(value)
+                    except ValueError as e:
+                        if 'does not exist' in str(e):
+                            self.fail(f'{value!r} is not a valid filepath',
+                                      param, ctx)
+                        else:
+                            raise ControlFlowException
+                else:
+                    raise ControlFlowException
             except OSError as e:
                 if e.errno == 28:
                     temp = tempfile.tempdir
@@ -119,11 +137,6 @@ class QIIME2Type(click.ParamType):
                               '(Try setting $TMPDIR to a directory with '
                               'more space, or increasing the size of '
                               f'{temp!r})', param, ctx)
-                else:
-                    raise ControlFlowException
-            except ValueError as e:
-                if 'does not exist' in str(e):
-                    self.fail(f'{value!r} is not a valid filepath', param, ctx)
                 else:
                     raise ControlFlowException
             except Exception as e:
@@ -156,6 +169,13 @@ class QIIME2Type(click.ParamType):
                       % (self.type_expr, result.type), param, ctx)
 
         return result
+
+    def _convert_to_cache_input(self, value):
+        from qiime2.core.cache import Cache
+
+        cache_path, key = value.split(':')
+        cache = Cache(cache_path)
+        return cache.load(key)
 
     def _convert_metadata(self, value, param, ctx):
         import sys
