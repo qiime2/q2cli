@@ -122,7 +122,7 @@ class QIIME2Type(click.ParamType):
                     try:
                         result = self._convert_to_cache_input(value)
                     except ValueError as e:
-                        if 'does not exist' in str(e):
+                        if 'not enough values to unpack' in str(e):
                             self.fail(f'{value!r} is not a valid filepath',
                                       param, ctx)
                         else:
