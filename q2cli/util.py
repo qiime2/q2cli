@@ -80,11 +80,26 @@ def output_in_cache(value):
     from pathlib import Path
     from qiime2.core.cache import Cache
 
+    IDENTIFIER_ERROR = ValueError(
+        'Key must be a valid Python identifier. Python identifier rules may '
+        'be found here https://www.askpython.com/python/'
+        'python-identifiers-rules-best-practices')
+
     if ':' not in value:
         return False
 
-    cache_path = Path(value.split(':')[0])
-    return Cache.is_cache(cache_path)
+    try:
+        cache_path, key = value.split(':')
+    except ValueError as e:
+        if 'too many values to unpack' in str(e):
+            raise IDENTIFIER_ERROR
+        else:
+            raise e
+
+    if not key.isidentifier():
+        raise IDENTIFIER_ERROR
+
+    return Cache.is_cache(Path(cache_path))
 
 
 def get_close_matches(name, possibilities):
