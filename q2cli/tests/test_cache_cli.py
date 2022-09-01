@@ -1,0 +1,209 @@
+# ----------------------------------------------------------------------------
+# Copyright (c) 2016-2022, QIIME 2 development team.
+#
+# Distributed under the terms of the Modified BSD License.
+#
+# The full license is in the file LICENSE, distributed with this software.
+# ----------------------------------------------------------------------------
+
+import os.path
+import unittest
+import unittest.mock
+import tempfile
+
+from click.testing import CliRunner
+from qiime2 import Artifact
+from qiime2.core.testing.type import IntSequence1, IntSequence2
+from qiime2.core.testing.util import get_dummy_plugin
+from qiime2.core.cache import Cache
+
+from q2cli.commands import RootCommand
+
+
+class TestCacheCli(unittest.TestCase):
+    def setUp(self):
+        get_dummy_plugin()
+
+        self.runner = CliRunner()
+        self.plugin_command = RootCommand().get_command(
+            ctx=None, name='dummy-plugin')
+        self.tempdir = \
+            tempfile.TemporaryDirectory(prefix='qiime2-q2cli-test-temp-')
+        self.cache = Cache(os.path.join(self.tempdir.name, 'new_cache'))
+
+        self.art1 = Artifact.import_data(IntSequence1, [0, 1, 2])
+        self.art2 = Artifact.import_data(IntSequence1, [3, 4, 5])
+        self.art3 = Artifact.import_data(IntSequence2, [6, 7, 8])
+
+        self.non_cache_output = os.path.join(self.tempdir.name, 'output.qza')
+        self.art3_non_cache = os.path.join(self.tempdir.name, 'art3.qza')
+
+    def tearDown(self):
+        self.tempdir.cleanup()
+
+    def _run_command(self, *args):
+        return self.runner.invoke(self.plugin_command, args)
+
+    def test_inputs_from_cache(self):
+        self.cache.save(self.art1, 'art1')
+        self.cache.save(self.art2, 'art2')
+        self.cache.save(self.art3, 'art3')
+
+        art1_path = str(self.cache.path) + ':art1'
+        art2_path = str(self.cache.path) + ':art2'
+        art3_path = str(self.cache.path) + ':art3'
+
+        result = self._run_command(
+            'concatenate-ints', '--i-ints1', art1_path, '--i-ints2', art2_path,
+            '--i-ints3', art3_path, '--p-int1', '9', '--p-int2', '10',
+            '--o-concatenated-ints', self.non_cache_output, '--verbose')
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertEqual(Artifact.load(self.non_cache_output).view(list),
+                         [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+
+    def test_inputs_split(self):
+        self.cache.save(self.art1, 'art1')
+        self.cache.save(self.art2, 'art2')
+        self.art3.save(self.art3_non_cache)
+
+        art1_path = str(self.cache.path) + ':art1'
+        art2_path = str(self.cache.path) + ':art2'
+
+        result = self._run_command(
+            'concatenate-ints', '--i-ints1', art1_path, '--i-ints2', art2_path,
+            '--i-ints3', self.art3_non_cache, '--p-int1', '9', '--p-int2',
+            '10', '--o-concatenated-ints', self.non_cache_output, '--verbose')
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertEqual(Artifact.load(self.non_cache_output).view(list),
+                         [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+
+    def test_output_to_cache(self):
+        self.cache.save(self.art1, 'art1')
+        self.cache.save(self.art2, 'art2')
+        self.cache.save(self.art3, 'art3')
+
+        art1_path = str(self.cache.path) + ':art1'
+        art2_path = str(self.cache.path) + ':art2'
+        art3_path = str(self.cache.path) + ':art3'
+
+        out_path = str(self.cache.path) + ':out'
+
+        result = self._run_command(
+            'concatenate-ints', '--i-ints1', art1_path, '--i-ints2', art2_path,
+            '--i-ints3', art3_path, '--p-int1', '9', '--p-int2', '10',
+            '--o-concatenated-ints', out_path, '--verbose')
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertEqual(self.cache.load('out').view(list),
+                         [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+
+    def test_outputs_to_cache(self):
+        self.cache.save(self.art1, 'art1')
+        art1_path = str(self.cache.path) + ':art1'
+
+        left_path = str(self.cache.path) + ':left'
+        right_path = str(self.cache.path) + ':right'
+
+        result = self._run_command(
+            'split-ints', '--i-ints', art1_path, '--o-left', left_path,
+            '--o-right', right_path, '--verbose'
+        )
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertEqual(self.cache.load('left').view(list), [0])
+        self.assertEqual(self.cache.load('right').view(list), [1, 2])
+
+    def test_outputs_split(self):
+        self.cache.save(self.art1, 'art1')
+        art1_path = str(self.cache.path) + ':' + 'art1'
+
+        left_path = str(self.cache.path) + ':' + 'left'
+
+        result = self._run_command(
+            'split-ints', '--i-ints', art1_path, '--o-left', left_path,
+            '--o-right', self.non_cache_output, '--verbose'
+        )
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertEqual(self.cache.load('left').view(list), [0])
+        self.assertEqual(Artifact.load(self.non_cache_output).view(list),
+                         [1, 2])
+
+    # TODO: Currently if you do something like this it will create a cache at
+    # the specified path then not find your key in it because it just created a
+    # brand new cache out of nothing. Perhaps we don't want it to be so easy to
+    # accidentally create caches out of nowhere
+    def test_invalid_cache_path_input(self):
+        pass
+        # art1_path = 'not_a_cache:art1'
+        # art1_key_path = 'not_a_cache/keys/art1'
+
+        # left_path = str(self.cache.path) + ':left'
+        # right_path = str(self.cache.path) + ':right'
+
+        # result = self._run_command(
+        #     'split-ints', '--i-ints', art1_path, '--o-left', left_path,
+        #     '--o-right', right_path, '--verbose'
+        # )
+
+        # self.assertEqual(result.exit_code, 1)
+        # self.assertIn(f"No such file or directory: '{art1_key_path}'",
+        #               str(result.exception))
+
+    # TODO: Do we want this to create a cache at the specified output location
+    # if no cache exists there now? That is the current behavior. So with
+    # left_path as 'not_a_cache:left' it creates a cache under cwd/not_a_cache
+    # and puts left in it
+    def test_invalid_cache_path_output(self):
+        pass
+        # self.cache.save(self.art1, 'art1')
+        # art1_path = str(self.cache.path) + ':art1'
+
+        # left_path = 'not_a_cache:left'
+        # right_path = str(self.cache.path) + ':right'
+
+        # result = self._run_command(
+        #     'split-ints', '--i-ints', art1_path, '--o-left', left_path,
+        #     '--o-right', right_path, '--verbose'
+        # )
+
+    def test_nonexistent_input_key(self):
+        art1_path = str(self.cache.path) + ':' + 'art1'
+        art1_key_path = self.cache.keys / 'art1'
+
+        left_path = str(self.cache.path) + ':' + 'left'
+
+        result = self._run_command(
+            'split-ints', '--i-ints', art1_path, '--o-left', left_path,
+            '--o-right', self.non_cache_output, '--verbose'
+        )
+
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn(f"No such file or directory: '{art1_key_path}'",
+                      str(result.exception))
+
+    def test_output_key_invalid(self):
+        self.cache.save(self.art1, 'art1')
+        self.cache.save(self.art2, 'art2')
+        self.cache.save(self.art3, 'art3')
+
+        art1_path = str(self.cache.path) + ':art1'
+        art2_path = str(self.cache.path) + ':art2'
+        art3_path = str(self.cache.path) + ':art3'
+
+        out_path = str(self.cache.path) + ':not_valid_identifier$&;'
+
+        result = self._run_command(
+            'concatenate-ints', '--i-ints1', art1_path, '--i-ints2', art2_path,
+            '--i-ints3', art3_path, '--p-int1', '9', '--p-int2', '10',
+            '--o-concatenated-ints', out_path, '--verbose')
+
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn('Key must be a valid Python identifier',
+                      str(result.exception))
+
+
+if __name__ == "__main__":
+    unittest.main()
