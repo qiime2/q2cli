@@ -120,7 +120,7 @@ class QIIME2Type(click.ParamType):
             except ValueError as e:
                 if 'does not exist' in str(e):
                     try:
-                        result = self._convert_to_cache_input(value)
+                        result = q2cli.util.convert_to_cache_input(value)
                     except ValueError as e:
                         if 'not enough values to unpack' in str(e):
                             self.fail(f'{value!r} is not a valid filepath',
@@ -170,41 +170,13 @@ class QIIME2Type(click.ParamType):
 
         return result
 
-    def _convert_to_cache_input(self, value):
-        from qiime2.core.cache import Cache
-
-        cache_path, key = value.split(':')
-        cache = Cache(cache_path)
-        return cache.load(key)
-
     def _convert_metadata(self, value, param, ctx):
-        import sys
-        import qiime2
         import q2cli.util
 
         if self.type_expr.name == 'MetadataColumn':
             value, column = value
-        fp = value
 
-        try:
-            q2cli.util.get_plugin_manager()
-            artifact = qiime2.Artifact.load(fp)
-        except Exception:
-            try:
-                metadata = qiime2.Metadata.load(fp)
-            except Exception as e:
-                header = ("There was an issue with loading the file %s as "
-                          "metadata:" % fp)
-                tb = 'stderr' if '--verbose' in sys.argv else None
-                q2cli.util.exit_with_error(e, header=header, traceback=tb)
-        else:
-            try:
-                metadata = artifact.view(qiime2.Metadata)
-            except Exception as e:
-                header = ("There was an issue with viewing the artifact "
-                          "%s as QIIME 2 Metadata:" % fp)
-                tb = 'stderr' if '--verbose' in sys.argv else None
-                q2cli.util.exit_with_error(e, header=header, traceback=tb)
+        metadata = q2cli.util.load_metadata(value)
 
         if self.type_expr.name != 'MetadataColumn':
             return metadata
