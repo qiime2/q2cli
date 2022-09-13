@@ -324,8 +324,7 @@ def cast_metadata(paths, cast, output_file, ignore_extra,
 @click.option('--tsv/--no-tsv', default=False,
               help='Print as machine-readable TSV instead of text.')
 @click.argument('paths', nargs=-1, required=True, metavar='METADATA...',
-                type=click.Path(exists=True, file_okay=True, dir_okay=False,
-                                readable=True))
+                type=click.Path(file_okay=True, dir_okay=False, readable=True))
 @q2cli.util.pretty_failure(traceback=None)
 def inspect_metadata(paths, tsv, failure):
     metadata = _merge_metadata(paths)
@@ -373,30 +372,8 @@ def inspect_metadata(paths, tsv, failure):
         click.echo(metadata.column_count)
 
 
-def _load_metadata(path):
-    import qiime2
-    import qiime2.sdk
-
-    # TODO: clean up duplication between this and the metadata handlers.
-    try:
-        artifact = qiime2.sdk.Result.load(path)
-    except Exception:
-        metadata = qiime2.Metadata.load(path)
-    else:
-        if isinstance(artifact, qiime2.Visualization):
-            raise Exception("Visualizations cannot be viewed as QIIME 2"
-                            " metadata:\n%r" % path)
-        elif artifact.has_metadata():
-            metadata = artifact.view(qiime2.Metadata)
-        else:
-            raise Exception("Artifacts with type %r cannot be viewed as"
-                            " QIIME 2 metadata:\n%r" % (artifact.type, path))
-
-    return metadata
-
-
 def _merge_metadata(paths):
-    m = [_load_metadata(p) for p in paths]
+    m = [q2cli.util.load_metadata(p) for p in paths]
     metadata = m[0]
     if m[1:]:
         metadata = metadata.merge(*m[1:])
