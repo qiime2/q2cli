@@ -263,3 +263,49 @@ def get_plugin_manager():
             return pm
 
         return qiime2.sdk.PluginManager()
+
+
+def convert_to_cache_input(value):
+    from qiime2.core.cache import Cache
+
+    cache_path, key = value.split(':')
+    cache = Cache(cache_path)
+    return cache.load(key)
+
+
+def load_metadata(fp):
+    import sys
+
+    import qiime2
+    import qiime2.sdk
+
+    try:
+        artifact = qiime2.sdk.Result.load(fp)
+    except Exception as e:
+        if 'does not exist' in str(e):
+            artifact = convert_to_cache_input(fp)
+        else:
+            try:
+                return qiime2.Metadata.load(fp)
+            except Exception as e:
+                header = ("There was an issue with loading the file %s as "
+                          "metadata:" % fp)
+                tb = 'stderr' if '--verbose' in sys.argv else None
+                exit_with_error(e, header=header, traceback=tb)
+
+    if isinstance(artifact, qiime2.Visualization):
+        raise Exception(
+            f'Visualizations cannot be viewed as QIIME 2 metadata:\n{fp}')
+    elif artifact.has_metadata():
+        try:
+            metadata = artifact.view(qiime2.Metadata)
+        except Exception as e:
+            header = ("There was an issue with viewing the artifact "
+                      "%s as QIIME 2 Metadata:" % fp)
+            tb = 'stderr' if '--verbose' in sys.argv else None
+            exit_with_error(e, header=header, traceback=tb)
+    else:
+        raise Exception("Artifacts with type %r cannot be viewed as"
+                        " QIIME 2 metadata:\n%r" % (artifact.type, fp))
+
+    return metadata
