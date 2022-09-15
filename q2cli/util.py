@@ -283,22 +283,54 @@ def convert_to_cache_input(value):
 def load_metadata(fp):
     import sys
 
+    from q2cli.click.type import ControlFlowException
+
     import qiime2
     import qiime2.sdk
 
+    # NOTE: This is just different enough from _convert_input that making a
+    # helper is a nightmare mainly because _convert_input uses fail while we
+    # raise normal exceptions here, so we would just need to pass the
+    # exceptions up to _convert_input so it can read their messages and fail
+    # as appropriate anyway
     try:
-        artifact = qiime2.sdk.Result.load(fp)
-    except Exception as e:
-        if 'does not exist' in str(e):
-            artifact = convert_to_cache_input(fp)
-        else:
-            try:
-                return qiime2.Metadata.load(fp)
-            except Exception as e:
-                header = ("There was an issue with loading the file %s as "
-                          "metadata:" % fp)
-                tb = 'stderr' if '--verbose' in sys.argv else None
-                exit_with_error(e, header=header, traceback=tb)
+        try:
+            if ':' in fp:
+                artifact = convert_to_cache_input(fp)
+
+            # If we get here we either had a path without a ':' or we got
+            # None from convert_to_cache_input meaning the part of value
+            # before the ':' was not an existing cache
+            if ':' not in fp or artifact is None:
+                artifact = qiime2.sdk.Result.load(fp)
+        except ValueError as e:
+            if 'does not contain the key' in str(e):
+                raise e
+            elif 'does not exist' in str(e):
+                # If value was also not an existing filepath
+                # containing a ':' we assume they wanted a cache
+                # but did not provide a valid one
+                if ':' in fp:
+                    raise ValueError(f"The path {fp.split(':')[0]} is not a "
+                                     "valid cache") from e
+                else:
+                    raise ValueError(f'{fp!r} is not a valid filepath') from e
+            else:
+                raise ControlFlowException
+        # We don't want the outer except to pick up our ValueErrors, so we only
+        # have it catch ControlFlowExceptions and make sure anything we aren't
+        # handling in here is a ControlFlowException when it arrives at the
+        # outer except
+        except Exception as e:
+            raise ControlFlowException from e
+    except ControlFlowException:
+        try:
+            return qiime2.Metadata.load(fp)
+        except Exception as e:
+            header = ("There was an issue with loading the file %s as "
+                      "metadata:" % fp)
+            tb = 'stderr' if '--verbose' in sys.argv else None
+            exit_with_error(e, header=header, traceback=tb)
 
     if isinstance(artifact, qiime2.Visualization):
         raise Exception(
