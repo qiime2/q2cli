@@ -212,5 +212,21 @@ class TestCacheCli(unittest.TestCase):
         self.assertIn("IDS:  1", result.output)
         self.assertIn("COLUMNS:  2", result.output)
 
+    def test_artifact_as_metadata_cache_bad_key(self):
+        mapping_path = str(self.cache.path) + ':mapping'
+
+        result = self.runner.invoke(tools, ['inspect-metadata', mapping_path])
+
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn("does not contain the key 'mapping'", result.output)
+
+    def test_artifact_as_metadata_cache_bad_cache(self):
+        result = self.runner.invoke(tools,
+                                    ['inspect-metadata', 'not_a_cache:key'])
+
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn('is not a valid cache', result.output)
+
+
 if __name__ == "__main__":
     unittest.main()
