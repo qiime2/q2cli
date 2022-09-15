@@ -13,11 +13,12 @@ import tempfile
 
 from click.testing import CliRunner
 from qiime2 import Artifact
-from qiime2.core.testing.type import IntSequence1, IntSequence2
+from qiime2.core.testing.type import IntSequence1, IntSequence2, Mapping
 from qiime2.core.testing.util import get_dummy_plugin
 from qiime2.core.cache import Cache
 
 from q2cli.commands import RootCommand
+from q2cli.builtin.tools import tools
 
 
 class TestCacheCli(unittest.TestCase):
@@ -34,6 +35,7 @@ class TestCacheCli(unittest.TestCase):
         self.art1 = Artifact.import_data(IntSequence1, [0, 1, 2])
         self.art2 = Artifact.import_data(IntSequence1, [3, 4, 5])
         self.art3 = Artifact.import_data(IntSequence2, [6, 7, 8])
+        self.mapping = Artifact.import_data(Mapping, {'a': '1', 'b': '2'})
 
         self.non_cache_output = os.path.join(self.tempdir.name, 'output.qza')
         self.art3_non_cache = os.path.join(self.tempdir.name, 'art3.qza')
@@ -196,6 +198,19 @@ class TestCacheCli(unittest.TestCase):
         self.assertIn('Key must be a valid Python identifier',
                       str(result.exception))
 
+    def test_artifact_as_metadata_cache(self):
+        self.cache.save(self.mapping, 'mapping')
+        mapping_path = str(self.cache.path) + ':mapping'
+
+        result = self.runner.invoke(tools, ['inspect-metadata', mapping_path])
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertIn('COLUMN NAME  TYPE', result.output)
+        self.assertIn("===========  ===========", result.output)
+        self.assertIn("a  categorical", result.output)
+        self.assertIn("b  categorical", result.output)
+        self.assertIn("IDS:  1", result.output)
+        self.assertIn("COLUMNS:  2", result.output)
 
 if __name__ == "__main__":
     unittest.main()
