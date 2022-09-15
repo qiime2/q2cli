@@ -131,26 +131,19 @@ class TestCacheCli(unittest.TestCase):
         self.assertEqual(Artifact.load(self.non_cache_output).view(list),
                          [1, 2])
 
-    # TODO: Currently if you do something like this it will create a cache at
-    # the specified path then not find your key in it because it just created a
-    # brand new cache out of nothing. Perhaps we don't want it to be so easy to
-    # accidentally create caches out of nowhere
     def test_invalid_cache_path_input(self):
-        pass
-        # art1_path = 'not_a_cache:art1'
-        # art1_key_path = 'not_a_cache/keys/art1'
+        art1_path = 'not_a_cache:art1'
 
-        # left_path = str(self.cache.path) + ':left'
-        # right_path = str(self.cache.path) + ':right'
+        left_path = str(self.cache.path) + ':left'
+        right_path = str(self.cache.path) + ':right'
 
-        # result = self._run_command(
-        #     'split-ints', '--i-ints', art1_path, '--o-left', left_path,
-        #     '--o-right', right_path, '--verbose'
-        # )
+        result = self._run_command(
+            'split-ints', '--i-ints', art1_path, '--o-left', left_path,
+            '--o-right', right_path, '--verbose'
+        )
 
-        # self.assertEqual(result.exit_code, 1)
-        # self.assertIn(f"No such file or directory: '{art1_key_path}'",
-        #               str(result.exception))
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn("is not a valid cache", result.output)
 
     # TODO: Do we want this to create a cache at the specified output location
     # if no cache exists there now? That is the current behavior. So with
@@ -171,7 +164,6 @@ class TestCacheCli(unittest.TestCase):
 
     def test_nonexistent_input_key(self):
         art1_path = str(self.cache.path) + ':' + 'art1'
-        art1_key_path = self.cache.keys / 'art1'
 
         left_path = str(self.cache.path) + ':' + 'left'
 
@@ -181,8 +173,8 @@ class TestCacheCli(unittest.TestCase):
         )
 
         self.assertEqual(result.exit_code, 1)
-        self.assertIn(f"No such file or directory: '{art1_key_path}'",
-                      str(result.exception))
+        self.assertIn("does not contain the key 'art1'",
+                      str(result.output))
 
     def test_output_key_invalid(self):
         self.cache.save(self.art1, 'art1')
