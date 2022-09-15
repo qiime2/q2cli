@@ -266,9 +266,16 @@ def get_plugin_manager():
 
 
 def convert_to_cache_input(value):
+    import os
+    from pathlib import Path
     from qiime2.core.cache import Cache
 
     cache_path, key = value.split(':')
+    # We don't want to invent a new cache on disk here because if their input
+    # exists their cache must also already exist
+    if not os.path.exists(cache_path) or not Cache.is_cache(Path(cache_path)):
+        return None
+
     cache = Cache(cache_path)
     return cache.load(key)
 
