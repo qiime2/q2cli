@@ -46,10 +46,6 @@ class OutDirType(click.Path):
         return value
 
 
-class ControlFlowException(Exception):
-    pass
-
-
 class QIIME2Type(click.ParamType):
     def __init__(self, type_ast, type_repr, is_output=False):
         self.type_repr = type_repr
@@ -108,57 +104,15 @@ class QIIME2Type(click.ParamType):
 
     def _convert_input(self, value, param, ctx):
         import os
-        import tempfile
         import qiime2.sdk
         import qiime2.sdk.util
         import q2cli.util
 
         try:
-            try:
-                q2cli.util.get_plugin_manager()
-                if ':' in value:
-                    result = q2cli.util.convert_to_cache_input(value)
-
-                # If we get here we either had a path without a ':' or we got
-                # None from convert_to_cache_input meaning the part of value
-                # before the ':' was not an existing cache
-                if ':' not in value or result is None:
-                    result = qiime2.sdk.Result.load(value)
-            except OSError as e:
-                if e.errno == 28:
-                    temp = tempfile.tempdir
-                    self.fail(f'There was not enough space left on {temp!r} '
-                              f'to extract the artifact {value!r}. (Try '
-                              'setting $TMPDIR to a directory with more '
-                              f'space, or increasing the size of {temp!r})',
-                              param, ctx)
-                else:
-                    raise ControlFlowException
-            except ValueError as e:
-                if 'does not contain the key' in str(e):
-                    self.fail(str(e), param, ctx)
-                elif 'does not exist' in str(e):
-                    # If value was also not an existing filepath
-                    # containing a ':' we assume they wanted a cache
-                    # but did not provide a valid one
-                    if ':' in value:
-                        self.fail(f"The path {value.split(':')[0]} is not a "
-                                  "valid cache", param, ctx)
-                    else:
-                        self.fail(f'{value!r} is not a valid filepath',
-                                  param, ctx)
-                else:
-                    raise ControlFlowException
-            except Exception as e:
-                # If we made it here, QIIME 2 was confident that the thing we
-                # are trying to load is a QIIME 2 Result, however, we have run
-                # into some kind of catastrophic error.
-                header = ('There was a problem loading %s as a QIIME 2 Result:'
-                          % value)
-                q2cli.util.exit_with_error(e, header=header)
-        except ControlFlowException:
-            self.fail('%r is not a QIIME 2 Artifact (.qza)' % value, param,
-                      ctx)
+            q2cli.util.get_plugin_manager()
+            result = q2cli.util.get_input(value)
+        except Exception as e:
+            self.fail(str(e), param, ctx)
 
         if isinstance(result, qiime2.sdk.Visualization):
             maybe = value[:-1] + 'a'

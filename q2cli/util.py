@@ -7,6 +7,10 @@
 # ----------------------------------------------------------------------------
 
 
+class ControlFlowException(Exception):
+    pass
+
+
 def get_app_dir():
     import os
     conda_prefix = os.environ.get('CONDA_PREFIX')
@@ -265,64 +269,15 @@ def get_plugin_manager():
         return qiime2.sdk.PluginManager()
 
 
-def convert_to_cache_input(value):
-    import os
-    from pathlib import Path
-    from qiime2.core.cache import Cache
-
-    cache_path, key = value.split(':')
-    # We don't want to invent a new cache on disk here because if their input
-    # exists their cache must also already exist
-    if not os.path.exists(cache_path) or not Cache.is_cache(Path(cache_path)):
-        return None
-
-    cache = Cache(cache_path)
-    return cache.load(key)
-
-
 def load_metadata(fp):
+    """ Turns a filepath into metadata if the path is either to metadata or an
+    artifact that can be viewed as metadata
+    """
     import sys
-
-    from q2cli.click.type import ControlFlowException
-
     import qiime2
-    import qiime2.sdk
 
-    # NOTE: This is just different enough from _convert_input that making a
-    # helper is a nightmare mainly because _convert_input uses fail while we
-    # raise normal exceptions here, so we would just need to pass the
-    # exceptions up to _convert_input so it can read their messages and fail
-    # as appropriate anyway
     try:
-        try:
-            if ':' in fp:
-                artifact = convert_to_cache_input(fp)
-
-            # If we get here we either had a path without a ':' or we got
-            # None from convert_to_cache_input meaning the part of value
-            # before the ':' was not an existing cache
-            if ':' not in fp or artifact is None:
-                artifact = qiime2.sdk.Result.load(fp)
-        except ValueError as e:
-            if 'does not contain the key' in str(e):
-                raise e
-            elif 'does not exist' in str(e):
-                # If value was also not an existing filepath
-                # containing a ':' we assume they wanted a cache
-                # but did not provide a valid one
-                if ':' in fp:
-                    raise ValueError(f"The path {fp.split(':')[0]} is not a "
-                                     "valid cache") from e
-                else:
-                    raise ValueError(f'{fp!r} is not a valid filepath') from e
-            else:
-                raise ControlFlowException
-        # We don't want the outer except to pick up our ValueErrors, so we only
-        # have it catch ControlFlowExceptions and make sure anything we aren't
-        # handling in here is a ControlFlowException when it arrives at the
-        # outer except
-        except Exception as e:
-            raise ControlFlowException from e
+        artifact = get_input(fp)
     except ControlFlowException:
         try:
             return qiime2.Metadata.load(fp)
@@ -348,3 +303,69 @@ def load_metadata(fp):
                         " QIIME 2 metadata:\n%r" % (artifact.type, fp))
 
     return metadata
+
+
+def get_input(fp):
+    """ Gets a Result from a filepath if possible
+    """
+    import tempfile
+    import qiime2
+    import qiime2.sdk
+
+    try:
+        if ':' in fp:
+            artifact = convert_to_cache_input(fp)
+
+        # If we get here we either had a path without a ':' or we got
+        # None from convert_to_cache_input meaning the part of value
+        # before the ':' was not an existing cache
+        if ':' not in fp or artifact is None:
+            artifact = qiime2.sdk.Result.load(fp)
+    except OSError as e:
+        if e.errno == 28:
+            temp = tempfile.tempdir
+            raise ValueError(f'There was not enough space left on {temp!r} '
+                             f'to extract the artifact {fp!r}. (Try '
+                             'setting $TMPDIR to a directory with more '
+                             f'space, or increasing the size of {temp!r})')
+        else:
+            raise ControlFlowException(
+                '%r is not a QIIME 2 Artifact (.qza)' % fp)
+    except ValueError as e:
+        if 'does not contain the key' in str(e):
+            raise e
+        elif 'does not exist' in str(e):
+            # If value was also not an existing filepath
+            # containing a ':' we assume they wanted a cache
+            # but did not provide a valid one
+            if ':' in fp:
+                raise ValueError(f"The path {fp.split(':')[0]} is not a valid"
+                                 " cache") from e
+            else:
+                raise ValueError(f'{fp!r} is not a valid filepath') from e
+        else:
+            raise ControlFlowException(
+                '%r is not a QIIME 2 Artifact (.qza)' % fp)
+    # If we get here, all we really know is we failed to get a Result
+    except Exception as e:
+        raise ControlFlowException(
+            'There was a problem loading %s as a QIIME 2 Result: ' % fp) from e
+
+    return artifact
+
+
+def convert_to_cache_input(fp):
+    """ Determine if an input is in a cache and load it from the cache if it is
+    """
+    import os
+    from pathlib import Path
+    from qiime2.core.cache import Cache
+
+    cache_path, key = fp.split(':')
+    # We don't want to invent a new cache on disk here because if their input
+    # exists their cache must also already exist
+    if not os.path.exists(cache_path) or not Cache.is_cache(Path(cache_path)):
+        return None
+
+    cache = Cache(cache_path)
+    return cache.load(key)
