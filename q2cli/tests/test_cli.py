@@ -56,17 +56,17 @@ class CliTests(unittest.TestCase):
         # top level commands, including a plugin, are present
         qiime_cli = RootCommand()
         commands = qiime_cli.list_commands(ctx=None)
-        self.assertTrue('info' in commands)
-        self.assertTrue('tools' in commands)
-        self.assertTrue('dummy-plugin' in commands)
+        self.assertIn('info', commands)
+        self.assertIn('tools', commands)
+        self.assertIn('dummy-plugin', commands)
 
     def test_plugin_list_commands(self):
         # plugin commands are present including a method and visualizer
         qiime_cli = RootCommand()
         command = qiime_cli.get_command(ctx=None, name='dummy-plugin')
         commands = command.list_commands(ctx=None)
-        self.assertTrue('split-ints' in commands)
-        self.assertTrue('mapping-viz' in commands)
+        self.assertIn('split-ints', commands)
+        self.assertIn('mapping-viz', commands)
 
         self.assertFalse('split_ints' in commands)
         self.assertFalse('mapping_viz' in commands)
@@ -96,25 +96,25 @@ class CliTests(unittest.TestCase):
         result = self.runner.invoke(
             tools, ['import', '--show-importable-types'])
         self.assertEqual(result.exit_code, 0)
-        self.assertTrue('FourInts' in result.output)
-        self.assertTrue('IntSequence1' in result.output)
-        self.assertTrue('IntSequence2' in result.output)
-        self.assertTrue('Kennel[Cat]' in result.output)
-        self.assertTrue('Kennel[Dog]' in result.output)
-        self.assertTrue('Mapping' in result.output)
+        self.assertIn('FourInts', result.output)
+        self.assertIn('IntSequence1', result.output)
+        self.assertIn('IntSequence2', result.output)
+        self.assertIn('Kennel[Cat]', result.output)
+        self.assertIn('Kennel[Dog]', result.output)
+        self.assertIn('Mapping', result.output)
 
     def test_show_importable_formats(self):
         result = self.runner.invoke(
             tools, ['import', '--show-importable-formats'])
         self.assertEqual(result.exit_code, 0)
-        self.assertTrue('FourIntsDirectoryFormat' in result.output)
-        self.assertTrue('IntSequenceDirectoryFormat' in result.output)
-        self.assertFalse('UnimportableFormat' in result.output)
-        self.assertFalse('UnimportableDirectoryFormat' in result.output)
-        self.assertTrue('MappingDirectoryFormat' in result.output)
-        self.assertTrue('IntSequenceFormat' in result.output)
-        self.assertTrue('IntSequenceFormatV2' in result.output)
-        self.assertTrue('IntSequenceV2DirectoryFormat' in result.output)
+        self.assertIn('FourIntsDirectoryFormat', result.output)
+        self.assertIn('IntSequenceDirectoryFormat', result.output)
+        self.assertNotIn('UnimportableFormat', result.output)
+        self.assertNotIn('UnimportableDirectoryFormat', result.output)
+        self.assertIn('MappingDirectoryFormat', result.output)
+        self.assertIn('IntSequenceFormat', result.output)
+        self.assertIn('IntSequenceFormatV2', result.output)
+        self.assertIn('IntSequenceV2DirectoryFormat', result.output)
 
     def test_extract(self):
         result = self.runner.invoke(
@@ -134,17 +134,17 @@ class CliTests(unittest.TestCase):
         result = self.runner.invoke(
             tools, ['validate', self.artifact1_path, '--level', 'min'])
         self.assertEqual(result.exit_code, 0)
-        self.assertTrue('appears to be valid at level=min' in result.output)
+        self.assertIn('appears to be valid at level=min', result.output)
 
     def test_validate_max(self):
         result = self.runner.invoke(
             tools, ['validate', self.artifact1_path, '--level', 'max'])
         self.assertEqual(result.exit_code, 0)
-        self.assertTrue('appears to be valid at level=max' in result.output)
+        self.assertIn('appears to be valid at level=max', result.output)
 
         result = self.runner.invoke(tools, ['validate', self.artifact1_path])
         self.assertEqual(result.exit_code, 0)
-        self.assertTrue('appears to be valid at level=max' in result.output)
+        self.assertIn('appears to be valid at level=max', result.output)
 
     def test_split_ints(self):
         qiime_cli = RootCommand()
@@ -324,8 +324,8 @@ class CliTests(unittest.TestCase):
                           '--o-visualization', viz_path, '--verbose'])
 
         self.assertEqual(result.exit_code, 1)
-        self.assertTrue('problem loading' in result.output)
-        self.assertTrue(self.artifact1_path in result.output)
+        self.assertIn('problem loading', result.output)
+        self.assertIn(self.artifact1_path, result.output)
 
     def test_deprecated_help_text(self):
         qiime_cli = RootCommand()
@@ -334,8 +334,8 @@ class CliTests(unittest.TestCase):
         result = self.runner.invoke(command, ['deprecated-method', '--help'])
 
         self.assertEqual(result.exit_code, 0)
-        self.assertTrue('WARNING' in result.output)
-        self.assertTrue('deprecated' in result.output)
+        self.assertIn('WARNING', result.output)
+        self.assertIn('deprecated', result.output)
 
     def test_run_deprecated_gets_warning_msg(self):
         qiime_cli = RootCommand()
@@ -354,7 +354,7 @@ class CliTests(unittest.TestCase):
         # Just make sure that the command ran as expected
         self.assertEqual(artifact.view(dict), {'foo': '43'})
 
-        self.assertTrue('deprecated' in result.output)
+        self.assertIn('deprecated', result.output)
 
 
 class TestOptionalArtifactSupport(unittest.TestCase):
@@ -612,6 +612,8 @@ class TestMetadataColumnSupport(MetadataTestsBase):
                 '--m-metadata-column', 'col1', '--verbose')
 
             exp_tsv = 'id\tcol1\n#q2:types\tcategorical\n0\tfoo\nid1\tbar\n'
+            if result.exit_code != 0:
+                raise ValueError(result.exception)
             self._assertMetadataOutput(
                 result, exp_tsv=exp_tsv,
                 exp_yaml="metadata: !metadata 'metadata.tsv'")
