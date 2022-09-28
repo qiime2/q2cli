@@ -77,7 +77,7 @@ def exit_with_error(e, header='An error has been encountered:',
     click.get_current_context().exit(status)
 
 
-def output_in_cache(value):
+def output_in_cache(fp):
     """Determines if an output path follows the format
     /path_to_extant_cache:key
     """
@@ -89,21 +89,31 @@ def output_in_cache(value):
         'be found here https://www.askpython.com/python/'
         'python-identifiers-rules-best-practices')
 
-    if ':' not in value:
+    # Tells us right away this isn't in a cache
+    if ':' not in fp:
         return False
 
+    split_path = fp.split(':')
+
+    # Account for potential for : in the path
+    cache_path = ':'.join(elem for elem in split_path[:-1])
+    key = split_path[-1]
+
     try:
-        cache_path, key = value.split(':')
-    except ValueError as e:
-        if 'too many values to unpack' in str(e):
-            raise IDENTIFIER_ERROR
+        if Cache.is_cache(Path(cache_path)):
+            if not key.isidentifier():
+                raise IDENTIFIER_ERROR
+            else:
+                return True
+    # cache_path doesn't exist at all
+    except FileNotFoundError as e:
+        if 'No such file or directory' in str(e):
+            pass
         else:
             raise e
 
-    if not key.isidentifier():
-        raise IDENTIFIER_ERROR
-
-    return Cache.is_cache(Path(cache_path))
+    # We don't have a cache at all
+    return False
 
 
 def get_close_matches(name, possibilities):
@@ -361,7 +371,12 @@ def convert_to_cache_input(fp):
     from pathlib import Path
     from qiime2.core.cache import Cache
 
-    cache_path, key = fp.split(':')
+    split_path = fp.split(':')
+
+    # Handle the potential for : in the cache path
+    cache_path = ':'.join(elem for elem in split_path[:-1])
+    key = split_path[-1]
+
     # We don't want to invent a new cache on disk here because if their input
     # exists their cache must also already exist
     if not os.path.exists(cache_path) or not Cache.is_cache(Path(cache_path)):
