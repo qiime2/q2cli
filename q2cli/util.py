@@ -84,11 +84,6 @@ def output_in_cache(fp):
     from pathlib import Path
     from qiime2.core.cache import Cache
 
-    IDENTIFIER_ERROR = ValueError(
-        'Key must be a valid Python identifier. Python identifier rules may '
-        'be found here https://www.askpython.com/python/'
-        'python-identifiers-rules-best-practices')
-
     # Tells us right away this isn't in a cache
     if ':' not in fp:
         return False
@@ -102,11 +97,14 @@ def output_in_cache(fp):
     try:
         if Cache.is_cache(Path(cache_path)):
             if not key.isidentifier():
-                raise IDENTIFIER_ERROR
+                raise ValueError(
+                    'Key must be a valid Python identifier. Python identifier '
+                    'rules may be found here https://www.askpython.com/python/'
+                    'python-identifiers-rules-best-practices')
             else:
                 return True
-    # cache_path doesn't exist at all
     except FileNotFoundError as e:
+        # If cache_path doesn't exist, don't treat this as a cache output
         if 'No such file or directory' in str(e):
             pass
         else:
