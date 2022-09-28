@@ -58,7 +58,8 @@ class TestCacheCli(unittest.TestCase):
         result = self._run_command(
             'concatenate-ints', '--i-ints1', art1_path, '--i-ints2', art2_path,
             '--i-ints3', art3_path, '--p-int1', '9', '--p-int2', '10',
-            '--o-concatenated-ints', self.non_cache_output, '--verbose')
+            '--o-concatenated-ints', self.non_cache_output, '--verbose'
+        )
 
         self.assertEqual(result.exit_code, 0)
         self.assertEqual(Artifact.load(self.non_cache_output).view(list),
@@ -75,11 +76,46 @@ class TestCacheCli(unittest.TestCase):
         result = self._run_command(
             'concatenate-ints', '--i-ints1', art1_path, '--i-ints2', art2_path,
             '--i-ints3', self.art3_non_cache, '--p-int1', '9', '--p-int2',
-            '10', '--o-concatenated-ints', self.non_cache_output, '--verbose')
+            '10', '--o-concatenated-ints', self.non_cache_output, '--verbose'
+        )
 
         self.assertEqual(result.exit_code, 0)
         self.assertEqual(Artifact.load(self.non_cache_output).view(list),
                          [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+
+    def test_colon_in_input_path_not_cache(self):
+        art_path = os.path.join(self.tempdir.name, 'art:1.qza')
+        self.art1.save(art_path)
+
+        left_path = os.path.join(self.tempdir.name, 'left.qza')
+        right_path = os.path.join(self.tempdir.name, 'right.qza')
+
+        result = self._run_command(
+            'split-ints', '--i-ints', art_path, '--o-left', left_path,
+            '--o-right', right_path, '--verbose'
+        )
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertEqual(Artifact.load(left_path).view(list), [0])
+        self.assertEqual(Artifact.load(right_path).view(list), [1, 2])
+
+    def test_colon_in_cache_path(self):
+        cache = Cache(os.path.join(self.tempdir.name, 'new:cache'))
+        cache.save(self.art1, 'art')
+
+        art_path = str(cache.path) + ':art'
+
+        left_path = os.path.join(self.tempdir.name, 'left.qza')
+        right_path = os.path.join(self.tempdir.name, 'right.qza')
+
+        result = self._run_command(
+            'split-ints', '--i-ints', art_path, '--o-left', left_path,
+            '--o-right', right_path, '--verbose'
+        )
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertEqual(Artifact.load(left_path).view(list), [0])
+        self.assertEqual(Artifact.load(right_path).view(list), [1, 2])
 
     def test_output_to_cache(self):
         self.cache.save(self.art1, 'art1')
@@ -95,7 +131,8 @@ class TestCacheCli(unittest.TestCase):
         result = self._run_command(
             'concatenate-ints', '--i-ints1', art1_path, '--i-ints2', art2_path,
             '--i-ints3', art3_path, '--p-int1', '9', '--p-int2', '10',
-            '--o-concatenated-ints', out_path, '--verbose')
+            '--o-concatenated-ints', out_path, '--verbose'
+        )
 
         self.assertEqual(result.exit_code, 0)
         self.assertEqual(self.cache.load('out').view(list),
@@ -147,22 +184,42 @@ class TestCacheCli(unittest.TestCase):
         self.assertEqual(result.exit_code, 1)
         self.assertIn("is not a valid cache", result.output)
 
-    # TODO: Do we want this to create a cache at the specified output location
-    # if no cache exists there now? That is the current behavior. So with
-    # left_path as 'not_a_cache:left' it creates a cache under cwd/not_a_cache
-    # and puts left in it
     def test_invalid_cache_path_output(self):
-        pass
-        # self.cache.save(self.art1, 'art1')
-        # art1_path = str(self.cache.path) + ':art1'
+        self.cache.save(self.art1, 'art1')
+        art1_path = str(self.cache.path) + ':art1'
 
-        # left_path = 'not_a_cache:left'
-        # right_path = str(self.cache.path) + ':right'
+        left_path = '/this/is/not_a_cache:left'
+        right_path = str(self.cache.path) + ':right'
 
-        # result = self._run_command(
-        #     'split-ints', '--i-ints', art1_path, '--o-left', left_path,
-        #     '--o-right', right_path, '--verbose'
-        # )
+        result = self._run_command(
+            'split-ints', '--i-ints', art1_path, '--o-left', left_path,
+            '--o-right', right_path, '--verbose'
+        )
+
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn('does not exist', result.output)
+
+    def test_colon_in_out_path_not_cache(self):
+        self.cache.save(self.art1, 'art1')
+        self.cache.save(self.art2, 'art2')
+        self.cache.save(self.art3, 'art3')
+
+        art1_path = str(self.cache.path) + ':art1'
+        art2_path = str(self.cache.path) + ':art2'
+        art3_path = str(self.cache.path) + ':art3'
+
+        out_path = os.path.join(self.tempdir.name, 'out:put.qza')
+
+        result = self._run_command(
+            'concatenate-ints', '--i-ints1', art1_path, '--i-ints2', art2_path,
+            '--i-ints3', art3_path, '--p-int1', '9', '--p-int2', '10',
+            '--o-concatenated-ints', out_path, '--verbose')
+
+        if result.exception:
+            raise result.exception
+        self.assertEqual(result.exit_code, 0)
+        self.assertEqual(Artifact.load(out_path).view(list),
+                         [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
 
     def test_nonexistent_input_key(self):
         art1_path = str(self.cache.path) + ':' + 'art1'
@@ -192,7 +249,8 @@ class TestCacheCli(unittest.TestCase):
         result = self._run_command(
             'concatenate-ints', '--i-ints1', art1_path, '--i-ints2', art2_path,
             '--i-ints3', art3_path, '--p-int1', '9', '--p-int2', '10',
-            '--o-concatenated-ints', out_path, '--verbose')
+            '--o-concatenated-ints', out_path, '--verbose'
+        )
 
         self.assertEqual(result.exit_code, 1)
         self.assertIn('Key must be a valid Python identifier',
