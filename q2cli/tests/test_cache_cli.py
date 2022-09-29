@@ -213,7 +213,8 @@ class TestCacheCli(unittest.TestCase):
         result = self._run_command(
             'concatenate-ints', '--i-ints1', art1_path, '--i-ints2', art2_path,
             '--i-ints3', art3_path, '--p-int1', '9', '--p-int2', '10',
-            '--o-concatenated-ints', out_path, '--verbose')
+            '--o-concatenated-ints', out_path, '--verbose'
+        )
 
         if result.exception:
             raise result.exception
@@ -279,8 +280,8 @@ class TestCacheCli(unittest.TestCase):
         self.assertIn("does not contain the key 'mapping'", result.output)
 
     def test_artifact_as_metadata_cache_bad_cache(self):
-        result = self.runner.invoke(tools,
-                                    ['inspect-metadata', 'not_a_cache:key'])
+        result = self.runner.invoke(
+            tools, ['inspect-metadata', 'not_a_cache:key'])
 
         self.assertEqual(result.exit_code, 1)
         self.assertIn('is not a valid cache', result.output)
