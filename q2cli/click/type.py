@@ -109,7 +109,6 @@ class QIIME2Type(click.ParamType):
         import q2cli.util
 
         try:
-            q2cli.util.get_plugin_manager()
             result = q2cli.util.get_input(value)
         except Exception as e:
             self.fail(str(e), param, ctx)

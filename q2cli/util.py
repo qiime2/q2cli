@@ -320,6 +320,7 @@ def get_input(fp):
     import qiime2
     import qiime2.sdk
 
+    get_plugin_manager()
     try:
         if ':' in fp:
             artifact = convert_to_cache_input(fp)
