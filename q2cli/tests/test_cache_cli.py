@@ -156,9 +156,9 @@ class TestCacheCli(unittest.TestCase):
 
     def test_outputs_split(self):
         self.cache.save(self.art1, 'art1')
-        art1_path = str(self.cache.path) + ':' + 'art1'
+        art1_path = str(self.cache.path) + ':art1'
 
-        left_path = str(self.cache.path) + ':' + 'left'
+        left_path = str(self.cache.path) + ':left'
 
         result = self._run_command(
             'split-ints', '--i-ints', art1_path, '--o-left', left_path,
@@ -222,9 +222,9 @@ class TestCacheCli(unittest.TestCase):
                          [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
 
     def test_nonexistent_input_key(self):
-        art1_path = str(self.cache.path) + ':' + 'art1'
+        art1_path = str(self.cache.path) + ':art1'
 
-        left_path = str(self.cache.path) + ':' + 'left'
+        left_path = str(self.cache.path) + ':left'
 
         result = self._run_command(
             'split-ints', '--i-ints', art1_path, '--o-left', left_path,
