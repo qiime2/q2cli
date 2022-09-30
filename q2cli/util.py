@@ -290,6 +290,14 @@ def load_metadata(fp):
         try:
             return qiime2.Metadata.load(fp)
         except Exception as e:
+            # Handle the case where we try to load a raw .qza as Metadata
+            # because we were missing the pugin(s) necessary to load it as an
+            # Artifact
+            if "'utf-8' codec can't decode byte" in str(e) and \
+                    qiime2.sdk.result.Result.peek(fp):
+                e = ValueError("It looks like you have an Artifact but are "
+                               "missing the plugin(s) necessary to load it.")
+
             header = ("There was an issue with loading the file %s as "
                       "metadata:" % fp)
             tb = 'stderr' if '--verbose' in sys.argv else None
