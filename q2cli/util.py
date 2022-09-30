@@ -339,7 +339,7 @@ def get_input(fp):
                              f'space, or increasing the size of {temp!r})')
         else:
             raise ControlFlowException(
-                '%r is not a QIIME 2 Artifact (.qza)' % fp)
+                '%r is not a QIIME 2 Artifact (.qza)' % fp) from e
     except ValueError as e:
         if 'does not contain the key' in str(e):
             raise e
@@ -354,7 +354,7 @@ def get_input(fp):
                 raise ValueError(f'{fp!r} is not a valid filepath') from e
         else:
             raise ControlFlowException(
-                '%r is not a QIIME 2 Artifact (.qza)' % fp)
+                '%r is not a QIIME 2 Artifact (.qza)' % fp) from e
     # If we get here, all we really know is we failed to get a Result
     except Exception as e:
         raise ControlFlowException(
