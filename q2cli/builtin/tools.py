@@ -330,6 +330,7 @@ def cast_metadata(paths, cast, output_file, ignore_extra,
                                 readable=True))
 @q2cli.util.pretty_failure(traceback=None)
 def inspect_metadata(paths, tsv, show_hashes, failure):
+    mds = [_load_metadata(path) for path in paths]
     metadata = _merge_metadata(paths)
 
     # we aren't expecting errors below this point, so set traceback to default
