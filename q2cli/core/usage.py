@@ -1,231 +1,326 @@
 # ----------------------------------------------------------------------------
-# Copyright (c) 2016-2021, QIIME 2 development team.
+# Copyright (c) 2016-2022, QIIME 2 development team.
 #
 # Distributed under the terms of the Modified BSD License.
 #
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 
+import collections
+import os
+import shlex
 import textwrap
 
-from qiime2.sdk import usage, util
+import qiime2.sdk.usage as usage
+import q2cli.util as util
+from q2cli.core.state import get_action_state
+import q2cli.click.option
 
-from q2cli.util import to_cli_name
+
+def write_example_data(action, output_dir):
+    for example_name, example in action.examples.items():
+        cli_name = util.to_cli_name(example_name)
+        example_path = os.path.join(output_dir, cli_name)
+
+        use = CLIUsage()
+        example(use)
+
+        for fn, val in use.get_example_data():
+            os.makedirs(example_path, exist_ok=True)
+            path = os.path.join(example_path, fn)
+            val.save(path)
+            try:
+                hint = repr(val.type)
+            except AttributeError:
+                hint = 'Metadata'
+
+            yield hint, path
 
 
-def is_collection(val):
-    return isinstance(val, list) or isinstance(val, set)
+def write_plugin_example_data(plugin, output_dir):
+    for name, action in plugin.actions.items():
+        path = os.path.join(output_dir, util.to_cli_name(name))
+
+        yield from write_example_data(action, path)
+
+
+class CLIUsageVariable(usage.UsageVariable):
+    EXT = {
+        'artifact': '.qza',
+        'visualization': '.qzv',
+        'metadata': '.tsv',
+        'column': '',
+        'format': '',
+    }
+
+    @property
+    def ext(self):
+        return self.EXT[self.var_type]
+
+    @staticmethod
+    def to_cli_name(val):
+        return util.to_cli_name(val)
+
+    def to_interface_name(self):
+        if hasattr(self, '_q2cli_ref'):
+            return self._q2cli_ref
+
+        cli_name = '%s%s' % (self.name, self.ext)
+
+        # don't disturb file names, this will break importing where QIIME 2
+        # relies on specific filenames being present in a dir
+        if self.var_type not in ('format', 'column'):
+            cli_name = self.to_cli_name(cli_name)
+
+        return cli_name
+
+    def assert_has_line_matching(self, path, expression):
+        if not self.use.enable_assertions:
+            return
+
+        INDENT = self.use.INDENT
+        input_path = self.to_interface_name()
+        expr = shlex.quote(expression)
+
+        lines = [
+            'qiime dev assert-result-data %s \\' % (input_path,),
+            INDENT + '--zip-data-path %s \\' % (path,),
+            INDENT + '--expression %s' % (expr,),
+        ]
+
+        self.use.recorder.extend(lines)
+
+    def assert_output_type(self, semantic_type):
+        if not self.use.enable_assertions:
+            return
+
+        INDENT = self.use.INDENT
+        input_path = self.to_interface_name()
+
+        lines = [
+            'qiime dev assert-result-type %s \\' % (input_path,),
+            INDENT + '--qiime-type %s' % (str(semantic_type),),
+        ]
+
+        self.use.recorder.extend(lines)
 
 
 class CLIUsage(usage.Usage):
-    def __init__(self):
+    INDENT = ' ' * 2
+
+    def __init__(self, enable_assertions=False, action_collection_size=None):
         super().__init__()
-        self._cache_recorder = []
+        self.recorder = []
+        self.init_data = []
+        self.enable_assertions = enable_assertions
+        self.action_collection_size = action_collection_size
+        self.output_dir_counter = collections.defaultdict(int)
 
-    @property
-    def cache(self):
-        return self._cache_recorder
+    def usage_variable(self, name, factory, var_type):
+        return CLIUsageVariable(name, factory, var_type, self)
 
-    @classmethod
-    def from_cache(cls, cache):
-        instance = cls()
-        instance._cache_recorder = cache
-        return instance
+    def render(self, flush=False):
+        rendered = '\n'.join(self.recorder)
+        if flush:
+            self.recorder = []
+            self.init_data = []
+        return rendered
 
-    def _add_cache_record(self, source, value):
-        record = dict(source=source, value=value)
-        self._cache_recorder.append(record)
+    def init_artifact(self, name, factory):
+        variable = super().init_artifact(name, factory)
 
-    def render(self):
-        renderer = CLIRenderer(self._cache_recorder)
-        for rendered in renderer.render():
-            yield rendered
+        self.init_data.append(variable)
 
-    def _init_data_(self, ref, factory):
-        return ref
+        return variable
 
-    def _init_metadata_(self, ref, factory):
-        return ref
+    def import_from_format(self, name, semantic_type,
+                           variable, view_type=None):
+        imported_var = super().import_from_format(
+            name, semantic_type, variable, view_type=view_type)
 
-    def _init_data_collection_(self, ref, collection_type, records):
-        # All collection types are saved as a list, for ordering,
-        # and for JSON serialization.
-        return sorted([r.ref for r in records])
+        in_fp = variable.to_interface_name()
+        out_fp = imported_var.to_interface_name()
 
-    def _merge_metadata_(self, ref, records):
-        return sorted([r.ref for r in records])
-
-    def _get_metadata_column_(self, column_name, record):
-        # Returns a list for JSON serialization.
-        return [record.ref, column_name]
-
-    def _comment_(self, text):
-        self._add_cache_record(source='comment', value=text)
-
-    def _action_(self, action, input_opts, output_opts):
-        action_f, action_sig = action.get_action()
-        signature = self._destructure_signature(action_sig)
-        inputs, params, mds, outputs = self._destructure_opts(
-            signature, input_opts, output_opts)
-
-        value = dict(plugin_id=action_f.plugin_id, action_id=action_f.id,
-                     inputs=inputs, params=params, mds=mds, outputs=outputs)
-        self._add_cache_record(source='action', value=value)
-        return output_opts
-
-    def _assert_has_line_matching_(self, ref, label, path, expression):
-        # TODO: implement this method - we can model the
-        # `assert_has_line_matching` behavior that @thermokarst added
-        # to galaxy.
-        pass
-
-    def _destructure_signature(self, action_sig):
-        # In the future this could return a more robust spec subset,
-        # if necessary.
-        def distill_spec(spec):
-            return str(spec.qiime_type)
-
-        inputs = {k: distill_spec(v) for k, v in action_sig.inputs.items()}
-        outputs = {k: distill_spec(v) for k, v in action_sig.outputs.items()}
-        params, mds = {}, {}
-
-        for param_name, spec in action_sig.inputs.items():
-            inputs[param_name] = distill_spec(spec)
-
-        for param_name, spec in action_sig.parameters.items():
-            if util.is_metadata_type(spec.qiime_type):
-                mds[param_name] = distill_spec(spec)
-            else:
-                params[param_name] = distill_spec(spec)
-
-        return {'inputs': inputs, 'params': params,
-                'mds': mds, 'outputs': outputs}
-
-    def _destructure_opts(self, signature, input_opts, output_opts):
-        inputs, params, mds, outputs = {}, {}, {}, {}
-
-        for opt_name, val in input_opts.items():
-            if opt_name in signature['inputs'].keys():
-                inputs[opt_name] = (val, signature['inputs'][opt_name])
-            elif opt_name in signature['params'].keys():
-                # Coerce all collection types into lists, to
-                # allow for JSON serialization.
-                if is_collection(val):
-                    val = list(val)
-                params[opt_name] = (val, signature['params'][opt_name])
-            elif opt_name in signature['mds'].keys():
-                mds[opt_name] = (val, signature['mds'][opt_name])
-
-        for opt_name, val in output_opts.items():
-            outputs[opt_name] = (val, signature['outputs'][opt_name])
-
-        return inputs, params, mds, outputs
-
-
-class CLIRenderer:
-    def __init__(self, records):
-        self.cache_records = records
-
-    def render(self):
-        if len(self.cache_records) == 0:
-            yield 'No examples have been registered for this action yet.'
-        else:
-            for record in self.cache_records:
-                yield self.dispatch(record)
-
-    def dispatch(self, record):
-        source = record['source']
-
-        if source == 'comment':
-            return self.template_comment(record['value'])
-        elif source == 'action':
-            return self.template_action(
-                record['value']['plugin_id'],
-                record['value']['action_id'],
-                record['value']['inputs'],
-                record['value']['params'],
-                record['value']['mds'],
-                record['value']['outputs'],
-            )
-        else:
-            raise Exception
-
-    def template_comment(self, comment):
-        return f'# {comment}'
-
-    def template_action(self, plugin_id, action_id,
-                        inputs, params, mds, outputs):
-        templates = [
-            *list(self._template_inputs(inputs)),
-            *list(self._template_parameters(params)),
-            *list(self._template_metadata(mds)),
-            *list(self._template_outputs(outputs)),
+        lines = [
+            'qiime tools import \\',
+            self.INDENT + '--type %r \\' % (semantic_type,)
         ]
 
-        base_cmd = to_cli_name(f'qiime {plugin_id} {action_id}')
-        action_t = self._format_templates(base_cmd, templates)
-        return action_t
+        if view_type is not None:
+            if type(view_type) is not str:
+                view_type = view_type.__name__
+            lines.append(self.INDENT + '--input-format %s \\' % (view_type,))
 
-    def _format_templates(self, command, templates):
-        wrapper = textwrap.TextWrapper(initial_indent=' ' * 4)
-        templates = [command] + [wrapper.fill(t) for t in templates]
-        return ' \\\n'.join(templates)
+        lines += [
+            self.INDENT + '--input-path %s \\' % (in_fp,),
+            self.INDENT + '--output-path %s' % (out_fp,),
+        ]
 
-    def _template_inputs(self, input_opts):
-        for opt_name, (ref, _) in input_opts.items():
-            refs = ref if isinstance(ref, list) else [ref]
-            for ref in refs:
-                opt_name = to_cli_name(opt_name)
-                yield f'--i-{opt_name} {ref}.qza'
+        self.recorder.extend(lines)
 
-    def _template_parameters(self, param_opts):
-        for opt_name, (val, _) in param_opts.items():
-            vals = val if is_collection(val) else [val]
-            for val in sorted(vals):
-                opt_name = to_cli_name(opt_name)
-                yield f'--p-{opt_name} {val}'
+        return imported_var
 
-    def _template_metadata(self, md_opts):
-        for opt_name, (ref, qiime_type) in md_opts.items():
-            qiime_type = util.parse_type(qiime_type)
-            is_mdc = util.is_metadata_column_type(qiime_type)
-            # Make this into a tuple to differentiate in the following loop
-            ref = tuple(ref) if is_mdc else ref
-            refs = ref if isinstance(ref, list) else [ref]
-            for ref in refs:
-                opt_name = to_cli_name(opt_name)
-                ref, col = ref if is_mdc else (ref, None)
-                yield f'--m-{opt_name}-file {ref}.tsv'
-                if col is not None:
-                    yield f'--m-{opt_name}-column \'{col}\''
+    def init_format(self, name, factory, ext=None):
+        if ext is not None:
+            name = '%s.%s' % (name, ext.lstrip('.'))
 
-    def _template_outputs(self, output_opts):
-        for opt_name, (ref, qiime_type) in output_opts.items():
-            opt_name = to_cli_name(opt_name)
-            qiime_type = util.parse_type(qiime_type)
-            ext = 'qzv' if util.is_visualization_type(qiime_type) else 'qza'
-            yield f'--o-{opt_name} {ref}.{ext}'
+        variable = super().init_format(name, factory, ext=ext)
 
+        self.init_data.append(variable)
 
-def cache_examples(action):
-    all_examples = []
-    for example in action.examples:
-        use = CLIUsage()
-        header = str(example).replace('_', ' ')
-        use._comment_(f'### example: {header} ###')
-        action.examples[example](use)
-        all_examples.extend(use.cache)
-    return all_examples
+        return variable
 
+    def init_metadata(self, name, factory):
+        variable = super().init_metadata(name, factory)
 
-def examples(action):
-    import q2cli.core.cache
+        self.init_data.append(variable)
 
-    plugin_id = to_cli_name(action.plugin_id)
-    cached_plugin = q2cli.core.cache.CACHE.plugins[plugin_id]
-    cached_action = cached_plugin['actions'][action.id]
-    cached_examples = cached_action['examples']
+        return variable
 
-    use = CLIUsage.from_cache(cached_examples)
-    for rendered in use.render():
-        yield rendered
+    def comment(self, text):
+        self.recorder += ['# ' + ln for ln in textwrap.wrap(text, width=74)]
+
+    def peek(self, variable):
+        var_name = variable.to_interface_name()
+        self.recorder.append('qiime tools peek %s' % var_name)
+
+    def merge_metadata(self, name, *variables):
+        var = super().merge_metadata(name, *variables)
+
+        # this is our special "short-circuit" attr to handle special-case
+        # .to_interface_name() needs
+        var._q2cli_ref = ' '.join(v.to_interface_name() for v in variables)
+        return var
+
+    def get_metadata_column(self, name, column_name, variable):
+        var = super().get_metadata_column(name, column_name, variable)
+
+        # this is our special "short-circuit" attr to handle special-case
+        # .to_interface_name() needs
+        var._q2cli_ref = (variable.to_interface_name(), column_name)
+        return var
+
+    def view_as_metadata(self, name, variable):
+        # use the given name so that namespace behaves as expected,
+        # then overwrite it because viewing is a no-op in q2cli
+        var = super().view_as_metadata(name, variable)
+        # preserve the original interface name of the QZA as this will be
+        # implicitly converted to metadata when executed.
+        var._q2cli_ref = variable.to_interface_name()
+        return var
+
+    def action(self, action, inputs, outputs):
+        variables = super().action(action, inputs, outputs)
+
+        vars_dict = variables._asdict()
+
+        plugin_name = util.to_cli_name(action.plugin_id)
+        action_name = util.to_cli_name(action.action_id)
+        self.recorder.append('qiime %s %s \\' % (plugin_name, action_name))
+
+        action_f = action.get_action()
+        action_state = get_action_state(action_f)
+
+        ins = inputs.map_variables(lambda v: v.to_interface_name())
+        outs = {k: v.to_interface_name() for k, v in vars_dict.items()}
+        signature = {s['name']: s for s in action_state['signature']}
+
+        for param_name, value in ins.items():
+            self._append_action_line(signature, param_name, value)
+
+        max_collection_size = self.action_collection_size
+        if max_collection_size is not None and len(outs) > max_collection_size:
+            dir_name = self._build_output_dir_name(plugin_name, action_name)
+            self.recorder.append(
+                self.INDENT + '--output-dir %s \\' % (dir_name))
+            self._rename_outputs(vars_dict, dir_name)
+        else:
+            for param_name, value in outs.items():
+                self._append_action_line(signature, param_name, value)
+
+        self.recorder[-1] = self.recorder[-1][:-2]  # remove trailing \
+
+        return variables
+
+    def _build_output_dir_name(self, plugin_name, action_name):
+        base_name = '%s-%s' % (plugin_name, action_name)
+        self.output_dir_counter[base_name] += 1
+        current_inc = self.output_dir_counter[base_name]
+        if current_inc == 1:
+            return base_name
+        return '%s-%d' % (base_name, current_inc)
+
+    def _rename_outputs(self, vars_dict, dir_name):
+        for signature_name, variable in vars_dict.items():
+            name = '%s%s' % (signature_name, variable.ext)
+            variable._q2cli_ref = os.path.join(dir_name, name)
+
+    def _append_action_line(self, signature, param_name, value):
+        param_state = signature[param_name]
+        if value is not None:
+            for opt, val in self._make_param(value, param_state):
+                line = self.INDENT + opt
+                if val is not None:
+                    line += ' ' + val
+                line += ' \\'
+
+                self.recorder.append(line)
+
+    def _make_param(self, value, state):
+        state = state.copy()
+        type_ = state.pop('type')
+
+        opt = q2cli.click.option.GeneratedOption(prefix=type_[0], **state)
+        option = opt.opts[0]
+
+        # INPUTS AND OUTPUTS
+        if type_ in ('input', 'output'):
+            if isinstance(value, str):
+                return [(option, value)]
+            else:
+                if isinstance(value, set):
+                    value = sorted(value)
+                return [(option, ' '.join(value))]
+
+        # METADATA FILE
+        if state['metadata'] == 'file':
+            return [(option, value)]
+
+        # METADATA COLUMN
+        if state['metadata'] == 'column':
+            # md cols are special, we have pre-computed the interface-specific
+            # names and stashed them in an attr, so unpack to get the values
+            fn, col_name = value
+            return [(option, fn), (opt.q2_extra_opts[0], col_name)]
+
+        # PARAMETERS
+        if type_ == 'parameter':
+            if isinstance(value, set):
+                value = [shlex.quote(str(v)) for v in value]
+                return [(option, ' '.join(sorted(value)))]
+
+            if isinstance(value, list):
+                return [(option, ' '.join(shlex.quote(str(v)) for v in value))]
+
+            if type(value) is bool:
+                if state['ast']['type'] == 'expression':
+                    if value:
+                        return [(option, None)]
+                    else:
+                        return [(opt.secondary_opts[0], None)]
+                else:
+                    # This is a more complicated param that can't be expressed
+                    # as a typical `--p-foo/--p-no-foo` so default to baseline
+                    # parameter handling behavior.
+                    pass
+
+            if type(value) is str:
+                return [(option, shlex.quote(value))]
+
+            return [(option, str(value))]
+
+        raise Exception('Something went terribly wrong!')
+
+    def get_example_data(self):
+        for val in self.init_data:
+            yield val.to_interface_name(), val.execute()

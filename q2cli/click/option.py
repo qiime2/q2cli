@@ -1,5 +1,5 @@
 # ----------------------------------------------------------------------------
-# Copyright (c) 2016-2021, QIIME 2 development team.
+# Copyright (c) 2016-2022, QIIME 2 development team.
 #
 # Distributed under the terms of the Modified BSD License.
 #
@@ -54,7 +54,18 @@ class GeneratedOption(click.Option):
         else:
             attrs['type'] = None
 
+        # This nonsense:
+        # https://github.com/pallets/click/blob
+        # /08f71b08e2b7ee9b1ea27daf6d3040999fc68551
+        # /src/click/core.py#L2576-L2584
+        if is_bool_flag and multiple is not None:
+            to_add_multiple = attrs.pop('multiple')
+
         super().__init__(**attrs)
+
+        if is_bool_flag and multiple is not None:
+            self.multiple = to_add_multiple
+
         # put things back the way they _should_ be after evading __DEBUG__
         self.is_bool_flag = is_bool_flag
         self.type = click_type
@@ -91,10 +102,11 @@ class GeneratedOption(click.Option):
 
     def _consume_metadata(self, ctx, opts):
         # double consume
-        md_file = super().consume_value(ctx, opts)
+        md_file, source = super().consume_value(ctx, opts)
         # consume uses self.name, so mutate but backup for after
         backup, self.name = self.name, self.q2_extra_dest
-        md_col = super().consume_value(ctx, opts)
+        md_col, _ = super().consume_value(ctx, opts)
+
         self.name = backup
 
         if (md_col is None) != (md_file is None):
@@ -106,9 +118,9 @@ class GeneratedOption(click.Option):
                                              ctx=ctx, param=self)
 
         if md_col is None and md_file is None:
-            return None
+            return (None, source)
         else:
-            return (md_file, md_col)
+            return ((md_file, md_col), source)
 
     def get_help_record(self, ctx):
         record = super().get_help_record(ctx)
@@ -125,28 +137,34 @@ class GeneratedOption(click.Option):
     def add_to_parser(self, parser, ctx):
         shared = dict(dest=self.name, nargs=0, obj=self)
         if self.q2_metadata == 'column':
-            parser.add_option(self.opts, action='store', dest=self.name,
+            parser.add_option(opts=self.opts, action='store', dest=self.name,
                               nargs=1, obj=self)
-            parser.add_option(self.q2_extra_opts, action='store',
+            parser.add_option(opts=self.q2_extra_opts, action='store',
                               dest=self.q2_extra_dest, nargs=1, obj=self)
         elif self.is_bool_flag:
             if self.multiple:
                 action = 'append_maybe'
             else:
                 action = 'store_maybe'
-            parser.add_option(self.opts, action=action, const=True,
+            parser.add_option(opts=self.opts, action=action, const=True,
                               **shared)
-            parser.add_option(self.secondary_opts, action=action,
+            parser.add_option(opts=self.secondary_opts, action=action,
                               const=False, **shared)
         elif self.multiple:
             action = 'append_greedy'
-            parser.add_option(self.opts, action='append_greedy', **shared)
+            parser.add_option(opts=self.opts, action='append_greedy', **shared)
         else:
             super().add_to_parser(parser, ctx)
 
-    def full_process_value(self, ctx, value):
+    def get_default(self, ctx, call=True):
+        if self.required and not ctx.resilient_parsing and not (
+                self.q2_prefix == 'o' and ctx.params.get('output_dir', False)):
+            raise click.MissingParameter(ctx=ctx, param=self)
+        return super().get_default(ctx, call=call)
+
+    def process_value(self, ctx, value):
         try:
-            return super().full_process_value(ctx, value)
+            return super().process_value(ctx, value)
         except click.MissingParameter:
             if not (self.q2_prefix == 'o'
                     and ctx.params.get('output_dir', False)):

@@ -1,5 +1,5 @@
 # ----------------------------------------------------------------------------
-# Copyright (c) 2016-2021, QIIME 2 development team.
+# Copyright (c) 2016-2022, QIIME 2 development team.
 #
 # Distributed under the terms of the Modified BSD License.
 #
@@ -51,10 +51,10 @@ class CLIConfig():
             self.styles = self.get_default_styles()
 
     def get_default_styles(self):
-        return {'option': {'fg': 'blue'},
+        return {'option': {'fg': 'bright_blue'},
                 'type': {'fg': 'green'},
                 'default_arg': {'fg': 'magenta'},
-                'command': {'fg': 'blue'},
+                'command': {'fg': 'bright_blue'},
                 'emphasis': {'underline': True},
                 'problem': {'fg': 'yellow'},
                 'warning': {'fg': 'yellow', 'bold': True},
