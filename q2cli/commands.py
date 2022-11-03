@@ -365,7 +365,7 @@ class ActionCommand(BaseCommandMixin, click.Command):
                 cache_path, key = output.split(':')
                 cache = Cache(cache_path)
                 cache.save(result, key)
-                path = cache.keys / key
+                path = output
             else:
                 path = result.save(output)
 

@@ -81,21 +81,16 @@ def output_in_cache(fp):
     """Determines if an output path follows the format
     /path_to_extant_cache:key
     """
-    from pathlib import Path
     from qiime2.core.cache import Cache
 
     # Tells us right away this isn't in a cache
     if ':' not in fp:
         return False
 
-    split_path = fp.split(':')
-
-    # Account for potential for : in the path
-    cache_path = ':'.join(elem for elem in split_path[:-1])
-    key = split_path[-1]
+    cache_path, key = _get_cache_path_and_key(fp)
 
     try:
-        if Cache.is_cache(Path(cache_path)):
+        if Cache.is_cache(cache_path):
             if not key.isidentifier():
                 raise ValueError(
                     'Key must be a valid Python identifier. Python identifier '
@@ -330,13 +325,15 @@ def get_input(fp):
 
     get_plugin_manager()
     try:
+        artifact = None
+
         if ':' in fp:
-            artifact = convert_to_cache_input(fp)
+            artifact = try_as_cache_input(fp)
 
         # If we get here we either had a path without a ':' or we got
-        # None from convert_to_cache_input meaning the part of value
+        # None from try_as_cache_input meaning the part of value
         # before the ':' was not an existing cache
-        if ':' not in fp or artifact is None:
+        if artifact is None:
             artifact = qiime2.sdk.Result.load(fp)
     except OSError as e:
         if e.errno == 28:
@@ -369,29 +366,29 @@ def get_input(fp):
                 '%r is not a QIIME 2 Artifact (.qza)' % fp) from e
     # If we get here, all we really know is we failed to get a Result
     except Exception as e:
+        print('CURRENTLY HERE')
         raise ControlFlowException(
             'There was a problem loading %s as a QIIME 2 Result: ' % fp) from e
 
     return artifact
 
 
-def convert_to_cache_input(fp):
+def try_as_cache_input(fp):
     """ Determine if an input is in a cache and load it from the cache if it is
     """
     import os
-    from pathlib import Path
     from qiime2.core.cache import Cache
 
-    split_path = fp.split(':')
-
-    # Handle the potential for : in the cache path
-    cache_path = ':'.join(elem for elem in split_path[:-1])
-    key = split_path[-1]
+    cache_path, key = _get_cache_path_and_key(fp)
 
     # We don't want to invent a new cache on disk here because if their input
     # exists their cache must also already exist
-    if not os.path.exists(cache_path) or not Cache.is_cache(Path(cache_path)):
+    if not os.path.exists(cache_path) or not Cache.is_cache(cache_path):
         return None
 
     cache = Cache(cache_path)
     return cache.load(key)
+
+
+def _get_cache_path_and_key(fp):
+    return fp.rsplit(':', 1)
