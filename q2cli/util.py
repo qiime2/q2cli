@@ -366,7 +366,6 @@ def get_input(fp):
                 '%r is not a QIIME 2 Artifact (.qza)' % fp) from e
     # If we get here, all we really know is we failed to get a Result
     except Exception as e:
-        print('CURRENTLY HERE')
         raise ControlFlowException(
             'There was a problem loading %s as a QIIME 2 Result: ' % fp) from e
 
