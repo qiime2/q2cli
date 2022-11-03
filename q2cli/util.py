@@ -348,10 +348,14 @@ def get_input(fp):
         else:
             raise ControlFlowException(
                 '%r is not a QIIME 2 Artifact (.qza)' % fp) from e
-    except ValueError as e:
+    except KeyError as e:
         if 'does not contain the key' in str(e):
             raise e
-        elif 'does not exist' in str(e):
+        else:
+            raise ControlFlowException(
+                '%r is not a QIIME 2 Artifact (.qza)' % fp) from e
+    except ValueError as e:
+        if 'does not exist' in str(e):
             # If value was also not an existing filepath
             # containing a ':' we assume they wanted a cache
             # but did not provide a valid one
