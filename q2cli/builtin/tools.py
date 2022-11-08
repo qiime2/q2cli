@@ -580,3 +580,47 @@ def citations(path):
         click.echo(CONFIG.cfg_style('problem', 'No citations found.'),
                    err=True)
         ctx.exit(1)
+
+
+@tools.command(name='cache-create',
+               short_help='Create an empty cache at the given location.',
+               help='Create an empty cache at the given location.',
+               cls=ToolCommand)
+@click.option('--path', required=True,
+              type=click.Path(exists=False, readable=True),
+              help='Path to a nonexistent directory to be created as a cache.')
+def cache_create(path):
+    from qiime2.core.cache import Cache
+    from q2cli.core.config import CONFIG
+
+    try:
+        Cache(path)
+    except Exception as e:
+        header = 'There was a problem creating a cache at %s:' % path
+        q2cli.util.exit_with_error(e, header=header, traceback=None)
+
+    success = 'Created cache at %s' % path
+    click.echo(CONFIG.cfg_style('success', success))
+
+
+@tools.command(name='cache-remove',
+               short_help='Removes a cache and all of its contents.',
+               help='Removes a cache and all of its contents at the given '
+                    'path if the given path is a cache.',
+               cls=ToolCommand)
+@click.option('--path', required=True,
+              type=click.Path(exists=True, file_okay=False, dir_okay=True,
+                              readable=True),
+              help='Path to an existing cache.')
+def cache_create(path):
+    from qiime2.core.cache import Cache
+    from q2cli.core.config import CONFIG
+
+    try:
+        Cache.remove_cache(path)
+    except Exception as e:
+        header = 'There was a problem removing the cache at %s:' % path
+        q2cli.util.exit_with_error(e, header=header, traceback=None)
+
+    success = 'Removed cache at %s' % path
+    click.echo(CONFIG.cfg_style('success', success))
