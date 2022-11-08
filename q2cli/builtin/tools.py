@@ -611,7 +611,7 @@ def cache_create(path):
 @click.option('--path', required=True,
               type=click.Path(exists=True, file_okay=False, dir_okay=True,
                               readable=True),
-              help='Path to an existing cache.')
+              help='Path to an existing cache that wll be removed.')
 def cache_remove(path):
     from qiime2.core.cache import Cache
     from q2cli.core.config import CONFIG
@@ -623,4 +623,30 @@ def cache_remove(path):
         q2cli.util.exit_with_error(e, header=header, traceback=None)
 
     success = 'Removed cache at %s' % path
+    click.echo(CONFIG.cfg_style('success', success))
+
+
+@tools.command(name='cache-garbage_collection',
+               short_help='Runs garbage collection on the cache at the '
+                          'specified location.',
+               help='Runs garbage collection on the cache at the specified '
+                    'location if the specified location is a cache.',
+               cls=ToolCommand)
+@click.option('--path', required=True,
+              type=click.Path(exists=True, file_okay=False, dir_okay=True,
+                              readable=True),
+              help='Path to an existing cache to run garbage collection on.')
+def cache_garbage_collection(path):
+    from qiime2.core.cache import Cache
+    from q2cli.core.config import CONFIG
+
+    try:
+        cache = Cache(path)
+        cache.garbage_collection()
+    except Exception as e:
+        header = 'There was a problem running garbage collection on the ' \
+            'cache at %s:' % path
+        q2cli.util.exit_with_error(e, header=header, traceback=None)
+
+    success = 'Ran garbage collection on cache at %s' % path
     click.echo(CONFIG.cfg_style('success', success))
