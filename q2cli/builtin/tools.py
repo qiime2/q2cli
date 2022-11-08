@@ -612,7 +612,7 @@ def cache_create(path):
               type=click.Path(exists=True, file_okay=False, dir_okay=True,
                               readable=True),
               help='Path to an existing cache.')
-def cache_create(path):
+def cache_remove(path):
     from qiime2.core.cache import Cache
     from q2cli.core.config import CONFIG
 
