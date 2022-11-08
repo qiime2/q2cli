@@ -650,3 +650,70 @@ def cache_garbage_collection(path):
 
     success = 'Ran garbage collection on cache at %s' % path
     click.echo(CONFIG.cfg_style('success', success))
+
+
+@tools.command(name='cache-save',
+               short_help='Saves a .qza into the cache under a key.',
+               help='Saves a .qza into the cache under a key.',
+               cls=ToolCommand)
+@click.option('--cache-path', required=True,
+              type=click.Path(exists=True, file_okay=False, dir_okay=True,
+                              readable=True),
+              help='Path to an existing cache to save into.')
+@click.option('--artifact-path', required=True,
+              type=click.Path(exists=True, file_okay=True, dir_okay=False,
+                              readable=True),
+              help='Path to a .qza to save into the cache.')
+@click.option('--key', required=True,
+              help='The key to save the artifact under (must be a valid '
+                   'Python identifier).')
+def cache_save(cache_path, artifact_path, key):
+    from qiime2 import Artifact
+    from qiime2.core.cache import Cache
+    from q2cli.core.config import CONFIG
+
+    try:
+        artifact = Artifact.load(artifact_path)
+        cache = Cache(cache_path)
+        cache.save(artifact, key)
+    except Exception as e:
+        header = 'There was a problem saving the artifact %s to the cache %s' \
+                 'under the key %s:' % artifact_path, cache_path, key
+        q2cli.util.exit_with_error(e, header=header, traceback=None)
+
+    success = 'Saved the artifact %s to the cache %s under the key %s' % \
+              artifact_path, cache_path, key
+    click.echo(CONFIG.cfg_style('success', success))
+
+
+@tools.command(name='cache-load',
+               short_help='Loads an artifact out of a cache into a .qza.',
+               help='Loads the artifact saved to the specified cache under '
+                    'the specified key into a .qza at the specified location.',
+               cls=ToolCommand)
+@click.option('--cache-path', required=True,
+              type=click.Path(exists=True, file_okay=False, dir_okay=True,
+                              readable=True),
+              help='Path to an existing cache to load from.')
+@click.option('--key', required=True,
+              help='The key to the artifact being loaded.')
+@click.option('--output-path', required=True,
+              type=click.Path(exists=False, readable=True),
+              help='Path to put the .qza we are loading the artifact into.')
+def cache_load(cache_path, key, output_path):
+    from qiime2.core.cache import Cache
+    from q2cli.core.config import CONFIG
+
+    try:
+        cache = Cache(cache_path)
+        artifact = cache.load(key)
+        artifact.save(output_path)
+    except Exception as e:
+        header = 'There was a problem loading the artifact with the key %s ' \
+                 'from the cache %s and saving it to the file %s:' % \
+                 key, cache_path, output_path
+        q2cli.util.exit_with_error(e, header=header, traceback=None)
+
+    success = 'Loaded artifact with the key %s from the cache %s and saved ' \
+              'it to the file %s' % key, cache_path, output_path
+    click.echo(CONFIG.cfg_style('success', success))
