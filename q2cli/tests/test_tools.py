@@ -7,6 +7,7 @@
 # ----------------------------------------------------------------------------
 
 import os
+import gc
 import shutil
 import unittest
 import tempfile
@@ -455,10 +456,12 @@ class TestCacheTools(unittest.TestCase):
             ctx=None, name='dummy-plugin')
         self.tempdir = \
             tempfile.TemporaryDirectory(prefix='qiime2-q2cli-test-temp-')
-        self.cache = Cache(os.path.join(self.tempdir.name, 'new_cache'))
 
-        self.non_cache_output = os.path.join(self.tempdir.name, 'output.qza')
-        self.art3_non_cache = os.path.join(self.tempdir.name, 'art3.qza')
+        self.art1 = Artifact.import_data('IntSequence1', [0, 1, 2])
+        self.art2 = Artifact.import_data('IntSequence1', [3, 4, 5])
+        self.art3 = Artifact.import_data('IntSequence1', [6, 7, 8])
+        self.art4 = Artifact.import_data('IntSequence2', [9, 10, 11])
+        self.cache = Cache(os.path.join(self.tempdir.name, 'new_cache'))
 
     def tearDown(self):
         self.tempdir.cleanup()
@@ -484,6 +487,81 @@ class TestCacheTools(unittest.TestCase):
         success = 'Removed cache at %s\n' % cache_path
         self.assertEqual(success, result.output)
         self.assertFalse(os.path.exists(cache_path))
+
+    def test_cache_garbage_collection(self):
+        # Data referenced directly by key
+        self.cache.save(self.art1, 'foo')
+        # Data referenced by pool that is referenced by key
+        pool = self.cache.create_pool(['bar'])
+        pool.save(self.art2)
+        # We will be manually deleting the keys that back these two
+        self.cache.save(self.art3, 'baz')
+        pool = self.cache.create_pool(['qux'])
+        pool.save(self.art4)
+
+        # What we expect to see before and after gc
+        expected_pre_gc_contents = \
+            set(('./VERSION', 'keys/foo', 'keys/bar',
+                 'keys/baz', 'keys/qux',
+                 f'pools/bar/{self.art2.uuid}',
+                 f'pools/qux/{self.art4.uuid}',
+                 f'data/{self.art1.uuid}', f'data/{self.art2.uuid}',
+                 f'data/{self.art3.uuid}', f'data/{self.art4.uuid}'))
+
+        expected_post_gc_contents = \
+            set(('./VERSION', 'keys/foo', 'keys/bar',
+                 f'pools/bar/{self.art2.uuid}',
+                 f'data/{self.art1.uuid}', f'data/{self.art2.uuid}'))
+
+        # Assert cache looks how we want pre gc
+        pre_gc_contents = _get_cache_contents(self.cache)
+        self.assertEqual(expected_pre_gc_contents, pre_gc_contents)
+
+        # Delete keys
+        self.cache.remove(self.cache.keys / 'baz')
+        self.cache.remove(self.cache.keys / 'qux')
+
+        # Make sure Python's garbage collector gets the process pool symlinks
+        # to the artifact that was keyed on baz and the one in the qux pool
+        gc.collect()
+        result = self.runner.invoke(
+            tools,
+            ['cache-garbage-collection', '--path', str(self.cache.path)])
+
+        success = 'Ran garbage collection on cache at %s\n' % self.cache.path
+        self.assertEqual(success, result.output)
+
+        # Assert cache looks how we want post gc
+        post_gc_contents = _get_cache_contents(self.cache)
+        self.assertEqual(expected_post_gc_contents, post_gc_contents)
+
+
+def _get_cache_contents(cache):
+    """Gets contents of cache not including contents of the artifacts
+    themselves relative to the root of the cache
+    """
+    cache_contents = set()
+
+    rel_keys = os.path.relpath(cache.keys, cache.path)
+    rel_data = os.path.relpath(cache.data, cache.path)
+    rel_pools = os.path.relpath(cache.pools, cache.path)
+    rel_cache = os.path.relpath(cache.path, cache.path)
+
+    for key in os.listdir(cache.keys):
+        cache_contents.add(os.path.join(rel_keys, key))
+
+    for art in os.listdir(cache.data):
+        cache_contents.add(os.path.join(rel_data, art))
+
+    for pool in os.listdir(cache.pools):
+        for link in os.listdir(os.path.join(cache.pools, pool)):
+            cache_contents.add(os.path.join(rel_pools, pool, link))
+
+    for elem in os.listdir(cache.path):
+        if os.path.isfile(os.path.join(cache.path, elem)):
+            cache_contents.add(os.path.join(rel_cache, elem))
+
+    return cache_contents
 
 
 if __name__ == "__main__":
