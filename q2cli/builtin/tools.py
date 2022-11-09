@@ -626,7 +626,7 @@ def cache_remove(path):
     click.echo(CONFIG.cfg_style('success', success))
 
 
-@tools.command(name='cache-garbage_collection',
+@tools.command(name='cache-garbage-collection',
                short_help='Runs garbage collection on the cache at the '
                           'specified location.',
                help='Runs garbage collection on the cache at the specified '
