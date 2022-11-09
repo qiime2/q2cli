@@ -596,10 +596,10 @@ def cache_create(path):
     try:
         Cache(path)
     except Exception as e:
-        header = 'There was a problem creating a cache at %s:' % path
+        header = "There was a problem creating a cache at '%s':" % path
         q2cli.util.exit_with_error(e, header=header, traceback=None)
 
-    success = 'Created cache at %s' % path
+    success = "Created cache at '%s'" % path
     click.echo(CONFIG.cfg_style('success', success))
 
 
@@ -619,10 +619,10 @@ def cache_remove(path):
     try:
         Cache.remove_cache(path)
     except Exception as e:
-        header = 'There was a problem removing the cache at %s:' % path
+        header = "There was a problem removing the cache at '%s':" % path
         q2cli.util.exit_with_error(e, header=header, traceback=None)
 
-    success = 'Removed cache at %s' % path
+    success = "Removed cache at '%s'" % path
     click.echo(CONFIG.cfg_style('success', success))
 
 
@@ -644,11 +644,11 @@ def cache_garbage_collection(path):
         cache = Cache(path)
         cache.garbage_collection()
     except Exception as e:
-        header = 'There was a problem running garbage collection on the ' \
-            'cache at %s:' % path
+        header = "There was a problem running garbage collection on the " \
+            "cache at '%s':" % path
         q2cli.util.exit_with_error(e, header=header, traceback=None)
 
-    success = 'Ran garbage collection on cache at %s' % path
+    success = "Ran garbage collection on cache at '%s'" % path
     click.echo(CONFIG.cfg_style('success', success))
 
 
@@ -677,12 +677,12 @@ def cache_save(cache_path, artifact_path, key):
         cache = Cache(cache_path)
         cache.save(artifact, key)
     except Exception as e:
-        header = 'There was a problem saving the artifact %s to the cache %s' \
-                 'under the key %s:' % artifact_path, cache_path, key
+        header = "There was a problem saving the artifact '%s' to the cache " \
+                 "'%s' under the key '%s':" % artifact_path, cache_path, key
         q2cli.util.exit_with_error(e, header=header, traceback=None)
 
-    success = 'Saved the artifact %s to the cache %s under the key %s' % \
-              artifact_path, cache_path, key
+    success = "Saved the artifact '%s' to the cache '%s' under the key " \
+              "'%s'" % artifact_path, cache_path, key
     click.echo(CONFIG.cfg_style('success', success))
 
 
@@ -709,11 +709,11 @@ def cache_load(cache_path, key, output_path):
         artifact = cache.load(key)
         artifact.save(output_path)
     except Exception as e:
-        header = 'There was a problem loading the artifact with the key %s ' \
-                 'from the cache %s and saving it to the file %s:' % \
+        header = "There was a problem loading the artifact with the key " \
+                 "'%s' from the cache '%s' and saving it to the file '%s':" % \
                  key, cache_path, output_path
         q2cli.util.exit_with_error(e, header=header, traceback=None)
 
-    success = 'Loaded artifact with the key %s from the cache %s and saved ' \
-              'it to the file %s' % key, cache_path, output_path
+    success = "Loaded artifact with the key '%s' from the cache '%s' and " \
+              "saved it to the file '%s'" % key, cache_path, output_path
     click.echo(CONFIG.cfg_style('success', success))

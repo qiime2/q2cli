@@ -472,7 +472,7 @@ class TestCacheTools(unittest.TestCase):
         result = self.runner.invoke(
             tools, ['cache-create', '--path', cache_path])
 
-        success = 'Created cache at %s\n' % cache_path
+        success = "Created cache at '%s'\n" % cache_path
         self.assertEqual(success, result.output)
         self.assertTrue(Cache.is_cache(cache_path))
 
@@ -484,7 +484,7 @@ class TestCacheTools(unittest.TestCase):
         result = self.runner.invoke(
             tools, ['cache-remove', '--path', cache_path])
 
-        success = 'Removed cache at %s\n' % cache_path
+        success = "Removed cache at '%s'\n" % cache_path
         self.assertEqual(success, result.output)
         self.assertFalse(os.path.exists(cache_path))
 
@@ -528,7 +528,7 @@ class TestCacheTools(unittest.TestCase):
             tools,
             ['cache-garbage-collection', '--path', str(self.cache.path)])
 
-        success = 'Ran garbage collection on cache at %s\n' % self.cache.path
+        success = "Ran garbage collection on cache at '%s'\n" % self.cache.path
         self.assertEqual(success, result.output)
 
         # Assert cache looks how we want post gc
