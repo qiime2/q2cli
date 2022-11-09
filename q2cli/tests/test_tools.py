@@ -535,6 +535,55 @@ class TestCacheTools(unittest.TestCase):
         post_gc_contents = _get_cache_contents(self.cache)
         self.assertEqual(expected_post_gc_contents, post_gc_contents)
 
+    def test_cache_save(self):
+        artifact = os.path.join(self.tempdir.name, 'artifact.qza')
+        self.art1.save(artifact)
+
+        result = self.runner.invoke(
+            tools, ['cache-save', '--cache-path', str(self.cache.path),
+                    '--artifact-path', artifact, '--key', 'key'])
+
+        success = "Saved the artifact '%s' to the cache '%s' under the key " \
+            "'key'\n" % (artifact, self.cache.path)
+        self.assertEqual(success, result.output)
+
+    def test_cache_load(self):
+        artifact = os.path.join(self.tempdir.name, 'artifact.qza')
+        self.cache.save(self.art1, 'key')
+
+        result = self.runner.invoke(
+            tools, ['cache-load', '--cache-path', str(self.cache.path),
+                    '--key', 'key', '--output-path', artifact])
+
+        success = "Loaded artifact with the key 'key' from the cache '%s' " \
+            "and saved it to the file '%s'\n" % (self.cache.path, artifact)
+        self.assertEqual(success, result.output)
+
+    def test_cache_roundtrip(self):
+        in_artifact = os.path.join(self.tempdir.name, 'in_artifact.qza')
+        out_artifact = os.path.join(self.tempdir.name, 'out_artifact.qza')
+
+        self.art1.save(in_artifact)
+
+        result = self.runner.invoke(
+            tools, ['cache-save', '--cache-path', str(self.cache.path),
+                    '--artifact-path', in_artifact, '--key', 'key'])
+
+        success = "Saved the artifact '%s' to the cache '%s' under the key " \
+            "'key'\n" % (in_artifact, self.cache.path)
+        self.assertEqual(success, result.output)
+
+        result = self.runner.invoke(
+            tools, ['cache-load', '--cache-path', str(self.cache.path),
+                    '--key', 'key', '--output-path', out_artifact])
+
+        success = "Loaded artifact with the key 'key' from the cache '%s' " \
+            "and saved it to the file '%s'\n" % (self.cache.path, out_artifact)
+        self.assertEqual(success, result.output)
+
+        artifact = Artifact.load(out_artifact)
+        self.assertEqual([0, 1, 2], artifact.view(list))
+
 
 def _get_cache_contents(cache):
     """Gets contents of cache not including contents of the artifacts
