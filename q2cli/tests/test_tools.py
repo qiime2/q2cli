@@ -15,6 +15,7 @@ from click.testing import CliRunner
 from qiime2 import Artifact
 from qiime2.core.testing.util import get_dummy_plugin
 from qiime2.metadata.base import SUPPORTED_COLUMN_TYPES
+from qiime2.core.cache import Cache
 
 from q2cli.builtin.tools import tools, _load_metadata
 from q2cli.commands import RootCommand
@@ -443,6 +444,46 @@ class TestExportToFileFormat(TestInspectMetadata):
         success = 'Exported %s as Visualization to '\
                   'directory %s\n' % (self.viz, output_path)
         self.assertEqual(success, result.output)
+
+
+class TestCacheTools(unittest.TestCase):
+    def setUp(self):
+        get_dummy_plugin()
+
+        self.runner = CliRunner()
+        self.plugin_command = RootCommand().get_command(
+            ctx=None, name='dummy-plugin')
+        self.tempdir = \
+            tempfile.TemporaryDirectory(prefix='qiime2-q2cli-test-temp-')
+        self.cache = Cache(os.path.join(self.tempdir.name, 'new_cache'))
+
+        self.non_cache_output = os.path.join(self.tempdir.name, 'output.qza')
+        self.art3_non_cache = os.path.join(self.tempdir.name, 'art3.qza')
+
+    def tearDown(self):
+        self.tempdir.cleanup()
+
+    def test_cache_create(self):
+        cache_path = os.path.join(self.tempdir.name, 'created_cache')
+
+        result = self.runner.invoke(
+            tools, ['cache-create', '--path', cache_path])
+
+        success = 'Created cache at %s\n' % cache_path
+        self.assertEqual(success, result.output)
+        self.assertTrue(Cache.is_cache(cache_path))
+
+    def test_cache_remove(self):
+        cache_path = os.path.join(self.tempdir.name, 'remove_cache')
+        Cache(cache_path)
+        self.assertTrue(Cache.is_cache(cache_path))
+
+        result = self.runner.invoke(
+            tools, ['cache-remove', '--path', cache_path])
+
+        success = 'Removed cache at %s\n' % cache_path
+        self.assertEqual(success, result.output)
+        self.assertFalse(os.path.exists(cache_path))
 
 
 if __name__ == "__main__":
