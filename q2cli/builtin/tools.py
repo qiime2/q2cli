@@ -682,7 +682,7 @@ def cache_save(cache_path, artifact_path, key):
         q2cli.util.exit_with_error(e, header=header, traceback=None)
 
     success = "Saved the artifact '%s' to the cache '%s' under the key " \
-              "'%s'" % artifact_path, cache_path, key
+        "'%s'" % (artifact_path, cache_path, key)
     click.echo(CONFIG.cfg_style('success', success))
 
 
@@ -715,5 +715,5 @@ def cache_load(cache_path, key, output_path):
         q2cli.util.exit_with_error(e, header=header, traceback=None)
 
     success = "Loaded artifact with the key '%s' from the cache '%s' and " \
-              "saved it to the file '%s'" % key, cache_path, output_path
+        "saved it to the file '%s'" % (key, cache_path, output_path)
     click.echo(CONFIG.cfg_style('success', success))
