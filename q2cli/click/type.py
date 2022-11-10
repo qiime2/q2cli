@@ -110,6 +110,8 @@ class QIIME2Type(click.ParamType):
 
         try:
             result = q2cli.util.get_input(value)
+        # We want to use click's fail to pretty print whatever error we got
+        # from get_input
         except Exception as e:
             self.fail(str(e), param, ctx)
 

@@ -281,6 +281,10 @@ def load_metadata(fp):
 
     try:
         artifact = get_input(fp)
+    # With a ControlFlowException, we don't know why we couldn't load it as an
+    # artifact, so it could still be a metadata file. With the other exception
+    # types, we do know why we couldn't load it, and we know it just isn't a
+    # valid file at all.
     except ControlFlowException:
         try:
             return qiime2.Metadata.load(fp)
@@ -344,13 +348,13 @@ def get_input(fp):
                              f'space, or increasing the size of {temp!r})')
         else:
             raise ControlFlowException(
-                '%r is not a QIIME 2 Artifact (.qza)' % fp) from e
+                '%r is not a QIIME 2 Artifact (.qza)' % fp)
     except KeyError as e:
         if 'does not contain the key' in str(e):
             raise e
         else:
             raise ControlFlowException(
-                '%r is not a QIIME 2 Artifact (.qza)' % fp) from e
+                '%r is not a QIIME 2 Artifact (.qza):\n%s' % (fp, str(e)))
     except ValueError as e:
         if 'does not exist' in str(e):
             # If value was also not an existing filepath
@@ -358,16 +362,17 @@ def get_input(fp):
             # but did not provide a valid one
             if ':' in fp:
                 raise ValueError(f"The path {fp.split(':')[0]} is not a valid"
-                                 " cache") from e
+                                 " cache")
             else:
-                raise ValueError(f'{fp!r} is not a valid filepath') from e
+                raise ValueError(f'{fp!r} is not a valid filepath:\n{str(e)}')
         else:
             raise ControlFlowException(
-                '%r is not a QIIME 2 Artifact (.qza)' % fp) from e
+                '%r is not a QIIME 2 Artifact (.qza):\n%s' % (fp, str(e)))
     # If we get here, all we really know is we failed to get a Result
     except Exception as e:
         raise ControlFlowException(
-            'There was a problem loading %s as a QIIME 2 Result: ' % fp) from e
+            'There was a problem loading %s as a QIIME 2 Result:\n%s' %
+            (fp, str(e)))
 
     return artifact
 
