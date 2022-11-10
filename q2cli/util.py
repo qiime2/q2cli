@@ -348,7 +348,7 @@ def get_input(fp):
                              f'space, or increasing the size of {temp!r})')
         else:
             raise ControlFlowException(
-                '%r is not a QIIME 2 Artifact (.qza)' % fp)
+                '%r is not a QIIME 2 Artifact (.qza):%s' % (fp, str(e)))
     except KeyError as e:
         if 'does not contain the key' in str(e):
             raise e
@@ -364,7 +364,7 @@ def get_input(fp):
                 raise ValueError(f"The path {fp.split(':')[0]} is not a valid"
                                  " cache")
             else:
-                raise ValueError(f'{fp!r} is not a valid filepath:\n{str(e)}')
+                raise ValueError(f'{fp!r} is not a valid filepath')
         else:
             raise ControlFlowException(
                 '%r is not a QIIME 2 Artifact (.qza):\n%s' % (fp, str(e)))
