@@ -731,22 +731,22 @@ def cache_load(cache_path, key, output_path):
               help='Path to an existing cache to check the status of.')
 def cache_status(cache_path):
     from qiime2.core.cache import Cache
-    from q2cli.core.config import CONFIG
     from qiime2.sdk.result import Result
+
+    from q2cli.core.config import CONFIG
 
     output = ''
     try:
         cache = Cache(cache_path)
-        with cache.lock:
-            for key in cache.get_keys():
-                key_values = cache.read_key(key)
+        for key in cache.get_keys():
+            key_values = cache.read_key(key)
 
-                output += 'key -> '
-                if (data := key_values['data']) is not None:
-                    output += str(Result.peek(cache.data / data))
-                elif (pool := key_values['pool']) is not None:
-                    output += str(len(os.listdir(cache.pools / pool)))
-                output += '\n'
+            output += 'key -> '
+            if (data := key_values['data']) is not None:
+                output += str(Result.peek(cache.data / data))
+            elif (pool := key_values['pool']) is not None:
+                output += str(len(os.listdir(cache.pools / pool)))
+            output += '\n'
     except Exception as e:
         header = "There was a problem getting the status of the cache at " \
                  "path '%s':" % cache_path
@@ -754,4 +754,37 @@ def cache_status(cache_path):
 
     success = "Status of the cache at the path '%s':\n\n%s" % \
         (cache_path, output)
+    click.echo(CONFIG.cfg_style('success', success))
+
+
+@tools.command(name='cache-validate',
+               short_help='Validates the contents of the cache.',
+               help='Fully validates all data in the cache using each '
+                    'artifacts validate functions and checksums.',
+               cls=ToolCommand)
+@click.option('--cache-path', required=True,
+              type=click.Path(exists=True, file_okay=False, dir_okay=True,
+                              readable=True),
+              help='Path to an existing cache to validate.')
+def cache_validate(cache_path):
+    from qiime2.core.cache import Cache
+    from qiime2.core.util import is_uuid4
+    from qiime2 import Artifact
+
+    from q2cli.core.config import CONFIG
+
+    try:
+        cache = Cache(cache_path)
+        for data in cache.get_data():
+            assert is_uuid4(data)
+
+            art = Artifact.load(cache.data / data)
+            art.validate()
+            click.echo(CONFIG.cfg_style('success', 'Validated: %s' % data))
+    except Exception as e:
+        header = "There was a problem getting the status of the cache at " \
+                 "path '%s':" % cache_path
+        q2cli.util.exit_with_error(e, header=header, traceback=None)
+
+    success = "Successfully validated cache at path '%s'\n" % cache_path
     click.echo(CONFIG.cfg_style('success', success))
