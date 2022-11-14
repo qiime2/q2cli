@@ -717,3 +717,41 @@ def cache_load(cache_path, key, output_path):
     success = "Loaded artifact with the key '%s' from the cache '%s' and " \
         "saved it to the file '%s'" % (key, cache_path, output_path)
     click.echo(CONFIG.cfg_style('success', success))
+
+
+@tools.command(name='cache-status',
+               short_help='Checks the status of the cache.',
+               help='Lists all keys in the given cache. Peeks artifacts '
+                    'pointed to by keys to data and lists the number of '
+                    'artifacts in the pool for keys to pools.',
+               cls=ToolCommand)
+@click.option('--cache-path', required=True,
+              type=click.Path(exists=True, file_okay=False, dir_okay=True,
+                              readable=True),
+              help='Path to an existing cache to check the status of.')
+def cache_status(cache_path):
+    from qiime2.core.cache import Cache
+    from q2cli.core.config import CONFIG
+    from qiime2.sdk.result import Result
+
+    output = ''
+    try:
+        cache = Cache(cache_path)
+        with cache.lock:
+            for key in cache.get_keys():
+                key_values = cache.read_key(key)
+
+                output += 'key -> '
+                if (data := key_values['data']) is not None:
+                    output += str(Result.peek(cache.data / data))
+                elif (pool := key_values['pool']) is not None:
+                    output += str(len(os.listdir(cache.pools / pool)))
+                output += '\n'
+    except Exception as e:
+        header = "There was a problem getting the status of the cache at " \
+                 "path '%s':" % cache_path
+        q2cli.util.exit_with_error(e, header=header, traceback=None)
+
+    success = "Status of the cache at the path '%s':\n\n%s" % \
+        (cache_path, output)
+    click.echo(CONFIG.cfg_style('success', success))
