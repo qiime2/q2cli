@@ -738,15 +738,16 @@ def cache_status(cache_path):
     output = ''
     try:
         cache = Cache(cache_path)
-        for key in cache.get_keys():
-            key_values = cache.read_key(key)
+        with cache.lock:
+            for key in cache.get_keys():
+                key_values = cache.read_key(key)
 
-            output += 'key -> '
-            if (data := key_values['data']) is not None:
-                output += str(Result.peek(cache.data / data))
-            elif (pool := key_values['pool']) is not None:
-                output += str(len(os.listdir(cache.pools / pool)))
-            output += '\n'
+                output += 'key -> '
+                if (data := key_values['data']) is not None:
+                    output += str(Result.peek(cache.data / data))
+                elif (pool := key_values['pool']) is not None:
+                    output += str(len(os.listdir(cache.pools / pool)))
+                output += '\n'
     except Exception as e:
         header = "There was a problem getting the status of the cache at " \
                  "path '%s':" % cache_path
@@ -775,12 +776,13 @@ def cache_validate(cache_path):
 
     try:
         cache = Cache(cache_path)
-        for data in cache.get_data():
-            assert is_uuid4(data)
+        with cache.lock:
+            for data in cache.get_data():
+                assert is_uuid4(data)
 
-            art = Artifact.load(cache.data / data)
-            art.validate()
-            click.echo(CONFIG.cfg_style('success', 'Validated: %s' % data))
+                art = Artifact.load(cache.data / data)
+                art.validate()
+                click.echo(CONFIG.cfg_style('success', 'Validated: %s' % data))
     except Exception as e:
         header = "There was a problem getting the status of the cache at " \
                  "path '%s':" % cache_path
