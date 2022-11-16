@@ -478,16 +478,16 @@ class TestCacheTools(unittest.TestCase):
         self.assertTrue(Cache.is_cache(cache_path))
 
     def test_cache_remove(self):
-        cache_path = os.path.join(self.tempdir.name, 'remove_cache')
-        Cache(cache_path)
-        self.assertTrue(Cache.is_cache(cache_path))
+        self.cache.save(self.art1, 'key')
+        self.assertTrue('key' in self.cache.get_keys())
 
         result = self.runner.invoke(
-            tools, ['cache-remove', '--path', cache_path])
+            tools,
+            ['cache-remove', '--path', str(self.cache.path), '--key', 'key'])
 
-        success = "Removed cache at '%s'\n" % cache_path
+        success = "Removed key 'key' from cache '%s'\n" % self.cache.path
         self.assertEqual(success, result.output)
-        self.assertFalse(os.path.exists(cache_path))
+        self.assertFalse('key' in self.cache.get_keys())
 
     def test_cache_garbage_collection(self):
         # Data referenced directly by key

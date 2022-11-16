@@ -604,25 +604,29 @@ def cache_create(path):
 
 
 @tools.command(name='cache-remove',
-               short_help='Removes a cache and all of its contents.',
-               help='Removes a cache and all of its contents at the given '
-                    'path if the given path is a cache.',
+               short_help='Removes a given key from a cache.',
+               help='Removes a given key from a cache then runs garbage '
+                    'collection on the cache.',
                cls=ToolCommand)
 @click.option('--path', required=True,
               type=click.Path(exists=True, file_okay=False, dir_okay=True,
                               readable=True),
-              help='Path to an existing cache that wll be removed.')
-def cache_remove(path):
+              help='Path to an existing cache to remove the key from.')
+@click.option('--key', required=True,
+              help='The key to remove from the cache.')
+def cache_remove(path, key):
     from qiime2.core.cache import Cache
     from q2cli.core.config import CONFIG
 
     try:
-        Cache.remove_cache(path)
+        cache = Cache(path)
+        cache.remove(key)
     except Exception as e:
-        header = "There was a problem removing the cache at '%s':" % path
+        header = "There was a problem removing the key '%s' from the " \
+                 "cache '%s':" % (key, path)
         q2cli.util.exit_with_error(e, header=header, traceback=None)
 
-    success = "Removed cache at '%s'" % path
+    success = "Removed key '%s' from cache '%s'" % (key, path)
     click.echo(CONFIG.cfg_style('success', success))
 
 
