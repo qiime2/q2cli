@@ -682,7 +682,7 @@ def cache_save(cache_path, artifact_path, key):
         cache.save(artifact, key)
     except Exception as e:
         header = "There was a problem saving the artifact '%s' to the cache " \
-                 "'%s' under the key '%s':" % artifact_path, cache_path, key
+                 "'%s' under the key '%s':" % (artifact_path, cache_path, key)
         q2cli.util.exit_with_error(e, header=header, traceback=None)
 
     success = "Saved the artifact '%s' to the cache '%s' under the key " \
@@ -803,7 +803,9 @@ def cache_validate(path):
                 try:
                     click.echo(
                         CONFIG.cfg_style('success', 'Validating: %s' % data))
-                    assert is_uuid4(data)
+                    if not is_uuid4(data):
+                        raise ValueError(
+                            "Item in data directory '%s' is not a valid uuid4." % data)
 
                     art = Artifact.load(cache.data / data)
                     art.validate()
