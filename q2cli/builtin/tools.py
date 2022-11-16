@@ -814,8 +814,8 @@ def cache_validate(path):
                         CONFIG.cfg_style('success', 'Validated: %s\n' % data))
                 except Exception as e:
                     click.echo(
-                        CONFIG.cfg_style('error',
-                                         'Failed to validate: %s' % data))
+                        CONFIG.cfg_style(
+                            'error', 'Failed to validate: %s' % data))
                     raise e
     except Exception as e:
         header = "There was a problem validating the cache at path '%s':" % \
