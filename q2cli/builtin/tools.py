@@ -735,27 +735,40 @@ def cache_status(path):
 
     from q2cli.core.config import CONFIG
 
-    output = ''
+    data_output = []
+    pool_output = []
     try:
         cache = Cache(path)
         with cache.lock:
             for key in cache.get_keys():
                 key_values = cache.read_key(key)
 
-                output += 'key -> '
                 if (data := key_values['data']) is not None:
-                    output += str(Result.peek(cache.data / data))
+                    data_output.append(
+                        'data: %s -> %s' %
+                        (key, str(Result.peek(cache.data / data))))
                 elif (pool := key_values['pool']) is not None:
-                    output += str(len(os.listdir(cache.pools / pool)))
-                output += '\n'
+                    pool_output.append(
+                        'pool: %s -> size = %s' %
+                        (key, str(len(os.listdir(cache.pools / pool)))))
     except Exception as e:
         header = "There was a problem getting the status of the cache at " \
                  "path '%s':" % path
         q2cli.util.exit_with_error(e, header=header, traceback=None)
 
-    if output == '':
-        output = 'Cache is empty!'
+    if not data_output:
+        data_output = 'No data in cache'
+    else:
+        data_output = '\n'.join(data_output)
+        data_output = 'Data in cache:\n' + data_output
 
+    if not pool_output:
+        pool_output = 'No pools in cache'
+    else:
+        pool_output = '\n'.join(pool_output)
+        pool_output = 'Pools in cache:\n' + pool_output
+
+    output = data_output + '\n\n' + pool_output
     success = "Status of the cache at the path '%s':\n\n%s" % (path, output)
     click.echo(CONFIG.cfg_style('success', success))
 
