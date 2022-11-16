@@ -17,6 +17,7 @@ from qiime2 import Artifact
 from qiime2.core.testing.util import get_dummy_plugin
 from qiime2.metadata.base import SUPPORTED_COLUMN_TYPES
 from qiime2.core.cache import Cache
+from qiime2.sdk.result import Result
 
 from q2cli.builtin.tools import tools, _load_metadata
 from q2cli.commands import RootCommand
@@ -583,6 +584,46 @@ class TestCacheTools(unittest.TestCase):
 
         artifact = Artifact.load(out_artifact)
         self.assertEqual([0, 1, 2], artifact.view(list))
+
+    def test_cache_status(self):
+        expected_template = \
+            "Status of the cache at the path '%s':\n\n%s\n\n%s\n"
+
+        # Empty cache
+        result = self.runner.invoke(
+            tools, ['cache-status', '--path', str(self.cache.path)])
+        expected = \
+            expected_template % (str(self.cache.path), 'No data keys in cache',
+                                 'No pool keys in cache')
+        self.assertEqual(expected, result.output)
+
+        # Cache with only data
+        in_artifact = os.path.join(self.tempdir.name, 'in_artifact.qza')
+        self.art1.save(in_artifact)
+        self.runner.invoke(
+            tools, ['cache-save', '--cache-path', str(self.cache.path),
+                    '--artifact-path', in_artifact, '--key', 'key'])
+
+        result = self.runner.invoke(
+            tools, ['cache-status', '--path', str(self.cache.path)])
+        data_output = 'Data keys in cache:\ndata: key -> %s' % \
+            str(Result.peek(self.cache.data / str(self.art1.uuid)))
+        expected = \
+            expected_template % (str(self.cache.path), data_output,
+                                 'No pool keys in cache')
+        self.assertEqual(expected, result.output)
+
+        # Cache with data and pool
+        pool = self.cache.create_pool(keys=['pool_key'])
+        pool.save(self.art2)
+
+        result = self.runner.invoke(
+            tools, ['cache-status', '--path', str(self.cache.path)])
+        pool_output = 'Pool keys in cache:\npool: pool_key -> size = 1'
+        expected = \
+            expected_template % (str(self.cache.path), data_output,
+                                 pool_output)
+        self.assertEqual(expected, result.output)
 
 
 def _get_cache_contents(cache):
