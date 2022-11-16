@@ -757,16 +757,16 @@ def cache_status(path):
         q2cli.util.exit_with_error(e, header=header, traceback=None)
 
     if not data_output:
-        data_output = 'No data in cache'
+        data_output = 'No data keys in cache'
     else:
         data_output = '\n'.join(data_output)
-        data_output = 'Data in cache:\n' + data_output
+        data_output = 'Data keys in cache:\n' + data_output
 
     if not pool_output:
-        pool_output = 'No pools in cache'
+        pool_output = 'No pool keys in cache'
     else:
         pool_output = '\n'.join(pool_output)
-        pool_output = 'Pools in cache:\n' + pool_output
+        pool_output = 'Pool keys in cache:\n' + pool_output
 
     output = data_output + '\n\n' + pool_output
     success = "Status of the cache at the path '%s':\n\n%s" % (path, output)
