@@ -753,6 +753,9 @@ def cache_status(path):
                  "path '%s':" % path
         q2cli.util.exit_with_error(e, header=header, traceback=None)
 
+    if output == '':
+        output = 'Cache is empty!'
+
     success = "Status of the cache at the path '%s':\n\n%s" % (path, output)
     click.echo(CONFIG.cfg_style('success', success))
 
