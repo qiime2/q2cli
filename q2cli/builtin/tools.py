@@ -805,7 +805,8 @@ def cache_validate(path):
                         CONFIG.cfg_style('success', 'Validating: %s' % data))
                     if not is_uuid4(data):
                         raise ValueError(
-                            "Item in data directory '%s' is not a valid uuid4." % data)
+                            "Item in data directory '%s' is not a valid "
+                            "uuid4." % data)
 
                     art = Artifact.load(cache.data / data)
                     art.validate()

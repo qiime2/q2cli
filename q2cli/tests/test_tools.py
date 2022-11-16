@@ -595,7 +595,7 @@ class TestCacheTools(unittest.TestCase):
             tools, ['cache-status', '--path', str(self.cache.path)])
         success = \
             success_template % (str(self.cache.path), 'No data keys in cache',
-                                 'No pool keys in cache')
+                                'No pool keys in cache')
         self.assertEqual(success, result.output)
 
         # Cache with only data
@@ -611,7 +611,7 @@ class TestCacheTools(unittest.TestCase):
             str(Result.peek(self.cache.data / str(self.art1.uuid)))
         success = \
             success_template % (str(self.cache.path), data_output,
-                                 'No pool keys in cache')
+                                'No pool keys in cache')
         self.assertEqual(success, result.output)
 
         # Cache with data and pool
@@ -623,7 +623,7 @@ class TestCacheTools(unittest.TestCase):
         pool_output = 'Pool keys in cache:\npool: pool_key -> size = 1'
         success = \
             success_template % (str(self.cache.path), data_output,
-                                 pool_output)
+                                pool_output)
         self.assertEqual(success, result.output)
 
     def test_cache_validate_good(self):
@@ -642,10 +642,11 @@ class TestCacheTools(unittest.TestCase):
             tools, ['cache-validate', '--path', str(self.cache.path)])
         validated = 'Validating: %s\nValidated: %s\n\n' % \
             (self.art1.uuid, self.art1.uuid)
-        success = success_template % (self.cache.path, validated, self.cache.path)
+        success = success_template % \
+            (self.cache.path, validated, self.cache.path)
         self.assertEqual(success, result.output)
 
-    def test_cache_validate_good(self):
+    def test_cache_validate_bad(self):
         self.cache.save(self.art1, 'key')
         os.rename(self.cache.data / str(self.art1.uuid),
                   self.cache.data / 'not_uuid')
