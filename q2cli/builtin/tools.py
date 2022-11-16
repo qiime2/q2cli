@@ -796,17 +796,23 @@ def cache_validate(path):
         cache = Cache(path)
         with cache.lock:
             for data in cache.get_data():
-                click.echo(
-                    CONFIG.cfg_style('success', 'Validating: %s' % data))
-                assert is_uuid4(data)
+                try:
+                    click.echo(
+                        CONFIG.cfg_style('success', 'Validating: %s' % data))
+                    assert is_uuid4(data)
 
-                art = Artifact.load(cache.data / data)
-                art.validate()
-                click.echo(
-                    CONFIG.cfg_style('success', 'Validated: %s\n' % data))
+                    art = Artifact.load(cache.data / data)
+                    art.validate()
+                    click.echo(
+                        CONFIG.cfg_style('success', 'Validated: %s\n' % data))
+                except Exception as e:
+                    click.echo(
+                        CONFIG.cfg_style('error',
+                                         'Failed to validate: %s' % data))
+                    raise e
     except Exception as e:
-        header = "There was a problem validating the status of the cache at " \
-                 "path '%s':" % path
+        header = "There was a problem validating the cache at path '%s':" % \
+            path
         q2cli.util.exit_with_error(e, header=header, traceback=None)
 
     success = "Successfully validated cache at path '%s'" % path
