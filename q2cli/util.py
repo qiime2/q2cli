@@ -7,7 +7,7 @@
 # ----------------------------------------------------------------------------
 
 
-class ControlFlowException(Exception):
+class OutOfDisk(Exception):
     pass
 
 
@@ -74,7 +74,10 @@ def exit_with_error(e, header='An error has been encountered:',
     if not footer:
         click.echo(err=True)  # extra newline to look normal
 
-    click.get_current_context().exit(status)
+    try:
+        click.get_current_context().exit(status)
+    except RuntimeError:
+        sys.exit(status)
 
 
 def output_in_cache(fp):
@@ -148,10 +151,12 @@ class pretty_failure:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        if exc_val is not None:
+        # if exit_with_error is called twice, then click.exit(1) or sys.exit(1)
+        # will happen, no need to exit_with_error again in that case.
+        if exc_val is not None and str(exc_val) != '1':
             exit_with_error(exc_val, self.header, self.traceback, self.status)
 
-        return True
+        return False
 
 
 def convert_primitive(ast):
@@ -273,122 +278,148 @@ def get_plugin_manager():
 
 
 def load_metadata(fp):
-    """ Turns a filepath into metadata if the path is either to metadata or an
-    artifact that can be viewed as metadata
-    """
-    import sys
     import qiime2
+    import sys
 
-    try:
-        artifact = get_input(fp)
-    # With a ControlFlowException, we don't know why we couldn't load it as an
-    # artifact, so it could still be a metadata file. With the other exception
-    # types, we do know why we couldn't load it, and we know it just isn't a
-    # valid file at all.
-    except ControlFlowException:
+    metadata, error = _load_metadata_artifact(fp)
+    if metadata is None:
         try:
-            return qiime2.Metadata.load(fp)
+            metadata = qiime2.Metadata.load(fp)
         except Exception as e:
-            # Handle the case where we try to load a raw .qza as Metadata
-            # because we were missing the plugin(s) necessary to load it as an
-            # Artifact
-            if "'utf-8' codec can't decode byte" in str(e) and \
-                    qiime2.sdk.result.Result.peek(fp):
-                e = ValueError("It looks like you have an Artifact but are "
-                               "missing the plugin(s) necessary to load it.")
-
+            if error and ':' in fp:
+                e = error
             header = ("There was an issue with loading the file %s as "
                       "metadata:" % fp)
             tb = 'stderr' if '--verbose' in sys.argv else None
             exit_with_error(e, header=header, traceback=tb)
 
-    if isinstance(artifact, qiime2.Visualization):
-        raise Exception(
-            f'Visualizations cannot be viewed as QIIME 2 metadata:\n{fp}')
-    elif artifact.has_metadata():
-        try:
-            metadata = artifact.view(qiime2.Metadata)
-        except Exception as e:
-            header = ("There was an issue with viewing the artifact "
-                      "%s as QIIME 2 Metadata:" % fp)
-            tb = 'stderr' if '--verbose' in sys.argv else None
-            exit_with_error(e, header=header, traceback=tb)
-    else:
-        raise Exception("Artifacts with type %r cannot be viewed as"
-                        " QIIME 2 metadata:\n%r" % (artifact.type, fp))
-
     return metadata
 
 
-def get_input(fp):
-    """ Gets a Result from a filepath if possible
-    """
-    import tempfile
+def _load_metadata_artifact(fp):
     import qiime2
-    import qiime2.sdk
+    import sys
 
-    get_plugin_manager()
+    artifact, error = _load_input(fp)
+    if isinstance(error, OutOfDisk):
+        raise error
+
+    default_tb = 'stderr'
+    # if that worked, we have an artifact or we've
+    # already raised a critical error
+    # otherwise, any normal errors can be ignored as its
+    # most likely actually metadata not a qza
+    if artifact:
+        try:
+            default_tb = None
+            if isinstance(artifact, qiime2.Visualization):
+                raise Exception(
+                    'Visualizations cannot be viewed as QIIME 2 metadata.')
+            if not artifact.has_metadata():
+                raise Exception(
+                    f"Artifacts with type {artifact.type!r} cannot be viewed"
+                    " as QIIME 2 metadata.")
+
+            default_tb = 'stderr'
+            return artifact.view(qiime2.Metadata), None
+
+        except Exception as e:
+            header = ("There was an issue with viewing the artifact "
+                      f"{fp!r} as QIIME 2 Metadata:")
+            tb = 'stderr' if '--verbose' in sys.argv else default_tb
+            exit_with_error(e, header=header, traceback=tb)
+
+    else:
+        return None, error
+
+
+def _load_input(fp):
+    # just initialize the plugin manager
+    _ = get_plugin_manager()
+
+    if ':' in fp:
+        artifact, error = _load_input_cache(fp)
+        if error:
+            artifact, _ = _load_input_file(fp)
+            if artifact is not None:
+                error = None
+            # ignore this error (`_`), it was more likely
+            # a bad cache than an really weird filepath
+    else:
+        artifact, error = _load_input_file(fp)
+
+    if isinstance(error, OSError) and error.errno == 28:
+        # abort as there's nothing anyone can do about this
+        from qiime2.core.cache import get_cache
+
+        path = str(get_cache().path)
+        return None, OutOfDisk(f'There was not enough space left on {path!r} '
+                               f'to use the artifact {fp!r}. (Try '
+                               f'setting $TMPDIR to a directory with more '
+                               f'space, or increasing the size of {path!r})')
+
+    return artifact, error
+
+
+def _load_input_cache(fp):
+    artifact = error = None
     try:
-        artifact = None
-
-        if ':' in fp:
-            artifact = try_as_cache_input(fp)
-
-        # If we get here we either had a path without a ':' or we got
-        # None from try_as_cache_input meaning the part of value
-        # before the ':' was not an existing cache
-        if artifact is None:
-            artifact = qiime2.sdk.Result.load(fp)
-    except OSError as e:
-        if e.errno == 28:
-            temp = tempfile.tempdir
-            raise ValueError(f'There was not enough space left on {temp!r} '
-                             f'to extract the artifact {fp!r}. (Try '
-                             'setting $TMPDIR to a directory with more '
-                             f'space, or increasing the size of {temp!r})')
-        else:
-            raise ControlFlowException(
-                '%r is not a QIIME 2 Artifact (.qza):%s' % (fp, str(e)))
-    except KeyError as e:
-        if 'does not contain the key' in str(e):
-            raise e
-        else:
-            raise ControlFlowException(
-                '%r is not a QIIME 2 Artifact (.qza):\n%s' % (fp, str(e)))
-    except ValueError as e:
-        if 'does not exist' in str(e):
-            # If value was also not an existing filepath
-            # containing a ':' we assume they wanted a cache
-            # but did not provide a valid one
-            if ':' in fp:
-                raise ValueError(f"The path {fp.split(':')[0]} is not a valid"
-                                 " cache")
-            else:
-                raise ValueError(f'{fp!r} is not a valid filepath')
-        else:
-            raise ControlFlowException(
-                '%r is not a QIIME 2 Artifact (.qza):\n%s' % (fp, str(e)))
-    # If we get here, all we really know is we failed to get a Result
+        artifact = try_as_cache_input(fp)
     except Exception as e:
-        raise ControlFlowException(
-            'There was a problem loading %s as a QIIME 2 Result:\n%s' %
-            (fp, str(e)))
+        error = e
 
-    return artifact
+    return artifact, error
+
+
+def _load_input_file(fp):
+    import qiime2.sdk
+    import os
+
+    if os.path.exists(fp) and os.path.isdir(fp):
+        return None, ValueError(
+            f"{fp!r} is a directory, not a QIIME 2 Artifact.")
+
+    # test if valid
+    peek = None
+    try:
+        peek = qiime2.sdk.Result.peek(fp)
+    except Exception as error:
+        if isinstance(error, SyntaxError):
+            raise error
+        # ideally ValueError: X is not a QIIME archive.
+        # but sometimes SyntaxError or worse
+        return None, error
+
+    # try to actually load
+    try:
+        artifact = qiime2.sdk.Result.load(fp)
+        return artifact, None
+
+    except Exception as e:
+        if peek:
+            # abort early as there's nothing else to do
+            raise ValueError(
+                "It looks like you have an Artifact but are missing the"
+                " plugin(s) necessary to load it. Artifact has type"
+                f" {peek.type!r} and format {peek.format!r}") from e
+        else:
+            error = e
+
+        return None, error
 
 
 def try_as_cache_input(fp):
     """ Determine if an input is in a cache and load it from the cache if it is
     """
     import os
-    from qiime2.core.cache import Cache
+    from qiime2 import Cache
 
     cache_path, key = _get_cache_path_and_key(fp)
 
     # We don't want to invent a new cache on disk here because if their input
     # exists their cache must also already exist
     if not os.path.exists(cache_path) or not Cache.is_cache(cache_path):
-        return None
+        raise ValueError(f"The path {cache_path!r} is not a valid cache.")
 
     cache = Cache(cache_path)
     return cache.load(key)

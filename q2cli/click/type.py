@@ -109,11 +109,16 @@ class QIIME2Type(click.ParamType):
         import q2cli.util
 
         try:
-            result = q2cli.util.get_input(value)
+            result, error = q2cli.util._load_input(value)
+        except Exception as e:
+            header = f'There was a problem loading {value!r} as an artifact:'
+            q2cli.util.exit_with_error(
+                e, header=header, traceback='stderr')
+
+        if error:
+            self.fail(str(error), param, ctx)
         # We want to use click's fail to pretty print whatever error we got
         # from get_input
-        except Exception as e:
-            self.fail(str(e), param, ctx)
 
         if isinstance(result, qiime2.sdk.Visualization):
             maybe = value[:-1] + 'a'

@@ -182,7 +182,7 @@ class TestCacheCli(unittest.TestCase):
         )
 
         self.assertEqual(result.exit_code, 1)
-        self.assertIn("is not a valid cache", result.output)
+        self.assertRegex(result.output, r"cache")
 
     def test_invalid_cache_path_output(self):
         self.cache.save(self.art1, 'art1')

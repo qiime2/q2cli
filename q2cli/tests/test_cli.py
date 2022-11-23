@@ -16,6 +16,7 @@ import errno
 
 from click.testing import CliRunner
 from qiime2 import Artifact, Visualization
+from qiime2.core.cache import get_cache
 from qiime2.core.testing.type import IntSequence1, IntSequence2
 from qiime2.core.testing.util import get_dummy_plugin
 
@@ -290,18 +291,18 @@ class CliTests(unittest.TestCase):
         obj = QIIME2Type(IntSequence1.to_ast(), repr(IntSequence1))
 
         with self.assertRaisesRegex(click.exceptions.BadParameter,
-                                    f'{self.tempdir!r} is not a QIIME 2 '
-                                    'Artifact'):
+                                    f'{self.tempdir!r} is a directory,'
+                                    ' not a QIIME 2 Artifact'):
             obj._convert_input(self.tempdir, None, None)
 
         with self.assertRaisesRegex(click.exceptions.BadParameter,
-                                    "'x' is not a valid filepath"):
+                                    "x does not exist"):
             obj._convert_input('x', None, None)
 
         # This is to ensure the temp in the regex matches the temp used in the
         # method under test in type.py
-        temp = tempfile.tempdir
-        with unittest.mock.patch('qiime2.sdk.Result.load',
+        temp = str(get_cache().path)
+        with unittest.mock.patch('qiime2.sdk.Result.peek',
                                  side_effect=OSError(errno.ENOSPC,
                                                      'No space left on '
                                                      'device')):
@@ -317,7 +318,7 @@ class CliTests(unittest.TestCase):
 
         viz_path = os.path.join(self.tempdir, 'viz')
 
-        with unittest.mock.patch('qiime2.sdk.Result.load',
+        with unittest.mock.patch('qiime2.sdk.Result.peek',
                                  side_effect=SyntaxError):
             result = self.runner.invoke(
                 command, ['most-common-viz', '--i-ints', self.artifact1_path,
