@@ -16,7 +16,8 @@ from qiime2 import Artifact
 from qiime2.core.testing.util import get_dummy_plugin
 from qiime2.metadata.base import SUPPORTED_COLUMN_TYPES
 
-from q2cli.builtin.tools import tools, _load_metadata
+from q2cli.util import load_metadata
+from q2cli.builtin.tools import tools
 from q2cli.commands import RootCommand
 
 
@@ -102,7 +103,7 @@ class TestCastMetadata(unittest.TestCase):
                     '--ignore-extra', '--output-file', self.output_file])
 
         self.assertEqual(result.exit_code, 0)
-        casted_metadata = _load_metadata(self.output_file)
+        casted_metadata = load_metadata(self.output_file)
         self.assertNotIn('extra', casted_metadata.columns.keys())
 
     def test_complete_successful_run(self):
@@ -111,10 +112,10 @@ class TestCastMetadata(unittest.TestCase):
                     'numbers:categorical', '--output-file', self.output_file])
 
         self.assertEqual(result.exit_code, 0)
-        input_metadata = _load_metadata(self.metadata_file)
+        input_metadata = load_metadata(self.metadata_file)
         self.assertEqual('numeric', input_metadata.columns['numbers'].type)
 
-        casted_metadata = _load_metadata(self.output_file)
+        casted_metadata = load_metadata(self.output_file)
         self.assertEqual('categorical',
                          casted_metadata.columns['numbers'].type)
 
