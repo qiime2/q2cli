@@ -177,9 +177,9 @@ def import_data(type, input_path, output_path, input_format):
                help="Display basic information about a QIIME 2 Artifact or "
                     "Visualization, including its UUID and type.",
                cls=ToolCommand)
-@click.argument('paths', nargs=-1, required=True, 
-                type=click.Path(exists=True, file_okay=True, dir_okay=False, 
-                readable=True), metavar=_COMBO_METAVAR)
+@click.argument('paths', nargs=-1, required=True,
+                type=click.Path(exists=True, file_okay=True, dir_okay=False,
+                                readable=True), metavar=_COMBO_METAVAR)
 @click.option('--tsv/--no-tsv', default=False,
               help='Print as machine-readable TSV instead of text.')
 def peek(paths, tsv):
@@ -210,11 +210,11 @@ def peek(paths, tsv):
         COLUMN_DATA_FORMAT = "Data Format"
 
         filename_width = max([len(os.path.basename(p)) for p in paths]
-                                + [len(COLUMN_FILENAME)])
+                             + [len(COLUMN_FILENAME)])
         type_width = max([len(i.type) for i in metadatas.values()]
-                            + [len(COLUMN_TYPE)])
+                         + [len(COLUMN_TYPE)])
         uuid_width = max([len(i.uuid) for i in metadatas.values()]
-                            + [len(COLUMN_UUID)])
+                         + [len(COLUMN_UUID)])
         data_format_width = \
             max([len(i.format) for i in metadatas.values()]
                 + [len(COLUMN_DATA_FORMAT)])
@@ -224,22 +224,21 @@ def peek(paths, tsv):
                         f"{{t:<{type_width + padding}}} " + \
                         f"{{u:<{uuid_width + padding}}} " + \
                         f"{{d:<{data_format_width + padding}}}"
-        
+
         click.secho(
             format_string.format(
                 f=COLUMN_FILENAME,
                 t=COLUMN_TYPE,
                 u=COLUMN_UUID,
-                d=COLUMN_DATA_FORMAT), 
+                d=COLUMN_DATA_FORMAT),
             bold=True, fg="green")
         for path, m in metadatas.items():
             click.echo(
                 format_string.format(
-                    f=path, 
-                    t=m.type, 
-                    u=m.uuid, 
+                    f=path,
+                    t=m.type,
+                    u=m.uuid,
                     d=m.format))
-
 
 
 _COLUMN_TYPES = ['categorical', 'numeric']
