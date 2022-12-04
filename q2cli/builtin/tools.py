@@ -231,7 +231,7 @@ def peek(paths, tsv):
                 t=COLUMN_TYPE,
                 u=COLUMN_UUID,
                 d=COLUMN_DATA_FORMAT), 
-            bold=True)
+            bold=True, fg="green")
         for path, m in metadatas.items():
             click.echo(
                 format_string.format(
