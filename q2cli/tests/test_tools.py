@@ -445,5 +445,74 @@ class TestExportToFileFormat(TestInspectMetadata):
         self.assertEqual(success, result.output)
 
 
+class TestPeek(unittest.TestCase):
+    def setUp(self):
+        self.runner = CliRunner()
+        self.tempdir = tempfile.mkdtemp(prefix='qiime2-q2cli-test-temp-')
+
+        # create artifact
+        self.artifact = os.path.join(self.tempdir, 'artifact.qza')
+        Artifact.import_data(
+            'Mapping', {'foo': 'bar'}).save(self.artifact)
+
+        # create visualization
+        qiime_cli = RootCommand()
+        command = qiime_cli.get_command(ctx=None, name='dummy-plugin')
+        self.viz = os.path.join(self.tempdir, 'viz.qzv')
+
+        self.ints = os.path.join(self.tempdir, 'ints.qza')
+        ints = Artifact.import_data(
+            'IntSequence1', [0, 42, 43], list)
+        ints.save(self.ints)
+
+        self.runner.invoke(
+            command, ['most-common-viz', '--i-ints', self.ints,
+                      '--o-visualization', self.viz, '--verbose'])
+
+    def tearDown(self):
+        shutil.rmtree(self.tempdir)
+
+    def test_single_artifact(self):
+        result = self.runner.invoke(tools, ['peek', self.artifact])
+        self.assertEqual(result.exit_code, 0)
+        self.assertIn("UUID:", result.output)
+        self.assertIn("Type:", result.output)
+        self.assertIn("Data format:", result.output)
+        self.assertEqual(result.output.count('\n'), 3)
+
+    def test_single_visualization(self):
+        result = self.runner.invoke(tools, ['peek', self.viz])
+        self.assertEqual(result.exit_code, 0)
+        self.assertIn("UUID:", result.output)
+        self.assertIn("Type:", result.output)
+        self.assertNotIn("Data format:", result.output)
+        self.assertEqual(result.output.count('\n'), 2)
+
+    def test_artifact_and_visualization(self):
+        result = self.runner.invoke(tools, ['peek', self.artifact, self.viz])
+        self.assertEqual(result.exit_code, 0)
+        self.assertIn("UUID", result.output)
+        self.assertIn("Type", result.output)
+        self.assertIn("Data Format", result.output)
+        self.assertIn("N/A", result.output)
+        self.assertEqual(result.output.count('\n'), 3)
+
+    def test_single_file_tsv(self):
+        result = self.runner.invoke(tools, ['peek', '--tsv', self.artifact])
+        self.assertIn("Filename\tType\tUUID\tData Format\n", result.output)
+        self.assertIn("artifact.qza", result.output)
+        self.assertEqual(result.output.count('\t'), 6)
+        self.assertEqual(result.output.count('\n'), 2)
+
+    def test_multiple_file_tsv(self):
+        result = self.runner.invoke(tools, ['peek', '--tsv', self.artifact,
+                                            self.viz])
+        self.assertIn("Filename\tType\tUUID\tData Format\n", result.output)
+        self.assertIn("artifact.qza", result.output)
+        self.assertIn("viz.qzv", result.output)
+        self.assertEqual(result.output.count('\t'), 9)
+        self.assertEqual(result.output.count('\n'), 3)
+
+
 if __name__ == "__main__":
     unittest.main()

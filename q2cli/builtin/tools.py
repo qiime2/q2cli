@@ -216,7 +216,7 @@ def peek(paths, tsv):
         uuid_width = max([len(i.uuid) for i in metadatas.values()]
                          + [len(COLUMN_UUID)])
         data_format_width = \
-            max([len(i.format) if i.format is not None else 0 
+            max([len(i.format) if i.format is not None else 0
                  for i in metadatas.values()] + [len(COLUMN_DATA_FORMAT)])
 
         padding = 2
