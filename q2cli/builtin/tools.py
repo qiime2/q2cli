@@ -216,8 +216,8 @@ def peek(paths, tsv):
         uuid_width = max([len(i.uuid) for i in metadatas.values()]
                          + [len(COLUMN_UUID)])
         data_format_width = \
-            max([len(i.format) for i in metadatas.values()]
-                + [len(COLUMN_DATA_FORMAT)])
+            max([len(i.format) if i.format is not None else 0 
+                 for i in metadatas.values()] + [len(COLUMN_DATA_FORMAT)])
 
         padding = 2
         format_string = f"{{f:<{filename_width + padding}}} " + \
@@ -238,7 +238,7 @@ def peek(paths, tsv):
                     f=path,
                     t=m.type,
                     u=m.uuid,
-                    d=m.format))
+                    d=(m.format if m.format is not None else 'N/A')))
 
 
 _COLUMN_TYPES = ['categorical', 'numeric']
