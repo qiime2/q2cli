@@ -186,7 +186,8 @@ def peek(paths, tsv):
     import qiime2.sdk
     from q2cli.core.config import CONFIG
 
-    metadatas = {os.path.basename(path): qiime2.sdk.Result.peek(path) for path in paths}
+    metadatas = {os.path.basename(path):
+                 qiime2.sdk.Result.peek(path) for path in paths}
 
     if tsv:
         click.echo("Filename\tType\tUUID\tData Format")
