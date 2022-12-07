@@ -186,7 +186,7 @@ def peek(paths, tsv):
     import qiime2.sdk
     from q2cli.core.config import CONFIG
 
-    metadatas = {path: qiime2.sdk.Result.peek(path) for path in paths}
+    metadatas = {os.path.basename(path): qiime2.sdk.Result.peek(path) for path in paths}
 
     if tsv:
         click.echo("Filename\tType\tUUID\tData Format")
@@ -194,7 +194,7 @@ def peek(paths, tsv):
             click.echo(f"{path}\t{m.type}\t{m.uuid}\t{m.format}")
 
     elif len(metadatas) == 1:
-        metadata = metadatas[paths[0]]
+        metadata = metadatas[os.path.basename(paths[0])]
         click.echo(CONFIG.cfg_style('type', "UUID")+":        ", nl=False)
         click.echo(metadata.uuid)
         click.echo(CONFIG.cfg_style('type', "Type")+":        ", nl=False)
@@ -209,7 +209,7 @@ def peek(paths, tsv):
         COLUMN_UUID = "UUID"
         COLUMN_DATA_FORMAT = "Data Format"
 
-        filename_width = max([len(os.path.basename(p)) for p in paths]
+        filename_width = max([len(p) for p in paths]
                              + [len(COLUMN_FILENAME)])
         type_width = max([len(i.type) for i in metadatas.values()]
                          + [len(COLUMN_TYPE)])
