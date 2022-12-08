@@ -181,7 +181,7 @@ def import_data(type, input_path, output_path, input_format):
                 type=click.Path(exists=True, file_okay=True, dir_okay=False,
                                 readable=True), metavar=_COMBO_METAVAR)
 @click.option('--tsv/--no-tsv', default=False,
-              help='Print as machine-readable TSV instead of text.')
+              help='Print as machine-readable tab separated values.')
 def peek(paths, tsv):
     import qiime2.sdk
     from q2cli.core.config import CONFIG
