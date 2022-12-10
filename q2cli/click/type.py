@@ -46,10 +46,6 @@ class OutDirType(click.Path):
         return value
 
 
-class ControlFlowException(Exception):
-    pass
-
-
 class QIIME2Type(click.ParamType):
     def __init__(self, type_ast, type_repr, is_output=False):
         self.type_repr = type_repr
@@ -84,7 +80,13 @@ class QIIME2Type(click.ParamType):
 
     def _convert_output(self, value, param, ctx):
         import os
+        from q2cli.util import output_in_cache
         # Click path fails to validate writability on new paths
+
+        # Check if our output path is actually in a cache and if it is skip our
+        # other checks
+        if output_in_cache(value):
+            return value
 
         if os.path.exists(value):
             if os.path.isdir(value):
@@ -102,40 +104,21 @@ class QIIME2Type(click.ParamType):
 
     def _convert_input(self, value, param, ctx):
         import os
-        import tempfile
         import qiime2.sdk
         import qiime2.sdk.util
         import q2cli.util
 
         try:
-            try:
-                q2cli.util.get_plugin_manager()
-                result = qiime2.sdk.Result.load(value)
-            except OSError as e:
-                if e.errno == 28:
-                    temp = tempfile.tempdir
-                    self.fail(f'There was not enough space left on {temp!r} '
-                              f'to extract the artifact {value!r}. '
-                              '(Try setting $TMPDIR to a directory with '
-                              'more space, or increasing the size of '
-                              f'{temp!r})', param, ctx)
-                else:
-                    raise ControlFlowException
-            except ValueError as e:
-                if 'does not exist' in str(e):
-                    self.fail(f'{value!r} is not a valid filepath', param, ctx)
-                else:
-                    raise ControlFlowException
-            except Exception as e:
-                # If we made it here, QIIME 2 was confident that the thing we
-                # are trying to load is a QIIME 2 Result, however, we have run
-                # into some kind of catastrophic error.
-                header = ('There was a problem loading %s as a '
-                          'QIIME 2 Result:' % value)
-                q2cli.util.exit_with_error(e, header=header)
-        except ControlFlowException:
-            self.fail('%r is not a QIIME 2 Artifact (.qza)' % value, param,
-                      ctx)
+            result, error = q2cli.util._load_input(value)
+        except Exception as e:
+            header = f'There was a problem loading {value!r} as an artifact:'
+            q2cli.util.exit_with_error(
+                e, header=header, traceback='stderr')
+
+        if error:
+            self.fail(str(error), param, ctx)
+        # We want to use click's fail to pretty print whatever error we got
+        # from get_input
 
         if isinstance(result, qiime2.sdk.Visualization):
             maybe = value[:-1] + 'a'
@@ -158,33 +141,12 @@ class QIIME2Type(click.ParamType):
         return result
 
     def _convert_metadata(self, value, param, ctx):
-        import sys
-        import qiime2
         import q2cli.util
 
         if self.type_expr.name == 'MetadataColumn':
             value, column = value
-        fp = value
 
-        try:
-            q2cli.util.get_plugin_manager()
-            artifact = qiime2.Artifact.load(fp)
-        except Exception:
-            try:
-                metadata = qiime2.Metadata.load(fp)
-            except Exception as e:
-                header = ("There was an issue with loading the file %s as "
-                          "metadata:" % fp)
-                tb = 'stderr' if '--verbose' in sys.argv else None
-                q2cli.util.exit_with_error(e, header=header, traceback=tb)
-        else:
-            try:
-                metadata = artifact.view(qiime2.Metadata)
-            except Exception as e:
-                header = ("There was an issue with viewing the artifact "
-                          "%s as QIIME 2 Metadata:" % fp)
-                tb = 'stderr' if '--verbose' in sys.argv else None
-                q2cli.util.exit_with_error(e, header=header, traceback=tb)
+        metadata = q2cli.util.load_metadata(value)
 
         if self.type_expr.name != 'MetadataColumn':
             return metadata

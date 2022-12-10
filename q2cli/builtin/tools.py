@@ -177,22 +177,69 @@ def import_data(type, input_path, output_path, input_format):
                help="Display basic information about a QIIME 2 Artifact or "
                     "Visualization, including its UUID and type.",
                cls=ToolCommand)
-@click.argument('path', type=click.Path(exists=True, file_okay=True,
-                                        dir_okay=False, readable=True),
-                metavar=_COMBO_METAVAR)
-def peek(path):
+@click.argument('paths', nargs=-1, required=True,
+                type=click.Path(exists=True, file_okay=True, dir_okay=False,
+                                readable=True), metavar=_COMBO_METAVAR)
+@click.option('--tsv/--no-tsv', default=False,
+              help='Print as machine-readable tab separated values.')
+def peek(paths, tsv):
     import qiime2.sdk
     from q2cli.core.config import CONFIG
 
-    metadata = qiime2.sdk.Result.peek(path)
+    metadatas = {os.path.basename(path):
+                 qiime2.sdk.Result.peek(path) for path in paths}
 
-    click.echo(CONFIG.cfg_style('type', "UUID")+":        ", nl=False)
-    click.echo(metadata.uuid)
-    click.echo(CONFIG.cfg_style('type', "Type")+":        ", nl=False)
-    click.echo(metadata.type)
-    if metadata.format is not None:
-        click.echo(CONFIG.cfg_style('type', "Data format")+": ", nl=False)
-        click.echo(metadata.format)
+    if tsv:
+        click.echo("Filename\tType\tUUID\tData Format")
+        for path, m in metadatas.items():
+            click.echo(f"{path}\t{m.type}\t{m.uuid}\t{m.format}")
+
+    elif len(metadatas) == 1:
+        metadata = metadatas[os.path.basename(paths[0])]
+        click.echo(CONFIG.cfg_style('type', "UUID")+":        ", nl=False)
+        click.echo(metadata.uuid)
+        click.echo(CONFIG.cfg_style('type', "Type")+":        ", nl=False)
+        click.echo(metadata.type)
+        if metadata.format is not None:
+            click.echo(CONFIG.cfg_style('type', "Data format")+": ", nl=False)
+            click.echo(metadata.format)
+
+    else:
+        COLUMN_FILENAME = "Filename"
+        COLUMN_TYPE = "Type"
+        COLUMN_UUID = "UUID"
+        COLUMN_DATA_FORMAT = "Data Format"
+
+        filename_width = max([len(p) for p in paths]
+                             + [len(COLUMN_FILENAME)])
+        type_width = max([len(i.type) for i in metadatas.values()]
+                         + [len(COLUMN_TYPE)])
+        uuid_width = max([len(i.uuid) for i in metadatas.values()]
+                         + [len(COLUMN_UUID)])
+        data_format_width = \
+            max([len(i.format) if i.format is not None else 0
+                 for i in metadatas.values()] + [len(COLUMN_DATA_FORMAT)])
+
+        padding = 2
+        format_string = f"{{f:<{filename_width + padding}}} " + \
+                        f"{{t:<{type_width + padding}}} " + \
+                        f"{{u:<{uuid_width + padding}}} " + \
+                        f"{{d:<{data_format_width + padding}}}"
+
+        click.secho(
+            format_string.format(
+                f=COLUMN_FILENAME,
+                t=COLUMN_TYPE,
+                u=COLUMN_UUID,
+                d=COLUMN_DATA_FORMAT),
+            bold=True, fg="green")
+        for path, m in metadatas.items():
+            click.echo(
+                format_string.format(
+                    f=path,
+                    t=m.type,
+                    u=m.uuid,
+                    d=(m.format if m.format is not None else 'N/A')))
 
 
 _COLUMN_TYPES = ['categorical', 'numeric']
@@ -324,8 +371,7 @@ def cast_metadata(paths, cast, output_file, ignore_extra,
 @click.option('--tsv/--no-tsv', default=False,
               help='Print as machine-readable TSV instead of text.')
 @click.argument('paths', nargs=-1, required=True, metavar='METADATA...',
-                type=click.Path(exists=True, file_okay=True, dir_okay=False,
-                                readable=True))
+                type=click.Path(file_okay=True, dir_okay=False, readable=True))
 @q2cli.util.pretty_failure(traceback=None)
 def inspect_metadata(paths, tsv, failure):
     metadata = _merge_metadata(paths)
@@ -373,30 +419,8 @@ def inspect_metadata(paths, tsv, failure):
         click.echo(metadata.column_count)
 
 
-def _load_metadata(path):
-    import qiime2
-    import qiime2.sdk
-
-    # TODO: clean up duplication between this and the metadata handlers.
-    try:
-        artifact = qiime2.sdk.Result.load(path)
-    except Exception:
-        metadata = qiime2.Metadata.load(path)
-    else:
-        if isinstance(artifact, qiime2.Visualization):
-            raise Exception("Visualizations cannot be viewed as QIIME 2"
-                            " metadata:\n%r" % path)
-        elif artifact.has_metadata():
-            metadata = artifact.view(qiime2.Metadata)
-        else:
-            raise Exception("Artifacts with type %r cannot be viewed as"
-                            " QIIME 2 metadata:\n%r" % (artifact.type, path))
-
-    return metadata
-
-
 def _merge_metadata(paths):
-    m = [_load_metadata(p) for p in paths]
+    m = [q2cli.util.load_metadata(p) for p in paths]
     metadata = m[0]
     if m[1:]:
         metadata = metadata.merge(*m[1:])

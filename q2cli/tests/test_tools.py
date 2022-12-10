@@ -20,7 +20,8 @@ from qiime2.core.cache import Cache
 from qiime2.sdk.result import Result
 from qiime2.core.util import set_permissions, ALL_PERMISSIONS
 
-from q2cli.builtin.tools import tools, _load_metadata
+from q2cli.util import load_metadata
+from q2cli.builtin.tools import tools
 from q2cli.commands import RootCommand
 
 
@@ -106,7 +107,7 @@ class TestCastMetadata(unittest.TestCase):
                     '--ignore-extra', '--output-file', self.output_file])
 
         self.assertEqual(result.exit_code, 0)
-        casted_metadata = _load_metadata(self.output_file)
+        casted_metadata = load_metadata(self.output_file)
         self.assertNotIn('extra', casted_metadata.columns.keys())
 
     def test_complete_successful_run(self):
@@ -115,10 +116,10 @@ class TestCastMetadata(unittest.TestCase):
                     'numbers:categorical', '--output-file', self.output_file])
 
         self.assertEqual(result.exit_code, 0)
-        input_metadata = _load_metadata(self.metadata_file)
+        input_metadata = load_metadata(self.metadata_file)
         self.assertEqual('numeric', input_metadata.columns['numbers'].type)
 
-        casted_metadata = _load_metadata(self.output_file)
+        casted_metadata = load_metadata(self.output_file)
         self.assertEqual('categorical',
                          casted_metadata.columns['numbers'].type)
 
@@ -703,6 +704,75 @@ def _get_cache_contents(cache):
             cache_contents.add(os.path.join(rel_cache, elem))
 
     return cache_contents
+
+
+class TestPeek(unittest.TestCase):
+    def setUp(self):
+        self.runner = CliRunner()
+        self.tempdir = tempfile.mkdtemp(prefix='qiime2-q2cli-test-temp-')
+
+        # create artifact
+        self.artifact = os.path.join(self.tempdir, 'artifact.qza')
+        Artifact.import_data(
+            'Mapping', {'foo': 'bar'}).save(self.artifact)
+
+        # create visualization
+        qiime_cli = RootCommand()
+        command = qiime_cli.get_command(ctx=None, name='dummy-plugin')
+        self.viz = os.path.join(self.tempdir, 'viz.qzv')
+
+        self.ints = os.path.join(self.tempdir, 'ints.qza')
+        ints = Artifact.import_data(
+            'IntSequence1', [0, 42, 43], list)
+        ints.save(self.ints)
+
+        self.runner.invoke(
+            command, ['most-common-viz', '--i-ints', self.ints,
+                      '--o-visualization', self.viz, '--verbose'])
+
+    def tearDown(self):
+        shutil.rmtree(self.tempdir)
+
+    def test_single_artifact(self):
+        result = self.runner.invoke(tools, ['peek', self.artifact])
+        self.assertEqual(result.exit_code, 0)
+        self.assertIn("UUID:", result.output)
+        self.assertIn("Type:", result.output)
+        self.assertIn("Data format:", result.output)
+        self.assertEqual(result.output.count('\n'), 3)
+
+    def test_single_visualization(self):
+        result = self.runner.invoke(tools, ['peek', self.viz])
+        self.assertEqual(result.exit_code, 0)
+        self.assertIn("UUID:", result.output)
+        self.assertIn("Type:", result.output)
+        self.assertNotIn("Data format:", result.output)
+        self.assertEqual(result.output.count('\n'), 2)
+
+    def test_artifact_and_visualization(self):
+        result = self.runner.invoke(tools, ['peek', self.artifact, self.viz])
+        self.assertEqual(result.exit_code, 0)
+        self.assertIn("UUID", result.output)
+        self.assertIn("Type", result.output)
+        self.assertIn("Data Format", result.output)
+        self.assertIn("N/A", result.output)
+        self.assertEqual(result.output.count('\n'), 3)
+
+    def test_single_file_tsv(self):
+        result = self.runner.invoke(tools, ['peek', '--tsv', self.artifact])
+        self.assertIn("Filename\tType\tUUID\tData Format\n", result.output)
+        self.assertIn("artifact.qza", result.output)
+        self.assertEqual(result.output.count('\t'), 6)
+        self.assertEqual(result.output.count('\n'), 2)
+
+    def test_multiple_file_tsv(self):
+        result = self.runner.invoke(tools, ['peek', '--tsv', self.artifact,
+                                            self.viz])
+        self.assertIn("Filename\tType\tUUID\tData Format\n", result.output)
+        self.assertIn("artifact.qza", result.output)
+        self.assertIn("viz.qzv", result.output)
+        self.assertEqual(result.output.count('\t'), 9)
+        self.assertEqual(result.output.count('\n'), 3)
 
 
 if __name__ == "__main__":

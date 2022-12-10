@@ -286,6 +286,8 @@ class ActionCommand(BaseCommandMixin, click.Command):
         """Called when user hits return, **kwargs are Dict[click_names, Obj]"""
         import os
         import qiime2.util
+        from q2cli.util import output_in_cache
+        from qiime2.core.cache import Cache
 
         output_dir = kwargs.pop('output_dir')
         verbose = kwargs.pop('verbose')
@@ -359,7 +361,14 @@ class ActionCommand(BaseCommandMixin, click.Command):
             os.makedirs(output_dir)
 
         for result, output in zip(results, outputs):
-            path = result.save(output)
+            if output_in_cache(output) and output_dir is None:
+                cache_path, key = output.split(':')
+                cache = Cache(cache_path)
+                cache.save(result, key)
+                path = output
+            else:
+                path = result.save(output)
+
             if not quiet:
                 click.echo(
                     CONFIG.cfg_style('success', 'Saved %s to: %s' %
