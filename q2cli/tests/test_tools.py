@@ -7,6 +7,7 @@
 # ----------------------------------------------------------------------------
 
 import os
+import gc
 import shutil
 import unittest
 import tempfile
@@ -15,6 +16,9 @@ from click.testing import CliRunner
 from qiime2 import Artifact
 from qiime2.core.testing.util import get_dummy_plugin
 from qiime2.metadata.base import SUPPORTED_COLUMN_TYPES
+from qiime2.core.cache import Cache
+from qiime2.sdk.result import Result
+from qiime2.core.util import set_permissions, ALL_PERMISSIONS
 
 from q2cli.util import load_metadata
 from q2cli.builtin.tools import tools
@@ -444,6 +448,262 @@ class TestExportToFileFormat(TestInspectMetadata):
         success = 'Exported %s as Visualization to '\
                   'directory %s\n' % (self.viz, output_path)
         self.assertEqual(success, result.output)
+
+
+class TestCacheTools(unittest.TestCase):
+    def setUp(self):
+        get_dummy_plugin()
+
+        self.runner = CliRunner()
+        self.plugin_command = RootCommand().get_command(
+            ctx=None, name='dummy-plugin')
+        self.tempdir = \
+            tempfile.TemporaryDirectory(prefix='qiime2-q2cli-test-temp-')
+
+        self.art1 = Artifact.import_data('IntSequence1', [0, 1, 2])
+        self.art2 = Artifact.import_data('IntSequence1', [3, 4, 5])
+        self.art3 = Artifact.import_data('IntSequence1', [6, 7, 8])
+        self.art4 = Artifact.import_data('IntSequence2', [9, 10, 11])
+        self.cache = Cache(os.path.join(self.tempdir.name, 'new_cache'))
+
+    def tearDown(self):
+        self.tempdir.cleanup()
+
+    def test_cache_create(self):
+        cache_path = os.path.join(self.tempdir.name, 'created_cache')
+
+        result = self.runner.invoke(
+            tools, ['cache-create', '--path', cache_path])
+
+        success = "Created cache at '%s'\n" % cache_path
+        self.assertEqual(success, result.output)
+        self.assertTrue(Cache.is_cache(cache_path))
+
+    def test_cache_remove(self):
+        self.cache.save(self.art1, 'key')
+        self.assertTrue('key' in self.cache.get_keys())
+
+        result = self.runner.invoke(
+            tools,
+            ['cache-remove', '--path', str(self.cache.path), '--key', 'key'])
+
+        success = "Removed key 'key' from cache '%s'\n" % self.cache.path
+        self.assertEqual(success, result.output)
+        self.assertFalse('key' in self.cache.get_keys())
+
+    def test_cache_garbage_collection(self):
+        # Data referenced directly by key
+        self.cache.save(self.art1, 'foo')
+        # Data referenced by pool that is referenced by key
+        pool = self.cache.create_pool(['bar'])
+        pool.save(self.art2)
+        # We will be manually deleting the keys that back these two
+        self.cache.save(self.art3, 'baz')
+        pool = self.cache.create_pool(['qux'])
+        pool.save(self.art4)
+
+        # What we expect to see before and after gc
+        expected_pre_gc_contents = \
+            set(('./VERSION', 'keys/foo', 'keys/bar',
+                 'keys/baz', 'keys/qux',
+                 f'pools/bar/{self.art2.uuid}',
+                 f'pools/qux/{self.art4.uuid}',
+                 f'data/{self.art1.uuid}', f'data/{self.art2.uuid}',
+                 f'data/{self.art3.uuid}', f'data/{self.art4.uuid}'))
+
+        expected_post_gc_contents = \
+            set(('./VERSION', 'keys/foo', 'keys/bar',
+                 f'pools/bar/{self.art2.uuid}',
+                 f'data/{self.art1.uuid}', f'data/{self.art2.uuid}'))
+
+        # Assert cache looks how we want pre gc
+        pre_gc_contents = _get_cache_contents(self.cache)
+        self.assertEqual(expected_pre_gc_contents, pre_gc_contents)
+
+        # Delete keys
+        self.cache.remove(self.cache.keys / 'baz')
+        self.cache.remove(self.cache.keys / 'qux')
+
+        # Make sure Python's garbage collector gets the process pool symlinks
+        # to the artifact that was keyed on baz and the one in the qux pool
+        gc.collect()
+        result = self.runner.invoke(
+            tools,
+            ['cache-garbage-collection', '--path', str(self.cache.path)])
+
+        success = "Ran garbage collection on cache at '%s'\n" % self.cache.path
+        self.assertEqual(success, result.output)
+
+        # Assert cache looks how we want post gc
+        post_gc_contents = _get_cache_contents(self.cache)
+        self.assertEqual(expected_post_gc_contents, post_gc_contents)
+
+    def test_cache_save(self):
+        artifact = os.path.join(self.tempdir.name, 'artifact.qza')
+        self.art1.save(artifact)
+
+        result = self.runner.invoke(
+            tools, ['cache-save', '--cache-path', str(self.cache.path),
+                    '--artifact-path', artifact, '--key', 'key'])
+
+        success = "Saved the artifact '%s' to the cache '%s' under the key " \
+            "'key'\n" % (artifact, self.cache.path)
+        self.assertEqual(success, result.output)
+
+    def test_cache_load(self):
+        artifact = os.path.join(self.tempdir.name, 'artifact.qza')
+        self.cache.save(self.art1, 'key')
+
+        result = self.runner.invoke(
+            tools, ['cache-load', '--cache-path', str(self.cache.path),
+                    '--key', 'key', '--output-path', artifact])
+
+        success = "Loaded artifact with the key 'key' from the cache '%s' " \
+            "and saved it to the file '%s'\n" % (self.cache.path, artifact)
+        self.assertEqual(success, result.output)
+
+    def test_cache_roundtrip(self):
+        in_artifact = os.path.join(self.tempdir.name, 'in_artifact.qza')
+        out_artifact = os.path.join(self.tempdir.name, 'out_artifact.qza')
+
+        self.art1.save(in_artifact)
+
+        result = self.runner.invoke(
+            tools, ['cache-save', '--cache-path', str(self.cache.path),
+                    '--artifact-path', in_artifact, '--key', 'key'])
+
+        success = "Saved the artifact '%s' to the cache '%s' under the key " \
+            "'key'\n" % (in_artifact, self.cache.path)
+        self.assertEqual(success, result.output)
+
+        result = self.runner.invoke(
+            tools, ['cache-load', '--cache-path', str(self.cache.path),
+                    '--key', 'key', '--output-path', out_artifact])
+
+        success = "Loaded artifact with the key 'key' from the cache '%s' " \
+            "and saved it to the file '%s'\n" % (self.cache.path, out_artifact)
+        self.assertEqual(success, result.output)
+
+        artifact = Artifact.load(out_artifact)
+        self.assertEqual([0, 1, 2], artifact.view(list))
+
+    def test_cache_status(self):
+        success_template = \
+            "Status of the cache at the path '%s':\n\n%s\n\n%s\n"
+
+        # Empty cache
+        result = self.runner.invoke(
+            tools, ['cache-status', '--path', str(self.cache.path)])
+        success = \
+            success_template % (str(self.cache.path), 'No data keys in cache',
+                                'No pool keys in cache')
+        self.assertEqual(success, result.output)
+
+        # Cache with only data
+        in_artifact = os.path.join(self.tempdir.name, 'in_artifact.qza')
+        self.art1.save(in_artifact)
+        self.runner.invoke(
+            tools, ['cache-save', '--cache-path', str(self.cache.path),
+                    '--artifact-path', in_artifact, '--key', 'key'])
+
+        result = self.runner.invoke(
+            tools, ['cache-status', '--path', str(self.cache.path)])
+        data_output = 'Data keys in cache:\ndata: key -> %s' % \
+            str(Result.peek(self.cache.data / str(self.art1.uuid)))
+        success = \
+            success_template % (str(self.cache.path), data_output,
+                                'No pool keys in cache')
+        self.assertEqual(success, result.output)
+
+        # Cache with data and pool
+        pool = self.cache.create_pool(keys=['pool_key'])
+        pool.save(self.art2)
+
+        result = self.runner.invoke(
+            tools, ['cache-status', '--path', str(self.cache.path)])
+        pool_output = 'Pool keys in cache:\npool: pool_key -> size = 1'
+        success = \
+            success_template % (str(self.cache.path), data_output,
+                                pool_output)
+        self.assertEqual(success, result.output)
+
+    def test_cache_validate_good(self):
+        success_template = "Validating cache at '%s'\n\n%sSuccessfully " \
+                           "validated cache at path '%s'\n"
+
+        # Empty cache
+        result = self.runner.invoke(
+            tools, ['cache-validate', '--path', str(self.cache.path)])
+        success = success_template % (self.cache.path, '', self.cache.path)
+        self.assertEqual(success, result.output)
+
+        # Cache with artifact
+        self.cache.save(self.art1, 'key')
+        result = self.runner.invoke(
+            tools, ['cache-validate', '--path', str(self.cache.path)])
+        validated = 'Validating: %s\nValidated: %s\n\n' % \
+            (self.art1.uuid, self.art1.uuid)
+        success = success_template % \
+            (self.cache.path, validated, self.cache.path)
+        self.assertEqual(success, result.output)
+
+    def test_cache_validate_bad(self):
+        self.cache.save(self.art1, 'key')
+        os.rename(self.cache.data / str(self.art1.uuid),
+                  self.cache.data / 'not_uuid')
+
+        # Not a uuid
+        result = self.runner.invoke(
+            tools, ['cache-validate', '--path', str(self.cache.path)])
+        self.assertIn("Item in data directory 'not_uuid' is not a valid uuid4",
+                      result.output)
+
+        # This cleanup needs to happen so we don't error in gc later
+        set_permissions(self.cache.path, ALL_PERMISSIONS, ALL_PERMISSIONS)
+        shutil.rmtree(self.cache.data / 'not_uuid')
+
+        # Invalid artifact
+        self.cache.remove('key')
+        self.cache.save(self.art1, 'key')
+
+        set_permissions(self.cache.path, ALL_PERMISSIONS, ALL_PERMISSIONS)
+        os.remove(self.cache.data / str(self.art1.uuid) / 'VERSION')
+
+        result = self.runner.invoke(
+            tools, ['cache-validate', '--path', str(self.cache.path)])
+        self.assertIn(
+            "Failed to validate: %s\nThere was a problem validating the cache "
+            "at path '%s':\n\n  Archive does not contain a correctly "
+            "formatted VERSION file." %
+            (str(self.art1.uuid), str(self.cache.path)), result.output)
+
+
+def _get_cache_contents(cache):
+    """Gets contents of cache not including contents of the artifacts
+    themselves relative to the root of the cache
+    """
+    cache_contents = set()
+
+    rel_keys = os.path.relpath(cache.keys, cache.path)
+    rel_data = os.path.relpath(cache.data, cache.path)
+    rel_pools = os.path.relpath(cache.pools, cache.path)
+    rel_cache = os.path.relpath(cache.path, cache.path)
+
+    for key in os.listdir(cache.keys):
+        cache_contents.add(os.path.join(rel_keys, key))
+
+    for art in os.listdir(cache.data):
+        cache_contents.add(os.path.join(rel_data, art))
+
+    for pool in os.listdir(cache.pools):
+        for link in os.listdir(os.path.join(cache.pools, pool)):
+            cache_contents.add(os.path.join(rel_pools, pool, link))
+
+    for elem in os.listdir(cache.path):
+        if os.path.isfile(os.path.join(cache.path, elem)):
+            cache_contents.add(os.path.join(rel_cache, elem))
+
+    return cache_contents
 
 
 class TestPeek(unittest.TestCase):

@@ -604,3 +604,247 @@ def citations(path):
         click.echo(CONFIG.cfg_style('problem', 'No citations found.'),
                    err=True)
         ctx.exit(1)
+
+
+@tools.command(name='cache-create',
+               short_help='Create an empty cache at the given location.',
+               help='Create an empty cache at the given location.',
+               cls=ToolCommand)
+@click.option('--path', required=True,
+              type=click.Path(exists=False, readable=True),
+              help='Path to a nonexistent directory to be created as a cache.')
+def cache_create(path):
+    from qiime2.core.cache import Cache
+    from q2cli.core.config import CONFIG
+
+    try:
+        Cache(path)
+    except Exception as e:
+        header = "There was a problem creating a cache at '%s':" % path
+        q2cli.util.exit_with_error(e, header=header, traceback=None)
+
+    success = "Created cache at '%s'" % path
+    click.echo(CONFIG.cfg_style('success', success))
+
+
+@tools.command(name='cache-remove',
+               short_help='Removes a given key from a cache.',
+               help='Removes a given key from a cache then runs garbage '
+                    'collection on the cache.',
+               cls=ToolCommand)
+@click.option('--path', required=True,
+              type=click.Path(exists=True, file_okay=False, dir_okay=True,
+                              readable=True),
+              help='Path to an existing cache to remove the key from.')
+@click.option('--key', required=True,
+              help='The key to remove from the cache.')
+def cache_remove(path, key):
+    from qiime2.core.cache import Cache
+    from q2cli.core.config import CONFIG
+
+    try:
+        cache = Cache(path)
+        cache.remove(key)
+    except Exception as e:
+        header = "There was a problem removing the key '%s' from the " \
+                 "cache '%s':" % (key, path)
+        q2cli.util.exit_with_error(e, header=header, traceback=None)
+
+    success = "Removed key '%s' from cache '%s'" % (key, path)
+    click.echo(CONFIG.cfg_style('success', success))
+
+
+@tools.command(name='cache-garbage-collection',
+               short_help='Runs garbage collection on the cache at the '
+                          'specified location.',
+               help='Runs garbage collection on the cache at the specified '
+                    'location if the specified location is a cache.',
+               cls=ToolCommand)
+@click.option('--path', required=True,
+              type=click.Path(exists=True, file_okay=False, dir_okay=True,
+                              readable=True),
+              help='Path to an existing cache to run garbage collection on.')
+def cache_garbage_collection(path):
+    from qiime2.core.cache import Cache
+    from q2cli.core.config import CONFIG
+
+    try:
+        cache = Cache(path)
+        cache.garbage_collection()
+    except Exception as e:
+        header = "There was a problem running garbage collection on the " \
+            "cache at '%s':" % path
+        q2cli.util.exit_with_error(e, header=header, traceback=None)
+
+    success = "Ran garbage collection on cache at '%s'" % path
+    click.echo(CONFIG.cfg_style('success', success))
+
+
+@tools.command(name='cache-save',
+               short_help='Saves a .qza into the cache under a key.',
+               help='Saves a .qza into the cache under a key.',
+               cls=ToolCommand)
+@click.option('--cache-path', required=True,
+              type=click.Path(exists=True, file_okay=False, dir_okay=True,
+                              readable=True),
+              help='Path to an existing cache to save into.')
+@click.option('--artifact-path', required=True,
+              type=click.Path(exists=True, file_okay=True, dir_okay=False,
+                              readable=True),
+              help='Path to a .qza to save into the cache.')
+@click.option('--key', required=True,
+              help='The key to save the artifact under (must be a valid '
+                   'Python identifier).')
+def cache_save(cache_path, artifact_path, key):
+    from qiime2 import Artifact
+    from qiime2.core.cache import Cache
+    from q2cli.core.config import CONFIG
+
+    try:
+        artifact = Artifact.load(artifact_path)
+        cache = Cache(cache_path)
+        cache.save(artifact, key)
+    except Exception as e:
+        header = "There was a problem saving the artifact '%s' to the cache " \
+                 "'%s' under the key '%s':" % (artifact_path, cache_path, key)
+        q2cli.util.exit_with_error(e, header=header, traceback=None)
+
+    success = "Saved the artifact '%s' to the cache '%s' under the key " \
+        "'%s'" % (artifact_path, cache_path, key)
+    click.echo(CONFIG.cfg_style('success', success))
+
+
+@tools.command(name='cache-load',
+               short_help='Loads an artifact out of a cache into a .qza.',
+               help='Loads the artifact saved to the specified cache under '
+                    'the specified key into a .qza at the specified location.',
+               cls=ToolCommand)
+@click.option('--cache-path', required=True,
+              type=click.Path(exists=True, file_okay=False, dir_okay=True,
+                              readable=True),
+              help='Path to an existing cache to load from.')
+@click.option('--key', required=True,
+              help='The key to the artifact being loaded.')
+@click.option('--output-path', required=True,
+              type=click.Path(exists=False, readable=True),
+              help='Path to put the .qza we are loading the artifact into.')
+def cache_load(cache_path, key, output_path):
+    from qiime2.core.cache import Cache
+    from q2cli.core.config import CONFIG
+
+    try:
+        cache = Cache(cache_path)
+        artifact = cache.load(key)
+        artifact.save(output_path)
+    except Exception as e:
+        header = "There was a problem loading the artifact with the key " \
+                 "'%s' from the cache '%s' and saving it to the file '%s':" % \
+                 key, cache_path, output_path
+        q2cli.util.exit_with_error(e, header=header, traceback=None)
+
+    success = "Loaded artifact with the key '%s' from the cache '%s' and " \
+        "saved it to the file '%s'" % (key, cache_path, output_path)
+    click.echo(CONFIG.cfg_style('success', success))
+
+
+@tools.command(name='cache-status',
+               short_help='Checks the status of the cache.',
+               help='Lists all keys in the given cache. Peeks artifacts '
+                    'pointed to by keys to data and lists the number of '
+                    'artifacts in the pool for keys to pools.',
+               cls=ToolCommand)
+@click.option('--path', required=True,
+              type=click.Path(exists=True, file_okay=False, dir_okay=True,
+                              readable=True),
+              help='Path to an existing cache to check the status of.')
+def cache_status(path):
+    from qiime2.core.cache import Cache
+    from qiime2.sdk.result import Result
+
+    from q2cli.core.config import CONFIG
+
+    data_output = []
+    pool_output = []
+    try:
+        cache = Cache(path)
+        with cache.lock:
+            for key in cache.get_keys():
+                key_values = cache.read_key(key)
+
+                if (data := key_values['data']) is not None:
+                    data_output.append(
+                        'data: %s -> %s' %
+                        (key, str(Result.peek(cache.data / data))))
+                elif (pool := key_values['pool']) is not None:
+                    pool_output.append(
+                        'pool: %s -> size = %s' %
+                        (key, str(len(os.listdir(cache.pools / pool)))))
+    except Exception as e:
+        header = "There was a problem getting the status of the cache at " \
+                 "path '%s':" % path
+        q2cli.util.exit_with_error(e, header=header, traceback=None)
+
+    if not data_output:
+        data_output = 'No data keys in cache'
+    else:
+        data_output = '\n'.join(data_output)
+        data_output = 'Data keys in cache:\n' + data_output
+
+    if not pool_output:
+        pool_output = 'No pool keys in cache'
+    else:
+        pool_output = '\n'.join(pool_output)
+        pool_output = 'Pool keys in cache:\n' + pool_output
+
+    output = data_output + '\n\n' + pool_output
+    success = "Status of the cache at the path '%s':\n\n%s" % (path, output)
+    click.echo(CONFIG.cfg_style('success', success))
+
+
+@tools.command(name='cache-validate',
+               short_help='Validates the contents of the cache.',
+               help='Fully validates all data in the cache using each '
+                    'artifacts validate functions and checksums.',
+               cls=ToolCommand)
+@click.option('--path', required=True,
+              type=click.Path(exists=True, file_okay=False, dir_okay=True,
+                              readable=True),
+              help='Path to an existing cache to validate.')
+def cache_validate(path):
+    from qiime2.core.cache import Cache
+    from qiime2.core.util import is_uuid4
+    from qiime2 import Artifact
+
+    from q2cli.core.config import CONFIG
+
+    click.echo(
+        CONFIG.cfg_style('success', "Validating cache at '%s'\n" % path))
+
+    try:
+        cache = Cache(path)
+        with cache.lock:
+            for data in cache.get_data():
+                try:
+                    click.echo(
+                        CONFIG.cfg_style('success', 'Validating: %s' % data))
+                    if not is_uuid4(data):
+                        raise ValueError(
+                            "Item in data directory '%s' is not a valid "
+                            "uuid4." % data)
+
+                    art = Artifact.load(cache.data / data)
+                    art.validate()
+                    click.echo(
+                        CONFIG.cfg_style('success', 'Validated: %s\n' % data))
+                except Exception as e:
+                    click.echo(
+                        CONFIG.cfg_style(
+                            'error', 'Failed to validate: %s' % data))
+                    raise e
+    except Exception as e:
+        header = "There was a problem validating the cache at path '%s':" % \
+            path
+        q2cli.util.exit_with_error(e, header=header, traceback=None)
+
+    success = "Successfully validated cache at path '%s'" % path
+    click.echo(CONFIG.cfg_style('success', success))
