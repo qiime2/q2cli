@@ -649,6 +649,7 @@ class TestCacheTools(unittest.TestCase):
 
     def test_cache_validate_bad(self):
         self.cache.save(self.art1, 'key')
+        set_permissions(self.cache.path, ALL_PERMISSIONS, ALL_PERMISSIONS)
         os.rename(self.cache.data / str(self.art1.uuid),
                   self.cache.data / 'not_uuid')
 
