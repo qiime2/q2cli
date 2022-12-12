@@ -286,6 +286,27 @@ class TestCacheCli(unittest.TestCase):
         self.assertEqual(result.exit_code, 1)
         self.assertIn('is not a valid cache', result.output)
 
+    def test_output_dir_as_cache(self):
+        self.cache.save(self.art1, 'art1')
+        self.cache.save(self.art2, 'art2')
+        self.cache.save(self.art3, 'art3')
+
+        art1_path = str(self.cache.path) + ':art1'
+        art2_path = str(self.cache.path) + ':art2'
+        art3_path = str(self.cache.path) + ':art3'
+
+        out_path = str(self.cache.path) + ':out'
+
+        result = self._run_command(
+            'concatenate-ints', '--i-ints1', art1_path, '--i-ints2', art2_path,
+            '--i-ints3', art3_path, '--p-int1', '9', '--p-int2', '10',
+            '--output-dir', out_path, '--verbose'
+        )
+
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn(
+            'Cache keys cannot be used as output dirs.', str(result.exception))
+
 
 if __name__ == "__main__":
     unittest.main()

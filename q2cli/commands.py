@@ -290,6 +290,17 @@ class ActionCommand(BaseCommandMixin, click.Command):
         from qiime2.core.cache import Cache
 
         output_dir = kwargs.pop('output_dir')
+        # If they gave us a cache and key combo as an output dir, we want to
+        # error out, so we check if their output dir contains a : and the part
+        # before it is a cache
+        if output_dir:
+            potential_cache = output_dir.rsplit(':', 1)[0]
+            if potential_cache and os.path.exists(potential_cache) and \
+                    Cache.is_cache(potential_cache):
+                raise ValueError(f"The given output dir '{output_dir}' "
+                                 "appears to be a cache:key combo. Cache keys "
+                                 "cannot be used as output dirs.")
+
         verbose = kwargs.pop('verbose')
         if verbose is None:
             verbose = False
