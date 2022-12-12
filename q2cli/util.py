@@ -96,9 +96,10 @@ def output_in_cache(fp):
         if Cache.is_cache(cache_path):
             if not key.isidentifier():
                 raise ValueError(
-                    'Key must be a valid Python identifier. Python identifier '
-                    'rules may be found here https://www.askpython.com/python/'
-                    'python-identifiers-rules-best-practices')
+                    f"Key '{key}' is not a valid Python identifier. Keys must "
+                    "be valid Python identifiers. Python identifier rules may "
+                    "be found here https://www.askpython.com/python/"
+                    "python-identifiers-rules-best-practices")
             else:
                 return True
     except FileNotFoundError as e:
