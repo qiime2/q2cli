@@ -822,25 +822,28 @@ def cache_validate(path):
 
     try:
         cache = Cache(path)
-        with cache.lock:
-            for data in cache.get_data():
-                try:
-                    click.echo(
-                        CONFIG.cfg_style('success', 'Validating: %s' % data))
-                    if not is_uuid4(data):
-                        raise ValueError(
-                            "Item in data directory '%s' is not a valid "
-                            "uuid4." % data)
+        with cache:
+            with cache.lock:
+                for data in cache.get_data():
+                    try:
+                        click.echo(
+                            CONFIG.cfg_style(
+                                'success', 'Validating: %s' % data))
+                        if not is_uuid4(data):
+                            raise ValueError(
+                                "Item in data directory '%s' is not a valid "
+                                "uuid4." % data)
 
-                    art = Artifact.load(cache.data / data)
-                    art.validate()
-                    click.echo(
-                        CONFIG.cfg_style('success', 'Validated: %s\n' % data))
-                except Exception as e:
-                    click.echo(
-                        CONFIG.cfg_style(
-                            'error', 'Failed to validate: %s' % data))
-                    raise e
+                        art = Artifact.load(cache.data / data)
+                        art.validate()
+                        click.echo(
+                            CONFIG.cfg_style(
+                                'success', 'Validated: %s\n' % data))
+                    except Exception as e:
+                        click.echo(
+                            CONFIG.cfg_style(
+                                'error', 'Failed to validate: %s' % data))
+                        raise e
     except Exception as e:
         header = "There was a problem validating the cache at path '%s':" % \
             path
