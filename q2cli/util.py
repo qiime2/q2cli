@@ -333,9 +333,11 @@ def _load_metadata_artifact(fp):
         return None, error
 
 
-def _load_input(fp):
-    # just initialize the plugin manager
-    _ = get_plugin_manager()
+def _load_input(fp, view=False):
+    # Just initialize the plugin manager. This is slow and not necessary if we
+    # called this from qiime tools view.
+    if not view:
+        _ = get_plugin_manager()
 
     if ':' in fp:
         artifact, error = _load_input_cache(fp)
