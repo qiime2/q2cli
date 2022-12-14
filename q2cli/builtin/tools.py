@@ -696,12 +696,18 @@ def cache_garbage_collection(path):
               help='The key to save the artifact under (must be a valid '
                    'Python identifier).')
 def cache_save(cache_path, artifact_path, key):
-    from qiime2 import Artifact
+    from qiime2 import Artifact, Visualization
     from qiime2.core.cache import Cache
     from q2cli.core.config import CONFIG
 
     try:
-        artifact = Artifact.load(artifact_path)
+        try:
+            artifact = Artifact.load(artifact_path)
+        except TypeError as e:
+            if 'Attempting to load Visualization' in str(e):
+                artifact = Visualization.load(artifact_path)
+            else:
+                raise e
         cache = Cache(cache_path)
         cache.save(artifact, key)
     except Exception as e:
