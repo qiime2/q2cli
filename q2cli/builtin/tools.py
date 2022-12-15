@@ -441,6 +441,7 @@ def _merge_metadata(paths):
 def view(visualization_path, index_extension):
     # Guard headless envs from having to import anything large
     import sys
+    from qiime2 import Visualization
     from q2cli.util import _load_input
     from q2cli.core.config import CONFIG
     if not os.getenv("DISPLAY") and sys.platform != "darwin":
@@ -454,6 +455,12 @@ def view(visualization_path, index_extension):
         index_extension = index_extension[1:]
 
     visualization = _load_input(visualization_path, view=True)[0]
+    if not isinstance(visualization, Visualization):
+        raise click.BadParameter(
+            '%s is not a QIIME 2 Visualization. Only QIIME 2 Visualizations '
+            'can be viewed.' % visualization_path)
+
+
     index_paths = visualization.get_index_paths(relative=False)
 
     if index_extension not in index_paths:
