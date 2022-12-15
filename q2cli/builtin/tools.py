@@ -434,14 +434,15 @@ def _merge_metadata(paths):
                     "used after the command exits, use 'qiime tools extract'.",
                cls=ToolCommand)
 @click.argument('visualization-path', metavar='VISUALIZATION',
-                type=click.Path(exists=True, file_okay=True, dir_okay=False,
-                                readable=True))
+                type=click.Path(file_okay=True, dir_okay=False, readable=True))
 @click.option('--index-extension', required=False, default='html',
               help='The extension of the index file that should be opened. '
                    '[default: html]')
 def view(visualization_path, index_extension):
     # Guard headless envs from having to import anything large
     import sys
+    from qiime2 import Visualization
+    from q2cli.util import _load_input
     from q2cli.core.config import CONFIG
     if not os.getenv("DISPLAY") and sys.platform != "darwin":
         raise click.UsageError(
@@ -450,16 +451,11 @@ def view(visualization_path, index_extension):
             'https://view.qiime2.org, or move the Visualization to an '
             'environment with a display and view it with `qiime tools view`.')
 
-    import zipfile
-    import qiime2.sdk
-
     if index_extension.startswith('.'):
         index_extension = index_extension[1:]
-    try:
-        visualization = qiime2.sdk.Visualization.load(visualization_path)
-    # TODO: currently a KeyError is raised if a zipped file that is not a
-    # QIIME 2 result is passed. This should be handled better by the framework.
-    except (zipfile.BadZipFile, KeyError, TypeError):
+
+    visualization = _load_input(visualization_path, view=True)[0]
+    if not isinstance(visualization, Visualization):
         raise click.BadParameter(
             '%s is not a QIIME 2 Visualization. Only QIIME 2 Visualizations '
             'can be viewed.' % visualization_path)
@@ -696,12 +692,12 @@ def cache_garbage_collection(path):
               help='The key to save the artifact under (must be a valid '
                    'Python identifier).')
 def cache_save(cache_path, artifact_path, key):
-    from qiime2 import Artifact
+    from qiime2.sdk.result import Result
     from qiime2.core.cache import Cache
     from q2cli.core.config import CONFIG
 
     try:
-        artifact = Artifact.load(artifact_path)
+        artifact = Result.load(artifact_path)
         cache = Cache(cache_path)
         cache.save(artifact, key)
     except Exception as e:
