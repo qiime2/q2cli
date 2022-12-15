@@ -18,7 +18,6 @@ from qiime2.core.testing.util import get_dummy_plugin
 from qiime2.metadata.base import SUPPORTED_COLUMN_TYPES
 from qiime2.core.cache import Cache
 from qiime2.sdk.result import Result
-from qiime2.core.util import set_permissions, ALL_PERMISSIONS
 
 from q2cli.util import load_metadata
 from q2cli.builtin.tools import tools
@@ -626,57 +625,6 @@ class TestCacheTools(unittest.TestCase):
             success_template % (str(self.cache.path), data_output,
                                 pool_output)
         self.assertEqual(success, result.output)
-
-    def test_cache_validate_good(self):
-        success_template = "Validating cache at '%s'\n\n%sSuccessfully " \
-                           "validated cache at path '%s'\n"
-
-        # Empty cache
-        result = self.runner.invoke(
-            tools, ['cache-validate', '--path', str(self.cache.path)])
-        success = success_template % (self.cache.path, '', self.cache.path)
-        self.assertEqual(success, result.output)
-
-        # Cache with artifact
-        self.cache.save(self.art1, 'key')
-        result = self.runner.invoke(
-            tools, ['cache-validate', '--path', str(self.cache.path)])
-        validated = 'Validating: %s\nValidated: %s\n\n' % \
-            (self.art1.uuid, self.art1.uuid)
-        success = success_template % \
-            (self.cache.path, validated, self.cache.path)
-        self.assertEqual(success, result.output)
-
-    def test_cache_validate_bad(self):
-        self.cache.save(self.art1, 'key')
-        set_permissions(self.cache.path, ALL_PERMISSIONS, ALL_PERMISSIONS)
-        os.rename(self.cache.data / str(self.art1.uuid),
-                  self.cache.data / 'not_uuid')
-
-        # Not a uuid
-        result = self.runner.invoke(
-            tools, ['cache-validate', '--path', str(self.cache.path)])
-        self.assertIn("Item in data directory 'not_uuid' is not a valid uuid4",
-                      result.output)
-
-        # This cleanup needs to happen so we don't error in gc later
-        set_permissions(self.cache.path, ALL_PERMISSIONS, ALL_PERMISSIONS)
-        shutil.rmtree(self.cache.data / 'not_uuid')
-
-        # Invalid artifact
-        self.cache.remove('key')
-        self.cache.save(self.art1, 'key')
-
-        set_permissions(self.cache.path, ALL_PERMISSIONS, ALL_PERMISSIONS)
-        os.remove(self.cache.data / str(self.art1.uuid) / 'VERSION')
-
-        result = self.runner.invoke(
-            tools, ['cache-validate', '--path', str(self.cache.path)])
-        self.assertIn(
-            "Failed to validate: %s\nThere was a problem validating the cache "
-            "at path '%s':\n\n  Archive does not contain a correctly "
-            "formatted VERSION file." %
-            (str(self.art1.uuid), str(self.cache.path)), result.output)
 
 
 def _get_cache_contents(cache):
