@@ -460,7 +460,6 @@ def view(visualization_path, index_extension):
             '%s is not a QIIME 2 Visualization. Only QIIME 2 Visualizations '
             'can be viewed.' % visualization_path)
 
-
     index_paths = visualization.get_index_paths(relative=False)
 
     if index_extension not in index_paths:
