@@ -472,7 +472,7 @@ class TestCacheTools(unittest.TestCase):
         cache_path = os.path.join(self.tempdir.name, 'created_cache')
 
         result = self.runner.invoke(
-            tools, ['cache-create', '--cache-path', cache_path])
+            tools, ['cache-create', '--cache', cache_path])
 
         success = "Created cache at '%s'\n" % cache_path
         self.assertEqual(success, result.output)
@@ -484,8 +484,7 @@ class TestCacheTools(unittest.TestCase):
 
         result = self.runner.invoke(
             tools,
-            ['cache-remove', '--cache-path', str(self.cache.path), '--key',
-             'key'])
+            ['cache-remove', '--cache', str(self.cache.path), '--key', 'key'])
 
         success = "Removed key 'key' from cache '%s'\n" % self.cache.path
         self.assertEqual(success, result.output)
@@ -529,7 +528,7 @@ class TestCacheTools(unittest.TestCase):
         gc.collect()
         result = self.runner.invoke(
             tools,
-            ['cache-garbage-collection', '--cache-path', str(self.cache.path)])
+            ['cache-garbage-collection', '--cache', str(self.cache.path)])
 
         success = "Ran garbage collection on cache at '%s'\n" % self.cache.path
         self.assertEqual(success, result.output)
@@ -543,7 +542,7 @@ class TestCacheTools(unittest.TestCase):
         self.art1.save(artifact)
 
         result = self.runner.invoke(
-            tools, ['cache-store', '--cache-path', str(self.cache.path),
+            tools, ['cache-store', '--cache', str(self.cache.path),
                     '--artifact-path', artifact, '--key', 'key'])
 
         success = "Saved the artifact '%s' to the cache '%s' under the key " \
@@ -555,7 +554,7 @@ class TestCacheTools(unittest.TestCase):
         self.cache.save(self.art1, 'key')
 
         result = self.runner.invoke(
-            tools, ['cache-fetch', '--cache-path', str(self.cache.path),
+            tools, ['cache-fetch', '--cache', str(self.cache.path),
                     '--key', 'key', '--output-path', artifact])
 
         success = "Loaded artifact with the key 'key' from the cache '%s' " \
@@ -569,7 +568,7 @@ class TestCacheTools(unittest.TestCase):
         self.art1.save(in_artifact)
 
         result = self.runner.invoke(
-            tools, ['cache-store', '--cache-path', str(self.cache.path),
+            tools, ['cache-store', '--cache', str(self.cache.path),
                     '--artifact-path', in_artifact, '--key', 'key'])
 
         success = "Saved the artifact '%s' to the cache '%s' under the key " \
@@ -577,7 +576,7 @@ class TestCacheTools(unittest.TestCase):
         self.assertEqual(success, result.output)
 
         result = self.runner.invoke(
-            tools, ['cache-fetch', '--cache-path', str(self.cache.path),
+            tools, ['cache-fetch', '--cache', str(self.cache.path),
                     '--key', 'key', '--output-path', out_artifact])
 
         success = "Loaded artifact with the key 'key' from the cache '%s' " \
@@ -593,7 +592,7 @@ class TestCacheTools(unittest.TestCase):
 
         # Empty cache
         result = self.runner.invoke(
-            tools, ['cache-status', '--cache-path', str(self.cache.path)])
+            tools, ['cache-status', '--cache', str(self.cache.path)])
         success = \
             success_template % (str(self.cache.path), 'No data keys in cache',
                                 'No pool keys in cache')
@@ -603,11 +602,11 @@ class TestCacheTools(unittest.TestCase):
         in_artifact = os.path.join(self.tempdir.name, 'in_artifact.qza')
         self.art1.save(in_artifact)
         self.runner.invoke(
-            tools, ['cache-store', '--cache-path', str(self.cache.path),
+            tools, ['cache-store', '--cache', str(self.cache.path),
                     '--artifact-path', in_artifact, '--key', 'key'])
 
         result = self.runner.invoke(
-            tools, ['cache-status', '--cache-path', str(self.cache.path)])
+            tools, ['cache-status', '--cache', str(self.cache.path)])
         data_output = 'Data keys in cache:\ndata: key -> %s' % \
             str(Result.peek(self.cache.data / str(self.art1.uuid)))
         success = \
@@ -620,7 +619,7 @@ class TestCacheTools(unittest.TestCase):
         pool.save(self.art2)
 
         result = self.runner.invoke(
-            tools, ['cache-status', '--cache-path', str(self.cache.path)])
+            tools, ['cache-status', '--cache', str(self.cache.path)])
         pool_output = 'Pool keys in cache:\npool: pool_key -> size = 1'
         success = \
             success_template % (str(self.cache.path), data_output,
