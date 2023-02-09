@@ -710,5 +710,35 @@ class TestMetadataColumnSupport(MetadataTestsBase):
         self.assertIn("expected Numeric", result.output)
 
 
+class TestCollectionSupport(unittest.TestCase):
+    def setUp(self):
+        get_dummy_plugin()
+        self.runner = CliRunner()
+        self.plugin_command = RootCommand().get_command(
+            ctx=None, name='dummy-plugin')
+        self.tmpdir = tempfile.mkdtemp(prefix='qiime2-q2cli-test-temp-')
+        self.output = os.path.join(self.tmpdir, 'out')
+
+    def tearDown(self):
+        shutil.rmtree(self.tmpdir)
+
+    def _run_command(self, *args):
+        return self.runner.invoke(self.plugin_command, args)
+
+    def test_collection(self):
+        result = self._run_command(
+            'list-params', '--p-ints', '0', '--p-ints', '1', '--o-out',
+            self.output, '--verbose'
+        )
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertEqual(
+            Artifact.load(os.path.join(self.output, '0.qza')).view(int), 0)
+        self.assertEqual(
+            Artifact.load(os.path.join(self.output, '1.qza')).view(int), 1)
+        with open(os.path.join(self.output, '.order')) as fh:
+            self.assertEqual(fh.read(), '0\n1\n')
+
+
 if __name__ == "__main__":
     unittest.main()
