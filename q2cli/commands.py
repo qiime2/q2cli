@@ -372,18 +372,45 @@ class ActionCommand(BaseCommandMixin, click.Command):
             os.makedirs(output_dir)
 
         for result, output in zip(results, outputs):
+            # TODO: This will need to work with the cache somehow as well
             if output_in_cache(output) and output_dir is None:
                 cache_path, key = output.split(':')
                 cache = Cache(cache_path)
                 cache.save(result, key)
                 path = output
             else:
-                path = result.save(output)
+                if isinstance(result, dict):
+                    path = self._save_collection(result, output)
+                else:
+                    path = result.save(output)
 
             if not quiet:
+
+                if isinstance(result, dict):
+                    type = f'Collection[{list(result.values())[0].type}]'
+                else:
+                    type = result.type
                 click.echo(
                     CONFIG.cfg_style('success', 'Saved %s to: %s' %
-                                     (result.type, path)))
+                                     (type, path)))
+
+    def _save_collection(self, output_collection, output_directory):
+        import os
+
+        # TODO: Having a collection output causes this to become a tuple for
+        # some reason. I don't understand why yet
+        output_directory = output_directory[0]
+        # Click already errors if this is an existing directory, we do not need
+        # to explicitly check for that anywhere
+        os.makedirs(output_directory)
+
+        with open(os.path.join(output_directory, '.order'), 'w') as fh:
+            for key, value in output_collection.items():
+                path = os.path.join(output_directory, key)
+                value.save(path)
+                fh.write(f'{key}\n')
+
+        return output_directory
 
     def _order_outputs(self, outputs):
         ordered = []
