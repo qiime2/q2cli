@@ -725,19 +725,28 @@ class TestCollectionSupport(unittest.TestCase):
     def _run_command(self, *args):
         return self.runner.invoke(self.plugin_command, args)
 
-    def test_collection(self):
+    def test_collection_roundtrip(self):
         result = self._run_command(
-            'list-params', '--p-ints', '0', '--p-ints', '1', '--o-out',
+            'list-params', '--p-ints', '0', '--p-ints', '1', '--o-output',
             self.output, '--verbose'
         )
 
         self.assertEqual(result.exit_code, 0)
         self.assertEqual(
-            Artifact.load(os.path.join(self.output, '0.qza')).view(int), 0)
+            Artifact.load(
+                os.path.join(self.output, '0.qza')).view(list), [0, 1])
         self.assertEqual(
-            Artifact.load(os.path.join(self.output, '1.qza')).view(int), 1)
+            Artifact.load(
+                os.path.join(self.output, '1.qza')).view(list), [0, 1])
         with open(os.path.join(self.output, '.order')) as fh:
             self.assertEqual(fh.read(), '0\n1\n')
+
+        result = self._run_command(
+            'list-of-ints', '--i-ints', self.output, '--o-output',
+            os.path.join(self.tmpdir, 'out2'), '--verbose'
+        )
+
+        raise ValueError(result.output)
 
 
 if __name__ == "__main__":

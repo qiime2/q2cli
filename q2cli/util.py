@@ -337,10 +337,14 @@ def _load_metadata_artifact(fp):
 def _load_input(fp, view=False):
     # Just initialize the plugin manager. This is slow and not necessary if we
     # called this from qiime tools view.
+    import os
+
     if not view:
         _ = get_plugin_manager()
 
-    if ':' in fp:
+    if os.path.exists(fp) and os.path.isdir(fp):
+        artifact, error = _load_collection(fp)
+    elif ':' in fp:
         artifact, error = _load_input_cache(fp)
         if error:
             artifact, _ = _load_input_file(fp)
@@ -364,6 +368,44 @@ def _load_input(fp, view=False):
     return artifact, error
 
 
+def _load_collection(fp):
+    import os
+
+    artifacts = {}
+    order_fp = os.path.join(fp, '.order')
+
+    if os.path.exists(order_fp) and os.path.isfile(order_fp):
+        artifacts, error = _load_ordered_collection(fp, order_fp)
+    else:
+        for artifact in os.listdir(fp):
+            artifact_fp = os.path.join(fp, artifact)
+            artifacts[artifact], error = _load_input_file(artifact_fp)
+
+            if error:
+                return None, error
+
+    return artifacts, None
+
+
+def _load_ordered_collection(fp, order_fp):
+    import os
+
+    artifacts = {}
+
+    with open(order_fp) as order_fh:
+        for key in order_fh:
+            # Get rid of white space in key (it will probably have a trailing
+            # newline)
+            key = key.strip()
+            artifact_path = os.path.join(fp, f'{key}.qza')
+            artifacts[key], error = _load_input_file(artifact_path)
+
+            if error:
+                return None, error
+
+    return artifacts, None
+
+
 def _load_input_cache(fp):
     artifact = error = None
     try:
@@ -376,11 +418,6 @@ def _load_input_cache(fp):
 
 def _load_input_file(fp):
     import qiime2.sdk
-    import os
-
-    if os.path.exists(fp) and os.path.isdir(fp):
-        return None, ValueError(
-            f"{fp!r} is a directory, not a QIIME 2 Artifact.")
 
     # test if valid
     peek = None

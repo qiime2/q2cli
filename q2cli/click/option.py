@@ -184,8 +184,20 @@ class GeneratedOption(click.Option):
                     self._check_length(value, ctx)
                 value = self.q2_multiple(value)
                 type_expr = qiime2.sdk.util.type_from_ast(self.q2_ast)
-                args = ', '.join(map(repr, (x.type for x in value)))
-                if value not in type_expr:
+
+                # If we were given a collection in the form of a directory, we
+                # will end up with a dictionary, we want to check that its
+                # values are valid artifacts, but we want to return the entire
+                # dictionary, but not in a list
+                if isinstance(value[0], dict) and len(value) == 1:
+                    _value = list(value[0].values())
+                    value = value[0]
+                    print(f'\nVALUE: {value}\n\n_VALUE: {_value}\n')
+                else:
+                    _value = value
+
+                args = ', '.join(map(repr, (x.type for x in _value)))
+                if _value not in type_expr:
                     raise click.BadParameter(
                         'received <%s> as an argument, which is incompatible'
                         ' with parameter type: %r' % (args, type_expr),
