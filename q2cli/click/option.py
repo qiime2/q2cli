@@ -193,7 +193,13 @@ class GeneratedOption(click.Option):
                         and len(value) == 1:
                     _value = list(value[0].values())
                     value = value[0]
-                    print(f'\nVALUE: {value}\n\n_VALUE: {_value}\n')
+                # TODO: I am not certain if this case is possible, but value
+                # definitely can be a set and I believe also not a collection
+                # at all, so maybe we can get a dict outside of a list somehow
+                # from passing a collection in? Not sure.
+                elif isinstance(value, dict):
+                    _value = list(value.values())
+                    value = value
                 else:
                     _value = value
 
