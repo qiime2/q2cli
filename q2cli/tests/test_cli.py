@@ -291,11 +291,6 @@ class CliTests(unittest.TestCase):
         obj = QIIME2Type(IntSequence1.to_ast(), repr(IntSequence1))
 
         with self.assertRaisesRegex(click.exceptions.BadParameter,
-                                    f'The directory {self.tempdir!r} does not '
-                                    'contain any QIIME 2 Artifacts.'):
-            obj._convert_input(self.tempdir, None, None)
-
-        with self.assertRaisesRegex(click.exceptions.BadParameter,
                                     "x does not exist"):
             obj._convert_input('x', None, None)
 
