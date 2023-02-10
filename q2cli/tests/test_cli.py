@@ -291,8 +291,8 @@ class CliTests(unittest.TestCase):
         obj = QIIME2Type(IntSequence1.to_ast(), repr(IntSequence1))
 
         with self.assertRaisesRegex(click.exceptions.BadParameter,
-                                    f'{self.tempdir!r} is a directory,'
-                                    ' not a QIIME 2 Artifact'):
+                                    f'The directory {self.tempdir!r} does not '
+                                    'contain any QIIME 2 Artifacts.'):
             obj._convert_input(self.tempdir, None, None)
 
         with self.assertRaisesRegex(click.exceptions.BadParameter,
@@ -718,6 +718,7 @@ class TestCollectionSupport(unittest.TestCase):
             ctx=None, name='dummy-plugin')
         self.tmpdir = tempfile.mkdtemp(prefix='qiime2-q2cli-test-temp-')
         self.output = os.path.join(self.tmpdir, 'out')
+        self.output2 = os.path.join(self.tmpdir, 'out2')
 
     def tearDown(self):
         shutil.rmtree(self.tmpdir)
@@ -743,10 +744,18 @@ class TestCollectionSupport(unittest.TestCase):
 
         result = self._run_command(
             'list-of-ints', '--i-ints', self.output, '--o-output',
-            os.path.join(self.tmpdir, 'out2'), '--verbose'
+            self.output2, '--verbose'
         )
 
-        raise ValueError(result.output)
+        self.assertEqual(result.exit_code, 0)
+        self.assertEqual(
+            Artifact.load(
+                os.path.join(self.output2, '0.qza')).view(list), [0, 1])
+        self.assertEqual(
+            Artifact.load(
+                os.path.join(self.output2, '1.qza')).view(list), [0, 1])
+        with open(os.path.join(self.output2, '.order')) as fh:
+            self.assertEqual(fh.read(), '0\n1\n')
 
 
 if __name__ == "__main__":
