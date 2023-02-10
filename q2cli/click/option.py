@@ -188,8 +188,9 @@ class GeneratedOption(click.Option):
                 # If we were given a collection in the form of a directory, we
                 # will end up with a dictionary, we want to check that its
                 # values are valid artifacts, but we want to return the entire
-                # dictionary, but not in a list
-                if isinstance(value[0], dict) and len(value) == 1:
+                # dictionary, but not in a list.
+                if isinstance(value, list) and isinstance(value[0], dict) \
+                        and len(value) == 1:
                     _value = list(value[0].values())
                     value = value[0]
                     print(f'\nVALUE: {value}\n\n_VALUE: {_value}\n')
