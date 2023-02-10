@@ -370,6 +370,7 @@ def _load_input(fp, view=False):
 
 def _load_collection(fp):
     import os
+    import warnings
 
     artifacts = {}
     order_fp = os.path.join(fp, '.order')
@@ -377,6 +378,9 @@ def _load_collection(fp):
     if os.path.exists(order_fp) and os.path.isfile(order_fp):
         artifacts, error = _load_ordered_collection(fp, order_fp)
     else:
+        warnings.warn(f'The directory {fp} does not contain a .order file. '
+                     'The files will be read into the collection in the order '
+                     'the filesystem provides them in.')
         for artifact in os.listdir(fp):
             artifact_fp = os.path.join(fp, artifact)
             artifacts[artifact], error = _load_input_file(artifact_fp)
