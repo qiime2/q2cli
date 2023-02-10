@@ -343,6 +343,9 @@ def _load_input(fp, view=False):
         _ = get_plugin_manager()
 
     if os.path.exists(fp) and os.path.isdir(fp):
+        if len(os.listdir(fp)) == 0:
+            raise ValueError(f"Provided directory '{fp}' is empty.")
+
         artifact, error = _load_collection(fp)
     elif ':' in fp:
         artifact, error = _load_input_cache(fp)
@@ -379,8 +382,8 @@ def _load_collection(fp):
         artifacts, error = _load_ordered_collection(fp, order_fp)
     else:
         warnings.warn(f'The directory {fp} does not contain a .order file. '
-                     'The files will be read into the collection in the order '
-                     'the filesystem provides them in.')
+                      'The files will be read into the collection in the '
+                      'order the filesystem provides them in.')
         for artifact in os.listdir(fp):
             artifact_fp = os.path.join(fp, artifact)
             artifacts[artifact], error = _load_input_file(artifact_fp)

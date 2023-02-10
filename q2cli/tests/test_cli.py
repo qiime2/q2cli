@@ -711,12 +711,12 @@ class TestCollectionSupport(unittest.TestCase):
         self.runner = CliRunner()
         self.plugin_command = RootCommand().get_command(
             ctx=None, name='dummy-plugin')
-        self.tmpdir = tempfile.mkdtemp(prefix='qiime2-q2cli-test-temp-')
-        self.output = os.path.join(self.tmpdir, 'out')
-        self.output2 = os.path.join(self.tmpdir, 'out2')
+        self.tempdir = tempfile.mkdtemp(prefix='qiime2-q2cli-test-temp-')
+        self.output = os.path.join(self.tempdir, 'out')
+        self.output2 = os.path.join(self.tempdir, 'out2')
 
     def tearDown(self):
-        shutil.rmtree(self.tmpdir)
+        shutil.rmtree(self.tempdir)
 
     def _run_command(self, *args):
         return self.runner.invoke(self.plugin_command, args)
@@ -751,6 +751,36 @@ class TestCollectionSupport(unittest.TestCase):
                 os.path.join(self.output2, '1.qza')).view(list), [0, 1])
         with open(os.path.join(self.output2, '.order')) as fh:
             self.assertEqual(fh.read(), '0\n1\n')
+
+    def test_directory_with_non_artifacts(self):
+        input_dir = os.path.join(self.tempdir, 'in')
+        os.mkdir(input_dir)
+
+        artifact_path = os.path.join(input_dir, 'a.qza')
+        artifact = Artifact.import_data(IntSequence1, [0, 42, 43])
+        artifact.save(artifact_path)
+
+        with open(os.path.join(input_dir, 'bad.txt'), 'w') as fh:
+            fh.write('This file is not an artifact')
+
+        result = self._run_command(
+            'list-of-ints', '--i-ints', input_dir, '--o-output',
+            self.output, '--verbose'
+        )
+
+        self.assertEquals(result.exit_code, 1)
+        self.assertIn("Invalid value for '--i-ints':", result.output)
+
+    # TODO: Actually, do we want to accept empty directories?
+    def test_empty_directory(self):
+        result = self._run_command(
+            'list-of-ints', '--i-ints', self.tempdir, '--o-output',
+            self.output, '--verbose'
+        )
+
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn(f"Provided directory '{self.tempdir}' is empty.",
+                      result.output)
 
 
 if __name__ == "__main__":
