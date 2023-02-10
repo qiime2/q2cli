@@ -721,7 +721,7 @@ class TestCollectionSupport(unittest.TestCase):
     def _run_command(self, *args):
         return self.runner.invoke(self.plugin_command, args)
 
-    def test_collection_roundtrip(self):
+    def test_collection_roundtrip_list(self):
         result = self._run_command(
             'list-params', '--p-ints', '0', '--p-ints', '1', '--o-output',
             self.output, '--verbose'
@@ -742,6 +742,39 @@ class TestCollectionSupport(unittest.TestCase):
             self.output2, '--verbose'
         )
 
+        self.assertEqual(result.exit_code, 0)
+        self.assertEqual(
+            Artifact.load(
+                os.path.join(self.output2, '0.qza')).view(list), [0, 1])
+        self.assertEqual(
+            Artifact.load(
+                os.path.join(self.output2, '1.qza')).view(list), [0, 1])
+        with open(os.path.join(self.output2, '.order')) as fh:
+            self.assertEqual(fh.read(), '0\n1\n')
+
+    # TODO: Figure out this test
+    def test_collection_roundtrip_dict(self):
+        result = self._run_command(
+            'collection-params', '--p-ints', '0', '--p-ints', '1',
+            '--o-output', self.output, '--verbose'
+        )
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertEqual(
+            Artifact.load(
+                os.path.join(self.output, '0.qza')).view(list), [0, 1])
+        self.assertEqual(
+            Artifact.load(
+                os.path.join(self.output, '1.qza')).view(list), [0, 1])
+        with open(os.path.join(self.output, '.order')) as fh:
+            self.assertEqual(fh.read(), '0\n1\n')
+
+        result = self._run_command(
+            'dict-of-ints', '--i-ints', self.output, '--o-output',
+            self.output2, '--verbose'
+        )
+
+        raise result.exception
         self.assertEqual(result.exit_code, 0)
         self.assertEqual(
             Artifact.load(
