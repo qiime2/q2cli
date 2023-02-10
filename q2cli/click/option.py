@@ -186,9 +186,10 @@ class GeneratedOption(click.Option):
                 type_expr = qiime2.sdk.util.type_from_ast(self.q2_ast)
 
                 # If we were given a collection in the form of a directory, we
-                # will end up with a dictionary, we want to check that its
-                # values are valid artifacts, but we want to return the entire
-                # dictionary, but not in a list.
+                # will end up with a dictionary wrapped in a list (not sure why
+                # it is wrapped), we want to check that its values are valid
+                # artifacts, and we want to return the entire dictionary, but
+                # not in a list.
                 if isinstance(value, list) and isinstance(value[0], dict) \
                         and len(value) == 1:
                     _value = list(value[0].values())
