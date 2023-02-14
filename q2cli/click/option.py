@@ -23,7 +23,12 @@ class GeneratedOption(click.Option):
         if metadata is not None:
             prefix = 'm'
         if multiple is not None:
-            multiple = list if multiple == 'list' else set
+            if multiple == 'list':
+                multiple = list
+            elif multiple == 'dict':
+                multiple = dict
+            else:
+                multiple = set
 
         if is_bool_flag:
             yes = q2cli.util.to_cli_name(name)
@@ -180,36 +185,36 @@ class GeneratedOption(click.Option):
                 return None
             elif self.q2_prefix == 'i':
                 value = super().type_cast_value(ctx, value)
+                keys = None
+
                 if self.q2_multiple is set:
                     self._check_length(value, ctx)
-                value = self.q2_multiple(value)
-                type_expr = qiime2.sdk.util.type_from_ast(self.q2_ast)
 
-                # If we were given a collection in the form of a directory, we
-                # will end up with a dictionary wrapped in a list (not sure why
-                # it is wrapped), we want to check that its values are valid
-                # artifacts, and we want to return the entire dictionary, but
-                # not in a list.
-                if isinstance(value, list) and isinstance(value[0], dict) \
-                        and len(value) == 1:
-                    _value = list(value[0].values())
-                    value = value[0]
-                # TODO: I am not certain if this case is possible, but value
-                # definitely can be a set and I believe also not a collection
-                # at all, so maybe we can get a dict outside of a list somehow
-                # from passing a collection in? Not sure.
-                elif isinstance(value, dict):
-                    _value = list(value.values())
-                    value = value
+                if isinstance(value, dict):
+                    keys = value.keys()
+                    value = list(value.values())
+                # Click keeps putting this crap in a tuple of 1 item when
+                # it is given a Collection. If it is in a list then we loaded
+                # in a Collection with an order file when we wanted a List
+                elif (isinstance(value, tuple) or
+                      isinstance(value, list)) and len(value) == 1 and \
+                        isinstance(value[0], dict):
+                    keys = value[0].keys()
+                    value = list(value[0].values())
                 else:
-                    _value = value
+                    value = self.q2_multiple(value)
 
-                args = ', '.join(map(repr, (x.type for x in _value)))
-                if _value not in type_expr:
+                type_expr = qiime2.sdk.util.type_from_ast(self.q2_ast)
+                args = ', '.join(map(repr, (x.type for x in value)))
+
+                if value not in type_expr:
                     raise click.BadParameter(
                         'received <%s> as an argument, which is incompatible'
                         ' with parameter type: %r' % (args, type_expr),
                         ctx=ctx, param=self)
+
+                if self.q2_multiple is dict:
+                    value = {k: v for k, v in zip(keys, value)}
                 return value
             elif self.q2_metadata == 'file':
                 value = super().type_cast_value(ctx, value)
@@ -243,7 +248,14 @@ class GeneratedOption(click.Option):
     def _check_length(self, value, ctx):
         import collections
 
+        # TODO: Ok seriously though figure out why value is in a tuple if it is
+        # a Collection
+        if isinstance(value, tuple) and len(value) == 1 and \
+                isinstance(value[0], dict):
+            value = list(value[0].values())
+
         counter = collections.Counter(value)
+
         dups = ', '.join(map(repr, (v for v, n in counter.items() if n > 1)))
         args = ', '.join(map(repr, value))
         if dups:

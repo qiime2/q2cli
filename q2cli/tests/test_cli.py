@@ -752,7 +752,6 @@ class TestCollectionSupport(unittest.TestCase):
         with open(os.path.join(self.output2, '.order')) as fh:
             self.assertEqual(fh.read(), '0\n1\n')
 
-    # TODO: Figure out this test
     def test_collection_roundtrip_dict(self):
         result = self._run_command(
             'collection-params', '--p-ints', '0', '--p-ints', '1',
@@ -774,7 +773,6 @@ class TestCollectionSupport(unittest.TestCase):
             self.output2, '--verbose'
         )
 
-        raise result.exception
         self.assertEqual(result.exit_code, 0)
         self.assertEqual(
             Artifact.load(
