@@ -231,9 +231,43 @@ class GeneratedOption(click.Option):
                             e, header=header, traceback=tb)
             elif self.q2_prefix == 'p':
                 try:
+                    _values = []
+
                     if self.q2_multiple is set:
                         self._check_length(value, ctx)
-                    value = qiime2.sdk.util.parse_primitive(self.q2_ast, value)
+
+                    keys = []
+                    if self.q2_multiple is dict:
+                        _values = {}
+
+                        keyed = False
+                        unkeyed = False
+                        # All params in a Collection must be either keyed or
+                        # unkeyed. We cannot have a mix because it makes things
+                        # ambiguous
+                        for idx, item in enumerate(value):
+                            if ':' in item:
+                                if unkeyed:
+                                    raise KeyError(
+                                        'The keyed value <%s> has been mixed'
+                                        ' with unkeyed values. All values must'
+                                        ' be keyed or unkeyed.' % item)
+                                key, _value = item.split(':', 1)
+                                _values[key] = _value
+                                keyed = True
+                            else:
+                                if keyed:
+                                    raise KeyError(
+                                        'The unkeyed value <%s> has been'
+                                        ' mixed with keyed values. All values'
+                                        ' must be keyed or unkeyed.' % item)
+                                _values[str(idx)] = item
+                                unkeyed = True
+                    else:
+                        _values = value
+
+                    value = \
+                        qiime2.sdk.util.parse_primitive(self.q2_ast, _values)
                 except ValueError:
                     args = ', '.join(map(repr, value))
                     expr = qiime2.sdk.util.type_from_ast(self.q2_ast)

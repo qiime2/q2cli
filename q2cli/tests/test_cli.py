@@ -783,6 +783,29 @@ class TestCollectionSupport(unittest.TestCase):
         with open(os.path.join(self.output2, '.order')) as fh:
             self.assertEqual(fh.read(), '0\n1\n')
 
+    def test_mixed_keyed_unkeyed(self):
+        # Puts the keyed param first
+        result = self._run_command(
+            'collection-params', '--p-ints', 'foo:0', '--p-ints', '1',
+            '--o-output', self.output, '--verbose'
+        )
+
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn('The unkeyed value <1> has been mixed with keyed values.'
+                      ' All values must be keyed or unkeyed',
+                      str(result.exception))
+
+        # Puts the unkeyed param first
+        result = self._run_command(
+            'collection-params', '--p-ints', '0', '--p-ints', 'bar:1',
+            '--o-output', self.output, '--verbose'
+        )
+
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn('The keyed value <bar:1> has been mixed with unkeyed'
+                      ' values. All values must be keyed or unkeyed',
+                      str(result.exception))
+
     def test_directory_with_non_artifacts(self):
         input_dir = os.path.join(self.tempdir, 'in')
         os.mkdir(input_dir)
