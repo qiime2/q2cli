@@ -286,7 +286,7 @@ class ActionCommand(BaseCommandMixin, click.Command):
         """Called when user hits return, **kwargs are Dict[click_names, Obj]"""
         import os
         import qiime2.util
-        from q2cli.util import output_in_cache
+        from q2cli.util import output_in_cache, _get_cache_path_and_key
         from qiime2.core.cache import Cache
 
         output_dir = kwargs.pop('output_dir')
@@ -372,12 +372,21 @@ class ActionCommand(BaseCommandMixin, click.Command):
             os.makedirs(output_dir)
 
         for result, output in zip(results, outputs):
-            # TODO: This will need to work with the cache somehow as well
+            # TODO: Having a collection output causes this to become a tuple
+            # for some reason. I don't understand why yet
+            if isinstance(output, tuple) and len(output) == 1:
+                output = output[0]
+
             if output_in_cache(output) and output_dir is None:
-                cache_path, key = output.split(':')
+                cache_path, key = _get_cache_path_and_key(output)
                 cache = Cache(cache_path)
-                cache.save(result, key)
-                path = output
+
+                if isinstance(result, dict):
+                    cache.save_collection(result, key)
+                    path = output
+                else:
+                    cache.save(result, key)
+                    path = output
             else:
                 if isinstance(result, dict):
                     path = self._save_collection(result, output)
@@ -397,9 +406,6 @@ class ActionCommand(BaseCommandMixin, click.Command):
     def _save_collection(self, output_collection, output_directory):
         import os
 
-        # TODO: Having a collection output causes this to become a tuple for
-        # some reason. I don't understand why yet
-        output_directory = output_directory[0]
         # Click already errors if this is an existing directory, we do not need
         # to explicitly check for that anywhere
         os.makedirs(output_directory)
