@@ -752,7 +752,38 @@ class TestCollectionSupport(unittest.TestCase):
         with open(os.path.join(self.output2, '.order')) as fh:
             self.assertEqual(fh.read(), '0\n1\n')
 
-    def test_collection_roundtrip_dict(self):
+    def test_collection_roundtrip_dict_keyed(self):
+        result = self._run_command(
+            'dict-params', '--p-ints', 'foo:0', '--p-ints', 'bar:1',
+            '--o-output', self.output, '--verbose'
+        )
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertEqual(
+            Artifact.load(
+                os.path.join(self.output, 'foo.qza')).view(int), 0)
+        self.assertEqual(
+            Artifact.load(
+                os.path.join(self.output, 'bar.qza')).view(int), 1)
+        with open(os.path.join(self.output, '.order')) as fh:
+            self.assertEqual(fh.read(), 'foo\nbar\n')
+
+        result = self._run_command(
+            'dict-of-ints', '--i-ints', self.output, '--o-output',
+            self.output2, '--verbose'
+        )
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertEqual(
+            Artifact.load(
+                os.path.join(self.output2, 'foo.qza')).view(int), 0)
+        self.assertEqual(
+            Artifact.load(
+                os.path.join(self.output2, 'bar.qza')).view(int), 1)
+        with open(os.path.join(self.output2, '.order')) as fh:
+            self.assertEqual(fh.read(), 'foo\nbar\n')
+
+    def test_collection_roundtrip_dict_unkeyed(self):
         result = self._run_command(
             'dict-params', '--p-ints', '0', '--p-ints', '1',
             '--o-output', self.output, '--verbose'
