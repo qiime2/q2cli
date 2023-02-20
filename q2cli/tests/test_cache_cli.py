@@ -6,6 +6,7 @@
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 
+import yaml
 import os.path
 import unittest
 import unittest.mock
@@ -221,6 +222,95 @@ class TestCacheCli(unittest.TestCase):
         self.assertEqual(result.exit_code, 0)
         self.assertEqual(Artifact.load(out_path).view(list),
                          [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+
+    def test_collection_roundtrip_list(self):
+        key1 = 'out1'
+        key2 = 'out2'
+
+        collection_out1 = str(self.cache.path) + ':' + key1
+        collection_out2 = str(self.cache.path) + ':' + key2
+
+        result = self._run_command(
+            'list-params', '--p-ints', '0', '--p-ints', '1', '--o-output',
+            collection_out1, '--verbose'
+        )
+
+        self.assertEqual(result.exit_code, 0)
+        collection = self.cache.load_collection(key1)
+
+        self.assertEqual(collection['0'].view(int), 0)
+        self.assertEqual(collection['1'].view(int), 1)
+
+        with open(self.cache.keys / key1) as fh:
+            loaded_key = yaml.safe_load(fh)
+
+        self.assertEqual(loaded_key['order'],
+                         [{'0': str(collection['0'].uuid)},
+                          {'1': str(collection['1'].uuid)}])
+
+        result = self._run_command(
+            'list-of-ints', '--i-ints', collection_out1, '--o-output',
+            collection_out2, '--verbose'
+        )
+
+        print(result.output)
+        self.assertEqual(result.exit_code, 0)
+        collection = self.cache.load_collection(key2)
+
+        self.assertEqual(collection['0'].view(int), 0)
+        self.assertEqual(collection['1'].view(int), 1)
+
+        with open(self.cache.keys / key2) as fh:
+            loaded_key = yaml.safe_load(fh)
+
+        self.assertEqual(loaded_key['order'],
+                         [{'0': str(collection['0'].uuid)},
+                          {'1': str(collection['1'].uuid)}])
+
+    def test_collection_roundtrip_dict(self):
+        key1 = 'out1'
+        key2 = 'out2'
+
+        collection_out1 = str(self.cache.path) + ':' + key1
+        collection_out2 = str(self.cache.path) + ':' + key2
+
+        result = self._run_command(
+            'dict-params', '--p-ints', 'foo:0', '--p-ints', 'bar:1',
+            '--o-output', collection_out1, '--verbose'
+        )
+
+        self.assertEqual(result.exit_code, 0)
+        collection = self.cache.load_collection(key1)
+        with open(self.cache.keys / key1) as fh:
+            loaded_key = yaml.safe_load(fh)
+
+        self.assertEqual(collection['foo'].view(int), 0)
+        self.assertEqual(collection['bar'].view(int), 1)
+
+        with open(self.cache.keys / key1) as fh:
+            loaded_key = yaml.safe_load(fh)
+
+        self.assertEqual(loaded_key['order'],
+                         [{'foo': str(collection['foo'].uuid)},
+                          {'bar': str(collection['bar'].uuid)}])
+
+        result = self._run_command(
+            'dict-of-ints', '--i-ints', collection_out1, '--o-output',
+            collection_out2, '--verbose'
+        )
+
+        self.assertEqual(result.exit_code, 0)
+        collection = self.cache.load_collection(key2)
+
+        self.assertEqual(collection['foo'].view(int), 0)
+        self.assertEqual(collection['bar'].view(int), 1)
+
+        with open(self.cache.keys / key2) as fh:
+            loaded_key = yaml.safe_load(fh)
+
+        self.assertEqual(loaded_key['order'],
+                         [{'foo': str(collection['foo'].uuid)},
+                          {'bar': str(collection['bar'].uuid)}])
 
     def test_nonexistent_input_key(self):
         art1_path = str(self.cache.path) + ':art1'

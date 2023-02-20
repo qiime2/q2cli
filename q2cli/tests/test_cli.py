@@ -730,10 +730,10 @@ class TestCollectionSupport(unittest.TestCase):
         self.assertEqual(result.exit_code, 0)
         self.assertEqual(
             Artifact.load(
-                os.path.join(self.output, '0.qza')).view(list), [0, 1])
+                os.path.join(self.output, '0.qza')).view(int), 0)
         self.assertEqual(
             Artifact.load(
-                os.path.join(self.output, '1.qza')).view(list), [0, 1])
+                os.path.join(self.output, '1.qza')).view(int), 1)
         with open(os.path.join(self.output, '.order')) as fh:
             self.assertEqual(fh.read(), '0\n1\n')
 
@@ -745,26 +745,26 @@ class TestCollectionSupport(unittest.TestCase):
         self.assertEqual(result.exit_code, 0)
         self.assertEqual(
             Artifact.load(
-                os.path.join(self.output2, '0.qza')).view(list), [0, 1])
+                os.path.join(self.output2, '0.qza')).view(int), 0)
         self.assertEqual(
             Artifact.load(
-                os.path.join(self.output2, '1.qza')).view(list), [0, 1])
+                os.path.join(self.output2, '1.qza')).view(int), 1)
         with open(os.path.join(self.output2, '.order')) as fh:
             self.assertEqual(fh.read(), '0\n1\n')
 
     def test_collection_roundtrip_dict(self):
         result = self._run_command(
-            'collection-params', '--p-ints', '0', '--p-ints', '1',
+            'dict-params', '--p-ints', '0', '--p-ints', '1',
             '--o-output', self.output, '--verbose'
         )
 
         self.assertEqual(result.exit_code, 0)
         self.assertEqual(
             Artifact.load(
-                os.path.join(self.output, '0.qza')).view(list), [0, 1])
+                os.path.join(self.output, '0.qza')).view(int), 0)
         self.assertEqual(
             Artifact.load(
-                os.path.join(self.output, '1.qza')).view(list), [0, 1])
+                os.path.join(self.output, '1.qza')).view(int), 1)
         with open(os.path.join(self.output, '.order')) as fh:
             self.assertEqual(fh.read(), '0\n1\n')
 
@@ -776,17 +776,17 @@ class TestCollectionSupport(unittest.TestCase):
         self.assertEqual(result.exit_code, 0)
         self.assertEqual(
             Artifact.load(
-                os.path.join(self.output2, '0.qza')).view(list), [0, 1])
+                os.path.join(self.output2, '0.qza')).view(int), 0)
         self.assertEqual(
             Artifact.load(
-                os.path.join(self.output2, '1.qza')).view(list), [0, 1])
+                os.path.join(self.output2, '1.qza')).view(int), 1)
         with open(os.path.join(self.output2, '.order')) as fh:
             self.assertEqual(fh.read(), '0\n1\n')
 
     def test_mixed_keyed_unkeyed(self):
         # Puts the keyed param first
         result = self._run_command(
-            'collection-params', '--p-ints', 'foo:0', '--p-ints', '1',
+            'dict-params', '--p-ints', 'foo:0', '--p-ints', '1',
             '--o-output', self.output, '--verbose'
         )
 
@@ -797,7 +797,7 @@ class TestCollectionSupport(unittest.TestCase):
 
         # Puts the unkeyed param first
         result = self._run_command(
-            'collection-params', '--p-ints', '0', '--p-ints', 'bar:1',
+            'dict-params', '--p-ints', '0', '--p-ints', 'bar:1',
             '--o-output', self.output, '--verbose'
         )
 
