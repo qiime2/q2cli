@@ -6,7 +6,6 @@
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 
-import yaml
 import os.path
 import unittest
 import unittest.mock
@@ -217,8 +216,6 @@ class TestCacheCli(unittest.TestCase):
             '--o-concatenated-ints', out_path, '--verbose'
         )
 
-        if result.exception:
-            raise result.exception
         self.assertEqual(result.exit_code, 0)
         self.assertEqual(Artifact.load(out_path).view(list),
                          [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
@@ -237,12 +234,10 @@ class TestCacheCli(unittest.TestCase):
 
         self.assertEqual(result.exit_code, 0)
         collection = self.cache.load_collection(key1)
+        loaded_key = self.cache.read_key(key1)
 
         self.assertEqual(collection['0'].view(int), 0)
         self.assertEqual(collection['1'].view(int), 1)
-
-        with open(self.cache.keys / key1) as fh:
-            loaded_key = yaml.safe_load(fh)
 
         self.assertEqual(loaded_key['order'],
                          [{'0': str(collection['0'].uuid)},
@@ -255,12 +250,10 @@ class TestCacheCli(unittest.TestCase):
 
         self.assertEqual(result.exit_code, 0)
         collection = self.cache.load_collection(key2)
+        loaded_key = self.cache.read_key(key2)
 
         self.assertEqual(collection['0'].view(int), 0)
         self.assertEqual(collection['1'].view(int), 1)
-
-        with open(self.cache.keys / key2) as fh:
-            loaded_key = yaml.safe_load(fh)
 
         self.assertEqual(loaded_key['order'],
                          [{'0': str(collection['0'].uuid)},
@@ -280,14 +273,10 @@ class TestCacheCli(unittest.TestCase):
 
         self.assertEqual(result.exit_code, 0)
         collection = self.cache.load_collection(key1)
-        with open(self.cache.keys / key1) as fh:
-            loaded_key = yaml.safe_load(fh)
+        loaded_key = self.cache.read_key(key1)
 
         self.assertEqual(collection['foo'].view(int), 0)
         self.assertEqual(collection['bar'].view(int), 1)
-
-        with open(self.cache.keys / key1) as fh:
-            loaded_key = yaml.safe_load(fh)
 
         self.assertEqual(loaded_key['order'],
                          [{'foo': str(collection['foo'].uuid)},
@@ -300,12 +289,10 @@ class TestCacheCli(unittest.TestCase):
 
         self.assertEqual(result.exit_code, 0)
         collection = self.cache.load_collection(key2)
+        loaded_key = self.cache.read_key(key2)
 
         self.assertEqual(collection['foo'].view(int), 0)
         self.assertEqual(collection['bar'].view(int), 1)
-
-        with open(self.cache.keys / key2) as fh:
-            loaded_key = yaml.safe_load(fh)
 
         self.assertEqual(loaded_key['order'],
                          [{'foo': str(collection['foo'].uuid)},
@@ -325,14 +312,10 @@ class TestCacheCli(unittest.TestCase):
 
         self.assertEqual(result.exit_code, 0)
         collection = self.cache.load_collection(key1)
-        with open(self.cache.keys / key1) as fh:
-            loaded_key = yaml.safe_load(fh)
+        loaded_key = self.cache.read_key(key1)
 
         self.assertEqual(collection['0'].view(int), 0)
         self.assertEqual(collection['1'].view(int), 1)
-
-        with open(self.cache.keys / key1) as fh:
-            loaded_key = yaml.safe_load(fh)
 
         self.assertEqual(loaded_key['order'],
                          [{'0': str(collection['0'].uuid)},
@@ -345,12 +328,10 @@ class TestCacheCli(unittest.TestCase):
 
         self.assertEqual(result.exit_code, 0)
         collection = self.cache.load_collection(key2)
+        loaded_key = self.cache.read_key(key2)
 
         self.assertEqual(collection['0'].view(int), 0)
         self.assertEqual(collection['1'].view(int), 1)
-
-        with open(self.cache.keys / key2) as fh:
-            loaded_key = yaml.safe_load(fh)
 
         self.assertEqual(loaded_key['order'],
                          [{'0': str(collection['0'].uuid)},
