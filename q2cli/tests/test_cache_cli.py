@@ -253,7 +253,6 @@ class TestCacheCli(unittest.TestCase):
             collection_out2, '--verbose'
         )
 
-        print(result.output)
         self.assertEqual(result.exit_code, 0)
         collection = self.cache.load_collection(key2)
 
