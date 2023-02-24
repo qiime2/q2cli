@@ -17,7 +17,7 @@ import errno
 from click.testing import CliRunner
 from qiime2 import Artifact, Visualization
 from qiime2.core.cache import get_cache
-from qiime2.core.testing.type import IntSequence1, IntSequence2
+from qiime2.core.testing.type import IntSequence1, IntSequence2, SingleInt
 from qiime2.core.testing.util import get_dummy_plugin
 
 from q2cli.builtin.info import info
@@ -712,6 +712,12 @@ class TestCollectionSupport(unittest.TestCase):
         self.plugin_command = RootCommand().get_command(
             ctx=None, name='dummy-plugin')
         self.tempdir = tempfile.mkdtemp(prefix='qiime2-q2cli-test-temp-')
+
+        self.art1_path = os.path.join(self.tempdir, 'art1.qza')
+        self.art2_path = os.path.join(self.tempdir, 'art2.qza')
+        self.art1 = Artifact.import_data(SingleInt, 0)
+        self.art2 = Artifact.import_data(SingleInt, 1)
+
         self.output = os.path.join(self.tempdir, 'out')
         self.output2 = os.path.join(self.tempdir, 'out2')
 
@@ -814,6 +820,63 @@ class TestCollectionSupport(unittest.TestCase):
         with open(os.path.join(self.output2, '.order')) as fh:
             self.assertEqual(fh.read(), '0\n1\n')
 
+    def test_de_facto_list(self):
+        self.art1.save(self.art1_path)
+        self.art2.save(self.art2_path)
+
+        result = self._run_command(
+            'list-of-ints', '--i-ints', self.art1_path, '--i-ints',
+            self.art2_path, '--o-output', self.output, '--verbose'
+        )
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertEqual(
+            Artifact.load(
+                os.path.join(self.output, '0.qza')).view(int), 0)
+        self.assertEqual(
+            Artifact.load(
+                os.path.join(self.output, '1.qza')).view(int), 1)
+        with open(os.path.join(self.output, '.order')) as fh:
+            self.assertEqual(fh.read(), '0\n1\n')
+
+    def test_de_facto_dict_keyed(self):
+        self.art1.save(self.art1_path)
+        self.art2.save(self.art2_path)
+
+        result = self._run_command(
+            'dict-of-ints', '--i-ints', f'foo:{self.art1_path}', '--i-ints',
+            f'bar:{self.art2_path}', '--o-output', self.output, '--verbose'
+        )
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertEqual(
+            Artifact.load(
+                os.path.join(self.output, 'foo.qza')).view(int), 0)
+        self.assertEqual(
+            Artifact.load(
+                os.path.join(self.output, 'bar.qza')).view(int), 1)
+        with open(os.path.join(self.output, '.order')) as fh:
+            self.assertEqual(fh.read(), 'foo\nbar\n')
+
+    def test_de_facto_dict_unkeyed(self):
+        self.art1.save(self.art1_path)
+        self.art2.save(self.art2_path)
+
+        result = self._run_command(
+            'dict-of-ints', '--i-ints', self.art1_path, '--i-ints',
+            self.art2_path, '--o-output', self.output, '--verbose'
+        )
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertEqual(
+            Artifact.load(
+                os.path.join(self.output, '0.qza')).view(int), 0)
+        self.assertEqual(
+            Artifact.load(
+                os.path.join(self.output, '1.qza')).view(int), 1)
+        with open(os.path.join(self.output, '.order')) as fh:
+            self.assertEqual(fh.read(), '0\n1\n')
+
     def test_mixed_keyed_unkeyed(self):
         # Puts the keyed param first
         result = self._run_command(
@@ -863,6 +926,7 @@ class TestCollectionSupport(unittest.TestCase):
             self.output, '--verbose'
         )
 
+        print(result.output)
         self.assertEqual(result.exit_code, 1)
         self.assertIn(f"Provided directory '{self.tempdir}' is empty.",
                       result.output)

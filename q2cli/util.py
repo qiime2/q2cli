@@ -302,6 +302,7 @@ def _load_metadata_artifact(fp):
     import sys
 
     artifact, error = _load_input(fp)
+    artifact = artifact[1]
     if isinstance(error, OutOfDisk):
         raise error
 
@@ -339,22 +340,46 @@ def _load_input(fp, view=False):
     # called this from qiime tools view.
     import os
 
+    key = None
+
     if not view:
         _ = get_plugin_manager()
 
-    if os.path.exists(fp) and os.path.isdir(fp):
+    # We are loading a collection from outside of a cache. This cannot be keyed
+    if os.path.isdir(fp):
         if len(os.listdir(fp)) == 0:
             raise ValueError(f"Provided directory '{fp}' is empty.")
 
         artifact, error = _load_collection(fp)
+    # We may be loading something from a cache with or without and additional
+    # key, or we may be loading a piece of data from outside of a cache with a
+    # key. We could also be loading a normal unkeyed artifact with a : in its
+    # path
     elif ':' in fp:
-        artifact, error = _load_input_cache(fp)
-        if error:
-            artifact, _ = _load_input_file(fp)
-            if artifact is not None:
-                error = None
-            # ignore this error (`_`), it was more likely
-            # a bad cache than an really weird filepath
+        # First we assume this is just a weird filepath
+        artifact, _ = _load_input_file(fp)
+        # Then we check if it is a key:path
+        if artifact is None:
+            key, new_fp = _get_path_and_collection_key(fp)
+            artifact, _ = _load_input_file(new_fp)
+
+        # If we still have nothing
+        if artifact is None:
+            key = None
+            # We assume this is a cache:key. We keep this error because we
+            # assume if they had a : in their path they were trying to load
+            # something from a cache
+            artifact, error = _load_input_cache(fp)
+            if error:
+                # Then we check if it is a key:cache:key
+                key, new_fp = _get_path_and_collection_key(fp)
+                artifact, _ = _load_input_cache(new_fp)
+
+        # If we ended up with an artifact, we disregard our error
+        if artifact is not None:
+            error = None
+    # We are just loading a normal artifact on disk without silly colons in the
+    # filepath
     else:
         artifact, error = _load_input_file(fp)
 
@@ -368,7 +393,7 @@ def _load_input(fp, view=False):
                                f'setting $TMPDIR to a directory with more '
                                f'space, or increasing the size of {path!r})')
 
-    return artifact, error
+    return (key, artifact), error
 
 
 def _load_collection(fp):
@@ -474,3 +499,7 @@ def try_as_cache_input(fp):
 
 def _get_cache_path_and_key(fp):
     return fp.rsplit(':', 1)
+
+
+def _get_path_and_collection_key(fp):
+    return fp.split(':', 1)

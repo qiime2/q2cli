@@ -13,7 +13,8 @@ import tempfile
 
 from click.testing import CliRunner
 from qiime2 import Artifact
-from qiime2.core.testing.type import IntSequence1, IntSequence2, Mapping
+from qiime2.core.testing.type import (IntSequence1, IntSequence2, Mapping,
+                                      SingleInt)
 from qiime2.core.testing.util import get_dummy_plugin
 from qiime2.core.cache import Cache
 
@@ -329,6 +330,87 @@ class TestCacheCli(unittest.TestCase):
         self.assertEqual(result.exit_code, 0)
         collection = self.cache.load_collection(key2)
         loaded_key = self.cache.read_key(key2)
+
+        self.assertEqual(collection['0'].view(int), 0)
+        self.assertEqual(collection['1'].view(int), 1)
+
+        self.assertEqual(loaded_key['order'],
+                         [{'0': str(collection['0'].uuid)},
+                          {'1': str(collection['1'].uuid)}])
+
+    def test_de_facto_list(self):
+        art1 = Artifact.import_data(SingleInt, 0)
+        art2 = Artifact.import_data(SingleInt, 1)
+
+        self.cache.save(art1, 'art1')
+        self.cache.save(art2, 'art2')
+
+        art1_path = str(self.cache.path) + ':art1'
+        art2_path = str(self.cache.path) + ':art2'
+        output = str(self.cache.path) + ':output'
+
+        result = self._run_command(
+            'list-of-ints', '--i-ints', art1_path, '--i-ints', art2_path,
+            '--o-output', output, '--verbose'
+        )
+
+        self.assertEqual(result.exit_code, 0)
+        collection = self.cache.load_collection('output')
+        loaded_key = self.cache.read_key('output')
+
+        self.assertEqual(collection['0'].view(int), 0)
+        self.assertEqual(collection['1'].view(int), 1)
+
+        self.assertEqual(loaded_key['order'],
+                         [{'0': str(collection['0'].uuid)},
+                          {'1': str(collection['1'].uuid)}])
+
+    def test_de_facto_dict_keyed(self):
+        art1 = Artifact.import_data(SingleInt, 0)
+        art2 = Artifact.import_data(SingleInt, 1)
+
+        self.cache.save(art1, 'art1')
+        self.cache.save(art2, 'art2')
+
+        art1_path = str(self.cache.path) + ':art1'
+        art2_path = str(self.cache.path) + ':art2'
+        output = str(self.cache.path) + ':output'
+
+        result = self._run_command(
+            'dict-of-ints', '--i-ints', f'foo:{art1_path}', '--i-ints',
+            f'bar:{art2_path}', '--o-output', output, '--verbose'
+        )
+
+        self.assertEqual(result.exit_code, 0)
+        collection = self.cache.load_collection('output')
+        loaded_key = self.cache.read_key('output')
+
+        self.assertEqual(collection['foo'].view(int), 0)
+        self.assertEqual(collection['bar'].view(int), 1)
+
+        self.assertEqual(loaded_key['order'],
+                         [{'foo': str(collection['foo'].uuid)},
+                          {'bar': str(collection['bar'].uuid)}])
+
+    def test_de_facto_dict_unkeyed(self):
+        art1 = Artifact.import_data(SingleInt, 0)
+        art2 = Artifact.import_data(SingleInt, 1)
+
+        self.cache.save(art1, 'art1')
+        self.cache.save(art2, 'art2')
+
+        art1_path = str(self.cache.path) + ':art1'
+        art2_path = str(self.cache.path) + ':art2'
+        output = str(self.cache.path) + ':output'
+
+        result = self._run_command(
+            'dict-of-ints', '--i-ints', art1_path, '--i-ints', art2_path,
+            '--o-output', output, '--verbose'
+        )
+
+        self.assertEqual(result.exit_code, 0)
+        collection = self.cache.load_collection('output')
+        loaded_key = self.cache.read_key('output')
 
         self.assertEqual(collection['0'].view(int), 0)
         self.assertEqual(collection['1'].view(int), 1)

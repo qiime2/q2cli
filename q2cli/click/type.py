@@ -110,6 +110,8 @@ class QIIME2Type(click.ParamType):
 
         try:
             result, error = q2cli.util._load_input(value)
+            if result is not None:
+                result_value = result[1]
         except Exception as e:
             header = f'There was a problem loading {value!r} as an artifact:'
             q2cli.util.exit_with_error(
@@ -120,7 +122,7 @@ class QIIME2Type(click.ParamType):
         # We want to use click's fail to pretty print whatever error we got
         # from get_input
 
-        if isinstance(result, qiime2.sdk.Visualization):
+        if isinstance(result_value, qiime2.sdk.Visualization):
             maybe = value[:-1] + 'a'
             hint = ''
             if os.path.exists(maybe):
@@ -132,12 +134,11 @@ class QIIME2Type(click.ParamType):
                       ' Artifact (.qza)%s' % (value, hint), param, ctx)
 
         style = qiime2.sdk.util.interrogate_collection_type(self.type_expr)
-        if style.style is None and result not in self.type_expr:
+        if style.style is None and result_value not in self.type_expr:
             # collections need to be handled above this
             self.fail("Expected an artifact of at least type %r."
                       " An artifact of type %r was provided."
-                      % (self.type_expr, result.type), param, ctx)
-
+                      % (self.type_expr, result_value.type), param, ctx)
         return result
 
     def _convert_metadata(self, value, param, ctx):
