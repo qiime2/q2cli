@@ -79,23 +79,19 @@ def export_data(input_path, output_path, output_format):
                                               output_type, output_path)
     click.echo(CONFIG.cfg_style('success', success))
 
-@tools.command(name='show-importable',
-               help='Show the semantic types or directory formats that '
-                    'are available to be imported into an artifact. ',
-               cls=ToolCommand)
-@click.option('--semantic-types', is_flag=True,
-              help='List the importable semantic types.')
-@click.option('--formats', is_flag=True,
-              help='List the importable formats.')
-@click.option('--tsv', is_flag=True,
-              help='Print as machine-readable tab separated values.')
-def show_importable(semantic_types, formats, tsv):
-    import textwrap
-    pm = q2cli.util.get_plugin_manager()
-    if semantic_types:
-        for importable_type in sorted(list(pm.importable_types)):
-            description = pm.artifact_classes[importable_type].description
-            click.secho(importable_type, bold=True)
+
+def print_importables(importables, tsv):
+    if tsv:
+        for importable, description in importables.items():
+            click.echo(f"{importable}\t", nl=False)
+            if description:
+                click.echo(description)
+            else:
+                click.echo("No description")
+    else:
+        import textwrap
+        for importable, description in importables.items():
+            click.secho(importable, bold=True)
             if description:
                 tabsize = 8
                 wrapped_description = textwrap.wrap(description, 
@@ -108,13 +104,19 @@ def show_importable(semantic_types, formats, tsv):
             else:
                 click.secho("\tNo description", italic=True)
             click.echo()
-            
-    elif formats:
-       for format in sorted(list(pm.importable_formats)):
-           click.secho(format) 
-           print(type(format))
 
-    else:
+@tools.command(name='show-importable',
+               help='Show the semantic types or directory formats that '
+                    'are available to be imported into an artifact. ',
+               cls=ToolCommand)
+@click.option('--semantic-types', is_flag=True,
+              help='List the importable semantic types.')
+@click.option('--formats', is_flag=True,
+              help='List the importable formats.')
+@click.option('--tsv', is_flag=True,
+              help='Print as machine-readable tab separated values.')
+def show_importable(semantic_types, formats, tsv):
+    if not semantic_types and not formats:
         ctx = click.get_current_context()
         click.echo(ctx.get_help())
         click.secho('\n\t\tThere was a problem with the command:', 
@@ -123,6 +125,24 @@ def show_importable(semantic_types, formats, tsv):
                     fg="red")
         click.secho("\t'--semantic-types' (or)", bold=True, fg='red')
         click.secho("\t'--formats'", bold=True, fg='red')
+    else:
+        pm = q2cli.util.get_plugin_manager()
+
+    importables = {}
+    if semantic_types:
+        for importable_type in sorted(list(pm.importable_types)):
+            description = pm.artifact_classes[importable_type].description
+            importables[importable_type] = description
+    elif formats:
+        for importable_format in sorted(list(pm.importable_formats)):
+            docstring = pm.importable_formats[importable_format].format.__doc__ 
+            first_docstring_line = docstring.split('\n\n')[0].strip() \
+                                   if docstring else ''
+            importables[importable_format] = first_docstring_line
+
+    print_importables(importables, tsv)
+
+
 
 
 def show_importable_types(ctx, param, value):
