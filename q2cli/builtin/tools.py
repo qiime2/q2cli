@@ -80,18 +80,19 @@ def export_data(input_path, output_path, output_format):
     click.echo(CONFIG.cfg_style('success', success))
 
 
-def print_importables(importables, tsv):
+
+def print_descriptions(descriptions, tsv):
     if tsv:
-        for importable, description in importables.items():
-            click.echo(f"{importable}\t", nl=False)
+        for value, description in descriptions.items():
+            click.echo(f"{value}\t", nl=False)
             if description:
                 click.echo(description)
             else:
-                click.echo("No description")
+                click.echo()
     else:
         import textwrap
-        for importable, description in importables.items():
-            click.secho(importable, bold=True)
+        for value, description in descriptions.items():
+            click.secho(value, bold=True)
             if description:
                 tabsize = 8
                 wrapped_description = textwrap.wrap(description, 
@@ -105,43 +106,87 @@ def print_importables(importables, tsv):
                 click.secho("\tNo description", italic=True)
             click.echo()
 
-@tools.command(name='show-importable',
-               help='Show the semantic types or directory formats that '
-                    'are available to be imported into an artifact. ',
-               cls=ToolCommand)
-@click.option('--semantic-types', is_flag=True,
-              help='List the importable semantic types.')
-@click.option('--formats', is_flag=True,
-              help='List the importable formats.')
+def get_matches(words, possibilities, cutoff=0.5):
+    from difflib import get_close_matches
+    matches = []
+    for word in words:
+        matches += get_close_matches(word, 
+                                    possibilities, 
+                                    n=len(possibilities),
+                                    cutoff=cutoff) 
+    return matches
+
+
+@tools.command(
+        name='show-types',
+        help='List the available semantic types.',
+        short_help='',
+        cls=ToolCommand
+)
+@click.argument('types', nargs=-1)
+@click.option('--strict', is_flag=True,
+              help='Show only exact matches for the type argument(s).')
 @click.option('--tsv', is_flag=True,
-              help='Print as machine-readable tab separated values.')
-def show_importable(semantic_types, formats, tsv):
-    if not semantic_types and not formats:
-        ctx = click.get_current_context()
-        click.echo(ctx.get_help())
-        click.secho('\n\t\tThere was a problem with the command:', 
-                    fg='yellow')
-        click.secho('\n  One of the following flags is required:', bold=True,
-                    fg="red")
-        click.secho("\t'--semantic-types' (or)", bold=True, fg='red')
-        click.secho("\t'--formats'", bold=True, fg='red')
+              help='Print as machine readable tab separated values.')
+def show_types(types, strict, tsv):
+    pm = q2cli.util.get_plugin_manager()
+
+    if types and strict:
+        matches = get_matches(types, list(pm.artifact_classes), 1)
+    elif types:
+        matches = get_matches(types, list(pm.artifact_classes))
     else:
-        pm = q2cli.util.get_plugin_manager()
+        matches = list(pm.artifact_classes)
 
-    importables = {}
-    if semantic_types:
-        for importable_type in sorted(list(pm.importable_types)):
-            description = pm.artifact_classes[importable_type].description
-            importables[importable_type] = description
+    descriptions = {}
+    for match in sorted(matches):
+        description = pm.artifact_classes[match].description
+        descriptions[match] = description
+
+    print_descriptions(descriptions, tsv)
+
+@tools.command(
+        name='show-formats',
+        help='List the availabe formats.',
+        short_help='',
+        cls=ToolCommand
+)
+@click.argument('formats', nargs=-1)
+@click.option('--importable', is_flag=True, 
+              help='List the importable formats.')
+@click.option('--exportable', is_flag=True, 
+              help='List the exportable formats.')
+@click.option('--strict', is_flag=True,
+              help='Show only exact matches for the format argument(s).')
+@click.option('--tsv', is_flag=True,
+              help='Print as machine readable tab separated values.')
+def show_formats(formats, importable, exportable, strict, tsv):
+    if importable and exportable:
+        raise click.UsageError("'--importable' and '--exportable' flags are "
+                               "mutually exclusive.")
+    if not importable and not exportable:
+        raise click.UsageError("One of '--importable' or '--exportable' flags "
+                               "is required.")
+
+    pm = q2cli.util.get_plugin_manager()
+    available_formats = list(pm.importable_formats) if importable \
+                        else list(pm.exportable_formats)
+
+    if formats and strict:
+        matches = get_matches(formats, available_formats, 1)
     elif formats:
-        for importable_format in sorted(list(pm.importable_formats)):
-            docstring = pm.importable_formats[importable_format].format.__doc__ 
-            first_docstring_line = docstring.split('\n\n')[0].strip() \
-                                   if docstring else ''
-            importables[importable_format] = first_docstring_line
+        matches = get_matches(formats, available_formats)
+    else:
+        matches = available_formats    
 
-    print_importables(importables, tsv)
+    descriptions = {}
+    for match in sorted(matches):
+        docstring = pm.importable_formats[match].format.__doc__ 
+        first_docstring_line = docstring.split('\n\n')[0].strip() \
+                               if docstring else ''
+        descriptions[match] = first_docstring_line
 
+    print_descriptions(descriptions, tsv)
 
 
 
