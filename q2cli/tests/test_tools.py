@@ -18,6 +18,7 @@ from qiime2.core.testing.util import get_dummy_plugin
 from qiime2.metadata.base import SUPPORTED_COLUMN_TYPES
 from qiime2.core.cache import Cache
 from qiime2.sdk.result import Result
+from qiime2.sdk.plugin_manager import PluginManager
 
 from q2cli.util import load_metadata
 from q2cli.builtin.tools import tools
@@ -722,6 +723,67 @@ class TestPeek(unittest.TestCase):
         self.assertIn("viz.qzv", result.output)
         self.assertEqual(result.output.count('\t'), 9)
         self.assertEqual(result.output.count('\n'), 3)
+
+
+class TestShowTypes(unittest.TestCase):
+    def setUp(self):
+        self.runner = CliRunner()
+        self.pm = PluginManager()
+
+    def tearDown(self):
+        pass
+
+    def test_show_all_types(self):
+        result = self.runner.invoke(tools, ['show-types'])
+        self.assertEqual(result.exit_code, 0)
+
+        for name, artifact_class_record in self.pm.artifact_classes.items():
+            self.assertIn(name, result.output)
+            self.assertIn(artifact_class_record.description, result.output)
+
+    def test_show_types_fuzzy(self):
+        types = list(self.pm.artifact_classes)[:5]
+        result = self.runner.invoke(tools, ['show-types', *types])
+        self.assertEqual(result.exit_code, 0)
+
+        # split on \n\n because types and their description are separated
+        # by two newlines
+        # len - 1 because split includes '' for the last \n\n split
+        self.assertGreaterEqual(len(result.output.split('\n\n')) - 1,
+                                len(types))
+
+    def test_show_types_strict(self):
+        types = list(self.pm.artifact_classes)[:5]
+        result = self.runner.invoke(tools, ['show-types', '--strict', *types])
+        self.assertEqual(result.exit_code, 0)
+        self.assertEqual(len(result.output.split('\n\n')) - 1, len(types))
+
+        result = self.runner.invoke(tools, ['show-types', '--strict',
+                                            'nonsense', 'morenonesense'])
+        self.assertEqual(result.exit_code, 0)
+        self.assertEqual(len(result.output), 0)
+
+        result = self.runner.invoke(tools, ['show-types', '--strict', *types,
+                                            'nonsense', 'morenonesense'])
+        self.assertEqual(result.exit_code, 0)
+        self.assertEqual(len(result.output.split('\n\n')) - 1, len(types))
+
+    def test_show_types_tsv(self):
+        result = self.runner.invoke(tools, ['show-types', '--tsv'])
+        self.assertEqual(result.exit_code, 0)
+
+        # len - 1 because \n split produces a final ''
+        self.assertEqual(len(result.output.split('\n')) - 1,
+                         len(self.pm.artifact_classes))
+
+        no_description_count = 0
+        for name, artifact_class_record in self.pm.artifact_classes.items():
+            self.assertIn(name, result.output)
+            self.assertIn(artifact_class_record.description, result.output)
+            if artifact_class_record.description == '':
+                no_description_count += 1
+
+        self.assertEqual(no_description_count, result.output.count('\t\n'))
 
 
 if __name__ == "__main__":
