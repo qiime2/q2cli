@@ -106,11 +106,13 @@ def print_descriptions(descriptions, tsv):
                 click.secho("\tNo description", italic=True)
             click.echo()
 
+
 def deformat_description(description):
     import re
-    deformatted = re.sub(r"[\t\n]+", ' ', description) 
+    deformatted = re.sub(r"[\t\n]+", ' ', description)
     despaced = re.sub(r" +", ' ', deformatted)
     return despaced
+
 
 def get_matches(words, possibilities, cutoff=0.5):
     from difflib import get_close_matches
@@ -184,7 +186,7 @@ def show_formats(formats, importable, exportable, strict, tsv):
 
     pm = q2cli.util.get_plugin_manager()
     portable_formats = pm.importable_formats if importable \
-        else pm.exportable_formats 
+        else pm.exportable_formats
     available_formats = list(portable_formats)
 
     if formats and strict:
