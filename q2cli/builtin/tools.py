@@ -114,7 +114,13 @@ def get_matches(words, possibilities, cutoff=0.5):
                                     possibilities, 
                                     n=len(possibilities),
                                     cutoff=cutoff) 
-    return matches
+        # simple substring search 
+        for possibility in possibilities:
+            if word.lower() in possibility.lower() \
+                and possibility not in matches:
+                matches.append(possibility)
+
+    return matches 
 
 
 @tools.command(
