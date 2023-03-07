@@ -120,11 +120,12 @@ def get_matches(words, possibilities, cutoff=0.5):
                                      possibilities,
                                      n=len(possibilities),
                                      cutoff=cutoff)
-        # simple substring search
-        for possibility in possibilities:
-            if word.lower() in possibility.lower():
-                if possibility not in matches:
-                    matches.append(possibility)
+        # substring search
+        if cutoff != 1:
+            for possibility in possibilities:
+                if word.lower() in possibility.lower():
+                    if possibility not in matches:
+                        matches.append(possibility)
 
     return matches
 
