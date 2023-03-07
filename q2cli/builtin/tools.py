@@ -80,7 +80,6 @@ def export_data(input_path, output_path, output_format):
     click.echo(CONFIG.cfg_style('success', success))
 
 
-
 def print_descriptions(descriptions, tsv):
     if tsv:
         for value, description in descriptions.items():
@@ -95,9 +94,9 @@ def print_descriptions(descriptions, tsv):
             click.secho(value, bold=True)
             if description:
                 tabsize = 8
-                wrapped_description = textwrap.wrap(description, 
-                                                    width=72-tabsize, 
-                                                    initial_indent='\t', 
+                wrapped_description = textwrap.wrap(description,
+                                                    width=72-tabsize,
+                                                    initial_indent='\t',
                                                     subsequent_indent='\t',
                                                     tabsize=tabsize)
                 for line in wrapped_description:
@@ -106,21 +105,22 @@ def print_descriptions(descriptions, tsv):
                 click.secho("\tNo description", italic=True)
             click.echo()
 
+
 def get_matches(words, possibilities, cutoff=0.5):
     from difflib import get_close_matches
     matches = []
     for word in words:
-        matches += get_close_matches(word, 
-                                    possibilities, 
-                                    n=len(possibilities),
-                                    cutoff=cutoff) 
-        # simple substring search 
+        matches += get_close_matches(word,
+                                     possibilities,
+                                     n=len(possibilities),
+                                     cutoff=cutoff)
+        # simple substring search
         for possibility in possibilities:
-            if word.lower() in possibility.lower() \
-                and possibility not in matches:
-                matches.append(possibility)
+            if word.lower() in possibility.lower():
+                if possibility not in matches:
+                    matches.append(possibility)
 
-    return matches 
+    return matches
 
 
 @tools.command(
@@ -151,6 +151,7 @@ def show_types(types, strict, tsv):
 
     print_descriptions(descriptions, tsv)
 
+
 @tools.command(
         name='show-formats',
         help='List the availabe formats.',
@@ -158,9 +159,9 @@ def show_types(types, strict, tsv):
         cls=ToolCommand
 )
 @click.argument('formats', nargs=-1)
-@click.option('--importable', is_flag=True, 
+@click.option('--importable', is_flag=True,
               help='List the importable formats.')
-@click.option('--exportable', is_flag=True, 
+@click.option('--exportable', is_flag=True,
               help='List the exportable formats.')
 @click.option('--strict', is_flag=True,
               help='Show only exact matches for the format argument(s).')
@@ -176,24 +177,23 @@ def show_formats(formats, importable, exportable, strict, tsv):
 
     pm = q2cli.util.get_plugin_manager()
     available_formats = list(pm.importable_formats) if importable \
-                        else list(pm.exportable_formats)
+        else list(pm.exportable_formats)
 
     if formats and strict:
         matches = get_matches(formats, available_formats, 1)
     elif formats:
         matches = get_matches(formats, available_formats)
     else:
-        matches = available_formats    
+        matches = available_formats
 
     descriptions = {}
     for match in sorted(matches):
-        docstring = pm.importable_formats[match].format.__doc__ 
+        docstring = pm.importable_formats[match].format.__doc__
         first_docstring_line = docstring.split('\n\n')[0].strip() \
-                               if docstring else ''
+            if docstring else ''
         descriptions[match] = first_docstring_line
 
     print_descriptions(descriptions, tsv)
-
 
 
 def show_importable_types(ctx, param, value):
