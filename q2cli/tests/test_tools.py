@@ -786,5 +786,93 @@ class TestShowTypes(unittest.TestCase):
         self.assertEqual(no_description_count, result.output.count('\t\n'))
 
 
+class TestShowFormats(unittest.TestCase):
+    def setUp(self):
+        self.runner = CliRunner()
+        self.pm = PluginManager()
+
+    def tearDown(self):
+        pass
+
+    def test_show_all_importable_formats(self):
+        result = self.runner.invoke(tools, ['show-formats', '--importable'])
+        self.assertEqual(result.exit_code, 0)
+
+        for name, format_record in self.pm.importable_formats.items():
+            self.assertIn(name, result.output)
+            docstring = format_record.format.__doc__
+            if docstring:
+                description = docstring.split('\n\n')[0].strip()
+                for word in description:
+                    self.assertIn(word.strip(), result.output)
+
+    def test_show_all_exportable_formats(self):
+        result = self.runner.invoke(tools, ['show-formats', '--exportable'])
+        self.assertEqual(result.exit_code, 0)
+
+        for name, format_record in self.pm.exportable_formats.items():
+            self.assertIn(name, result.output)
+            docstring = format_record.format.__doc__
+            if docstring:
+                description = docstring.split('\n\n')[0].strip()
+                for word in description:
+                    self.assertIn(word.strip(), result.output)
+
+    def test_show_formats_fuzzy(self):
+        formats = list(self.pm.importable_formats)[:5]
+        result = self.runner.invoke(tools, ['show-formats', '--importable',
+                                            *formats])
+        self.assertEqual(result.exit_code, 0)
+
+        # see TestShowTypes.test_show_types_fuzzy
+        self.assertGreaterEqual(len(result.output.split('\n\n')) - 1,
+                                len(formats))
+
+    def test_show_formats_strict(self):
+        formats = list(self.pm.exportable_formats)[:5]
+        result = self.runner.invoke(tools, ['show-formats', '--exportable',
+                                            '--strict', *formats])
+        self.assertEqual(result.exit_code, 0)
+        print(formats)
+        print(result.output)
+        self.assertEqual(len(result.output.split('\n\n')) - 1, len(formats))
+
+        result = self.runner.invoke(tools, ['show-formats', '--exportable',
+                                            '--strict', 'nonsense',
+                                            'morenonesense'])
+        self.assertEqual(result.exit_code, 0)
+        self.assertEqual(len(result.output), 0)
+
+        result = self.runner.invoke(tools, ['show-formats', '--exportable',
+                                            '--strict', *formats, 'nonsense',
+                                            'morenonesense'])
+        self.assertEqual(result.exit_code, 0)
+        self.assertEqual(len(result.output.split('\n\n')) - 1, len(formats))
+
+    def test_show_formats_tsv(self):
+        result = self.runner.invoke(tools, ['show-formats', '--importable',
+                                            '--tsv'])
+        self.assertEqual(result.exit_code, 0)
+
+        # len - 1 because \n split produces a final ''
+        print(result.output)
+        print(self.pm.importable_formats.keys())
+        self.assertEqual(len(result.output.split('\n')) - 1,
+                         len(self.pm.importable_formats))
+
+        no_description_count = 0
+        for name, format_record in self.pm.importable_formats.items():
+            self.assertIn(name, result.output)
+            docstring = format_record.format.__doc__
+            if docstring:
+                description = docstring.split('\n\n')[0].strip()
+                for word in description:
+                    self.assertIn(word.strip(), result.output)
+
+            if format_record.format.__doc__ is None:
+                no_description_count += 1
+        self.assertEqual(no_description_count, result.output.count('\t\n'))
+
+
 if __name__ == "__main__":
     unittest.main()
