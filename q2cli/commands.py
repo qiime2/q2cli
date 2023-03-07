@@ -381,13 +381,9 @@ class ActionCommand(BaseCommandMixin, click.Command):
                 path = result.save(output)
 
             if not quiet:
-                if output_in_cache(output):
-                    message = \
-                        f"Added {result.type} to cache: {cache_path} as: {key}"
-                else:
-                    message = f"Saved {result.type} to: {path}"
-
-                click.echo(CONFIG.cfg_style('success', message))
+                click.echo(
+                    CONFIG.cfg_style('success', 'Saved %s to: %s' %
+                                     (result.type, path)))
 
     def _order_outputs(self, outputs):
         ordered = []
