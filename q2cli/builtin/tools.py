@@ -176,8 +176,9 @@ def show_formats(formats, importable, exportable, strict, tsv):
                                "is required.")
 
     pm = q2cli.util.get_plugin_manager()
-    available_formats = list(pm.importable_formats) if importable \
-        else list(pm.exportable_formats)
+    portable_formats = pm.importable_formats if importable \
+        else pm.exportable_formats 
+    available_formats = list(portable_formats)
 
     if formats and strict:
         matches = get_matches(formats, available_formats, 1)
@@ -188,7 +189,7 @@ def show_formats(formats, importable, exportable, strict, tsv):
 
     descriptions = {}
     for match in sorted(matches):
-        docstring = pm.importable_formats[match].format.__doc__
+        docstring = portable_formats[match].format.__doc__
         first_docstring_line = docstring.split('\n\n')[0].strip() \
             if docstring else ''
         descriptions[match] = first_docstring_line
