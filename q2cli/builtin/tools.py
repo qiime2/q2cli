@@ -85,7 +85,7 @@ def print_descriptions(descriptions, tsv):
         for value, description in descriptions.items():
             click.echo(f"{value}\t", nl=False)
             if description:
-                click.echo(description)
+                click.echo(deformat_description(description))
             else:
                 click.echo()
     else:
@@ -93,6 +93,7 @@ def print_descriptions(descriptions, tsv):
         for value, description in descriptions.items():
             click.secho(value, bold=True)
             if description:
+                description = deformat_description(description)
                 tabsize = 8
                 wrapped_description = textwrap.wrap(description,
                                                     width=72-tabsize,
@@ -105,6 +106,11 @@ def print_descriptions(descriptions, tsv):
                 click.secho("\tNo description", italic=True)
             click.echo()
 
+def deformat_description(description):
+    import re
+    deformatted = re.sub(r"[\t\n]+", ' ', description) 
+    despaced = re.sub(r" +", ' ', deformatted)
+    return despaced
 
 def get_matches(words, possibilities, cutoff=0.5):
     from difflib import get_close_matches
