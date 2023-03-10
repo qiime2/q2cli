@@ -207,41 +207,17 @@ def show_formats(formats, importable, exportable, strict, tsv):
 
 
 def show_importable_types(ctx, param, value):
-    if not value or ctx.resilient_parsing:
-        return
-
-    import q2cli.util
-
-    importable_types = sorted(q2cli.util.get_plugin_manager().importable_types,
-                              key=repr)
-
-    if importable_types:
-        for name in importable_types:
-            click.echo(name)
-    else:
-        click.echo('There are no importable types in the current deployment.')
-
-    ctx.exit()
-
+    click.secho('This functionality has been moved to the show-types command.',
+                fg='red', bold=True)
+    click.secho('Run `qiime tools show-types` for more information.',
+                fg='red', bold=True)
+    return
 
 def show_importable_formats(ctx, param, value):
-    if not value or ctx.resilient_parsing:
-        return
-
-    import q2cli.util
-
-    importable_formats = sorted(
-            q2cli.util.get_plugin_manager().importable_formats)
-
-    if importable_formats:
-        for format in importable_formats:
-            click.echo(format)
-    else:
-        click.echo('There are no importable formats '
-                   'in the current deployment.')
-
-    ctx.exit()
-
+    click.secho('This functionality has been moved to the show-formats '
+                'command.', fg='red', bold=True)
+    click.secho('Run `qiime tools show-formats` for more information.',
+                fg='red', bold=True)
 
 @tools.command(name='import',
                short_help='Import data into a new QIIME 2 Artifact.',
