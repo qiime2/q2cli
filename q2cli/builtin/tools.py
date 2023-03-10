@@ -215,6 +215,7 @@ def show_importable_types(ctx, param, value):
                 fg='red', bold=True)
     ctx.exit()
 
+
 def show_importable_formats(ctx, param, value):
     if not value or ctx.resilient_parsing:
         return
@@ -223,6 +224,7 @@ def show_importable_formats(ctx, param, value):
     click.secho('Run `qiime tools show-formats --help` for more information.',
                 fg='red', bold=True)
     ctx.exit()
+
 
 @tools.command(name='import',
                short_help='Import data into a new QIIME 2 Artifact.',
