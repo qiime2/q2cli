@@ -207,17 +207,22 @@ def show_formats(formats, importable, exportable, strict, tsv):
 
 
 def show_importable_types(ctx, param, value):
+    if not value or ctx.resilient_parsing:
+        return
     click.secho('This functionality has been moved to the show-types command.',
                 fg='red', bold=True)
-    click.secho('Run `qiime tools show-types` for more information.',
+    click.secho('Run `qiime tools show-types --help` for more information.',
                 fg='red', bold=True)
-    return
+    ctx.exit()
 
 def show_importable_formats(ctx, param, value):
+    if not value or ctx.resilient_parsing:
+        return
     click.secho('This functionality has been moved to the show-formats '
                 'command.', fg='red', bold=True)
-    click.secho('Run `qiime tools show-formats` for more information.',
+    click.secho('Run `qiime tools show-formats --help` for more information.',
                 fg='red', bold=True)
+    ctx.exit()
 
 @tools.command(name='import',
                short_help='Import data into a new QIIME 2 Artifact.',
