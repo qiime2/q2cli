@@ -494,11 +494,11 @@ class TestCacheTools(unittest.TestCase):
         # Data referenced directly by key
         self.cache.save(self.art1, 'foo')
         # Data referenced by pool that is referenced by key
-        pool = self.cache.create_pool(['bar'])
+        pool = self.cache.create_pool('bar')
         pool.save(self.art2)
         # We will be manually deleting the keys that back these two
         self.cache.save(self.art3, 'baz')
-        pool = self.cache.create_pool(['qux'])
+        pool = self.cache.create_pool('qux')
         pool.save(self.art4)
 
         # What we expect to see before and after gc
@@ -615,7 +615,7 @@ class TestCacheTools(unittest.TestCase):
         self.assertEqual(success, result.output)
 
         # Cache with data and pool
-        pool = self.cache.create_pool(key='pool')
+        pool = self.cache.create_pool('pool')
         pool.save(self.art2)
 
         result = self.runner.invoke(
