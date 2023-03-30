@@ -615,12 +615,12 @@ class TestCacheTools(unittest.TestCase):
         self.assertEqual(success, result.output)
 
         # Cache with data and pool
-        pool = self.cache.create_pool(keys=['pool_key'])
+        pool = self.cache.create_pool(key='pool')
         pool.save(self.art2)
 
         result = self.runner.invoke(
             tools, ['cache-status', '--cache', str(self.cache.path)])
-        pool_output = 'Pool keys in cache:\npool: pool_key -> size = 1'
+        pool_output = 'Pool keys in cache:\npool: pool -> size = 1'
         success = \
             success_template % (str(self.cache.path), data_output,
                                 pool_output)
