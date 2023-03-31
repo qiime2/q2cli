@@ -891,6 +891,17 @@ class TestCollectionSupport(unittest.TestCase):
                       str(result.exception))
 
     def test_mixed_keyed_unkeyed_params(self):
+        # Puts the unkeyed param first
+        result = self._run_command(
+            'dict-of-ints', '--i-ints', self.art1_path, '--i-ints',
+            f'bar:{self.art2_path}', '--o-output', self.output, '--verbose'
+        )
+
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn('Keyed values cannot be mixed with unkeyed values.',
+                      str(result.exception))
+
+        # Puts the keyed param first
         result = self._run_command(
             'dict-params', '--p-ints', 'foo:0', '--p-ints', '1',
             '--o-output', self.output, '--verbose'
