@@ -246,7 +246,13 @@ class ActionCommand(BaseCommandMixin, click.Command):
                 click.Option(['--no-recycle'], is_flag=True, required=False,
                              help='Specifies that you do not want to attempt '
                                   'to recycle results from a previous failed '
-                                  'pipeline run.')])
+                                  'pipeline run.'),
+                click.Option(['--use-cache'], required=False,
+                             type=click.Path(exists=True, file_okay=False),
+                             help='Allows you to specify a cache to be used '
+                                  'for pipeline resumption. Otherwise the '
+                                  'default cache under /$TMP/qiime2/<uname> '
+                                  'will be used.')])
 
         options = [*self._inputs, *self._params, *self._outputs, *self._misc]
         help_ = [action['description']]
@@ -321,8 +327,10 @@ class ActionCommand(BaseCommandMixin, click.Command):
                                  "appears to be a cache:key combo. Cache keys "
                                  "cannot be used as output dirs.")
 
+        # Args pertaining to pipeline resumption
         recycle = kwargs.pop('recycle', None)
         no_recycle = kwargs.pop('no_recycle', False)
+        used_cache = kwargs.pop('use_cache', None)
 
         if recycle is not None and no_recycle:
             raise ValueError('Cannot set a pool to be used for recycling and '
@@ -399,10 +407,13 @@ class ActionCommand(BaseCommandMixin, click.Command):
                 if recycle_pool is None:
                     results = action(**arguments)
                 else:
-                    # TODO: cache should potentially come from a --use-cache
-                    # arg otherwise we're stuck with only the default cache
-                    # here
-                    cache = Cache()
+                    if used_cache is not None and not\
+                            Cache.is_cache(used_cache):
+                        raise ValueError(f"The path '{used_cache}' is not a "
+                                         "valid cache, please supply a path "
+                                         "to a valid pre-existing cache.")
+
+                    cache = Cache(path=used_cache)
                     pool = cache.create_pool(key=recycle_pool, reuse=True)
                     with pool:
                         results = action(**arguments)
