@@ -208,7 +208,6 @@ class GeneratedOption(click.Option):
                 elif self.q2_multiple is dict:
                     if keys is None:
                         keys = range(len(value))
-                    raise ValueError(f'{keys}\n{value}')
                     value = value
                 else:
                     value = self.q2_multiple(value)
