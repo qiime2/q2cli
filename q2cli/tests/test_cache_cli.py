@@ -36,6 +36,8 @@ class TestCacheCli(unittest.TestCase):
         self.art1 = Artifact.import_data(IntSequence1, [0, 1, 2])
         self.art2 = Artifact.import_data(IntSequence1, [3, 4, 5])
         self.art3 = Artifact.import_data(IntSequence2, [6, 7, 8])
+        self.art4= Artifact.import_data(SingleInt, 0)
+        self.art5 = Artifact.import_data(SingleInt, 1)
         self.mapping = Artifact.import_data(Mapping, {'a': '1', 'b': '2'})
 
         self.non_cache_output = os.path.join(self.tempdir.name, 'output.qza')
@@ -339,18 +341,15 @@ class TestCacheCli(unittest.TestCase):
                           {'1': str(collection['1'].uuid)}])
 
     def test_de_facto_list(self):
-        art1 = Artifact.import_data(SingleInt, 0)
-        art2 = Artifact.import_data(SingleInt, 1)
+        self.cache.save(self.art4, 'art4')
+        self.cache.save(self.art5, 'art5')
 
-        self.cache.save(art1, 'art1')
-        self.cache.save(art2, 'art2')
-
-        art1_path = str(self.cache.path) + ':art1'
-        art2_path = str(self.cache.path) + ':art2'
+        art4_path = str(self.cache.path) + ':art4'
+        art5_path = str(self.cache.path) + ':art5'
         output = str(self.cache.path) + ':output'
 
         result = self._run_command(
-            'list-of-ints', '--i-ints', art1_path, '--i-ints', art2_path,
+            'list-of-ints', '--i-ints', art4_path, '--i-ints', art5_path,
             '--o-output', output, '--verbose'
         )
 
@@ -366,19 +365,16 @@ class TestCacheCli(unittest.TestCase):
                           {'1': str(collection['1'].uuid)}])
 
     def test_de_facto_dict_keyed(self):
-        art1 = Artifact.import_data(SingleInt, 0)
-        art2 = Artifact.import_data(SingleInt, 1)
+        self.cache.save(self.art4, 'art4')
+        self.cache.save(self.art5, 'art5')
 
-        self.cache.save(art1, 'art1')
-        self.cache.save(art2, 'art2')
-
-        art1_path = str(self.cache.path) + ':art1'
-        art2_path = str(self.cache.path) + ':art2'
+        art4_path = str(self.cache.path) + ':art4'
+        art5_path = str(self.cache.path) + ':art5'
         output = str(self.cache.path) + ':output'
 
         result = self._run_command(
-            'dict-of-ints', '--i-ints', f'foo:{art1_path}', '--i-ints',
-            f'bar:{art2_path}', '--o-output', output, '--verbose'
+            'dict-of-ints', '--i-ints', f'foo:{art4_path}', '--i-ints',
+            f'bar:{art5_path}', '--o-output', output, '--verbose'
         )
 
         self.assertEqual(result.exit_code, 0)
@@ -393,18 +389,15 @@ class TestCacheCli(unittest.TestCase):
                           {'bar': str(collection['bar'].uuid)}])
 
     def test_de_facto_dict_unkeyed(self):
-        art1 = Artifact.import_data(SingleInt, 0)
-        art2 = Artifact.import_data(SingleInt, 1)
+        self.cache.save(self.art4, 'art4')
+        self.cache.save(self.art5, 'art5')
 
-        self.cache.save(art1, 'art1')
-        self.cache.save(art2, 'art2')
-
-        art1_path = str(self.cache.path) + ':art1'
-        art2_path = str(self.cache.path) + ':art2'
+        art4_path = str(self.cache.path) + ':art4'
+        art5_path = str(self.cache.path) + ':art5'
         output = str(self.cache.path) + ':output'
 
         result = self._run_command(
-            'dict-of-ints', '--i-ints', art1_path, '--i-ints', art2_path,
+            'dict-of-ints', '--i-ints', art4_path, '--i-ints', art5_path,
             '--o-output', output, '--verbose'
         )
 
@@ -418,6 +411,34 @@ class TestCacheCli(unittest.TestCase):
         self.assertEqual(loaded_key['order'],
                          [{'0': str(collection['0'].uuid)},
                           {'1': str(collection['1'].uuid)}])
+
+    def test_mixed_keyed_unkeyed_inputs(self):
+        self.cache.save(self.art4, 'art4')
+        self.cache.save(self.art5, 'art5')
+
+        art4_path = str(self.cache.path) + ':art4'
+        art5_path = str(self.cache.path) + ':art5'
+        output = str(self.cache.path) + ':output'
+
+        # Puts the keyed param first
+        result = self._run_command(
+            'dict-of-ints', '--i-ints', f'foo:{art4_path}', '--i-ints',
+            art5_path,'--o-output', output, '--verbose'
+        )
+
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn('Keyed values cannot be mixed with unkeyed values.',
+                      str(result.exception))
+
+        # Puts the unkeyed param first
+        result = self._run_command(
+            'dict-of-ints', '--i-ints', art4_path, '--i-ints',
+            f'bar:{art5_path}', '--o-output', output, '--verbose'
+        )
+
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn('Keyed values cannot be mixed with unkeyed values.',
+                      str(result.exception))
 
     def test_nonexistent_input_key(self):
         art1_path = str(self.cache.path) + ':art1'

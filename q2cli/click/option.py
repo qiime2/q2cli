@@ -208,6 +208,7 @@ class GeneratedOption(click.Option):
                 elif self.q2_multiple is dict:
                     if keys is None:
                         keys = range(len(value))
+                    raise ValueError(f'{keys}\n{value}')
                     value = value
                 else:
                     value = self.q2_multiple(value)
@@ -318,7 +319,7 @@ class GeneratedOption(click.Option):
             raise ValueError('Keyed values may only be supplied for '
                              'Collection inputs.')
         # We cannot have a mixture of keyed and unkeyed values
-        elif self.q2_multiple is not dict and has_keys and has_nones:
+        elif self.q2_multiple is dict and has_keys and has_nones:
             raise ValueError('Keyed values cannot be mixed with unkeyed '
                              'values.')
 
