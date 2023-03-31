@@ -36,7 +36,7 @@ class TestCacheCli(unittest.TestCase):
         self.art1 = Artifact.import_data(IntSequence1, [0, 1, 2])
         self.art2 = Artifact.import_data(IntSequence1, [3, 4, 5])
         self.art3 = Artifact.import_data(IntSequence2, [6, 7, 8])
-        self.art4= Artifact.import_data(SingleInt, 0)
+        self.art4 = Artifact.import_data(SingleInt, 0)
         self.art5 = Artifact.import_data(SingleInt, 1)
         self.mapping = Artifact.import_data(Mapping, {'a': '1', 'b': '2'})
 
@@ -495,7 +495,6 @@ class TestCacheCli(unittest.TestCase):
 
     def test_nonexistent_input_key(self):
         art1_path = str(self.cache.path) + ':art1'
-
         left_path = str(self.cache.path) + ':left'
 
         result = self._run_command(
