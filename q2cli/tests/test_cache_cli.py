@@ -455,6 +455,33 @@ class TestCacheCli(unittest.TestCase):
                          [{'foo': str(collection['foo'].uuid)},
                           {'bar': str(collection['bar'].uuid)}])
 
+    def test_pipeline_resumption(self):
+        ints1 ={'1': Artifact.import_data(SingleInt, 0),
+                '2': Artifact.import_data(SingleInt, 1)}
+        ints2 = {'1': Artifact.import_data(IntSequence1, [0, 1, 2]),
+                 '2': Artifact.import_data(IntSequence1, [3, 4, 5])}
+        int1 = Artifact.import_data(SingleInt, 42)
+
+        output = os.path.join(self.tempdir, 'output')
+
+        self.cache.save_collection(ints1, 'ints1')
+        self.cache.save_collection(ints2, 'ints2')
+        self.cache.save(int1, 'int1')
+
+        ints1_path = str(self.cache.path) + ':ints1'
+        ints2_path = str(self.cache.path) + ':ints2'
+        int1_path = str(self.cache.path) + ':int1'
+
+        result = self._run_command(
+            'resumable-varied-pipeline', '--i-ints1', ints1_path, '--i-ints2',
+            ints2_path, '--i-int1', int1_path, '--p-string', 'Hi', '--p-fail',
+            'True', '--output-dir', output
+        )
+
+        print(result.output)
+        # self.assertEqual(result.exit_code, 0)
+        raise result.exception
+
     def test_mixed_keyed_unkeyed_inputs(self):
         art4_uncached_path = os.path.join(self.tempdir, 'art4.qza')
         self.art4.save(art4_uncached_path)
