@@ -456,8 +456,11 @@ class TestCacheCli(unittest.TestCase):
                           {'bar': str(collection['bar'].uuid)}])
 
     def test_pipeline_resumption(self):
-        ints1 ={'1': Artifact.import_data(SingleInt, 0),
-                '2': Artifact.import_data(SingleInt, 1)}
+        FIRST_SPLIT = 'Plugin error from dummy-plugin:'
+        SECOND_SPLIT = 'See above for debug info.'
+
+        ints1 = {'1': Artifact.import_data(SingleInt, 0),
+                 '2': Artifact.import_data(SingleInt, 1)}
         ints2 = {'1': Artifact.import_data(IntSequence1, [0, 1, 2]),
                  '2': Artifact.import_data(IntSequence1, [3, 4, 5])}
         int1 = Artifact.import_data(SingleInt, 42)
@@ -475,12 +478,28 @@ class TestCacheCli(unittest.TestCase):
         result = self._run_command(
             'resumable-varied-pipeline', '--i-ints1', ints1_path, '--i-ints2',
             ints2_path, '--i-int1', int1_path, '--p-string', 'Hi', '--p-fail',
-            'True', '--output-dir', output
+            'True', '--output-dir', output, '--verbose'
         )
 
-        print(result.output)
-        # self.assertEqual(result.exit_code, 0)
-        raise result.exception
+        exception = result.output.split(FIRST_SPLIT)[-1]
+        exception = exception.split(SECOND_SPLIT)[0]
+        exception.strip()
+        exception.rstrip()
+
+        ints1_uuids, ints2_uuids, int1_uuid, list_uuids, dict_uuids = \
+            exception.split('_')
+
+        self.assertEqual(result.exit_code, 1)
+
+        result = self._run_command(
+            'resumable-varied-pipeline', '--i-ints1', ints1_path, '--i-ints2',
+            ints2_path, '--i-int1', int1_path, '--p-string', 'Hi',
+            '--output-dir', output, '--verbose'
+        )
+
+        self.assertEqual(result.exit_code, 0)
+        # Open the artifacts saved to output and assert they are aliases of
+        # what we picked apart from the exception
 
     def test_mixed_keyed_unkeyed_inputs(self):
         art4_uncached_path = os.path.join(self.tempdir, 'art4.qza')
