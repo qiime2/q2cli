@@ -396,11 +396,12 @@ def _load_input(fp, view=False):
     return (key, artifact), error
 
 
+# NOTE: These load collection functions are now virtually identical to class
+# methods on qiime2.sdk.Result
 def _load_collection(fp):
     import os
     import warnings
 
-    artifacts = {}
     order_fp = os.path.join(fp, '.order')
 
     if os.path.isfile(order_fp):
@@ -409,12 +410,7 @@ def _load_collection(fp):
         warnings.warn(f'The directory {fp} does not contain a .order file. '
                       'The files will be read into the collection in the '
                       'order the filesystem provides them in.')
-        for artifact in os.listdir(fp):
-            artifact_fp = os.path.join(fp, artifact)
-            artifacts[artifact], error = _load_input_file(artifact_fp)
-
-            if error:
-                return None, error
+        artifacts, error = _load_unordered_collection(fp)
 
     return artifacts, error
 
@@ -425,15 +421,27 @@ def _load_ordered_collection(fp, order_fp):
     artifacts = {}
 
     with open(order_fp) as order_fh:
-        for key in order_fh:
-            # Get rid of white space in key (it will probably have a trailing
-            # newline)
-            key = key.strip()
+        for key in order_fh.read().splitlines():
             artifact_path = os.path.join(fp, f'{key}.qza')
             artifacts[key], error = _load_input_file(artifact_path)
 
             if error:
                 return None, error
+
+    return artifacts, None
+
+
+def _load_unordered_collection(fp):
+    import os
+
+    artifacts = {}
+
+    for artifact in os.listdir(fp):
+        artifact_fp = os.path.join(fp, artifact)
+        artifacts[artifact], error = _load_input_file(artifact_fp)
+
+        if error:
+            return None, error
 
     return artifacts, None
 
