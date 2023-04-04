@@ -734,29 +734,20 @@ class TestCollectionSupport(unittest.TestCase):
         )
 
         self.assertEqual(result.exit_code, 0)
-        self.assertEqual(
-            Artifact.load(
-                os.path.join(self.output, '0.qza')).view(int), 0)
-        self.assertEqual(
-            Artifact.load(
-                os.path.join(self.output, '1.qza')).view(int), 1)
-        with open(os.path.join(self.output, '.order')) as fh:
-            self.assertEqual(fh.read(), '0\n1\n')
+        collection = Artifact.load_collection(self.output)
+
+        self.assertEqual(collection['0'].view(int), 0)
+        self.assertEqual(collection['1'].view(int), 1)
+        self.assertEqual(list(collection.keys()), ['0', '1'])
 
         result = self._run_command(
             'list-of-ints', '--i-ints', self.output, '--o-output',
             self.output2, '--verbose'
         )
 
-        self.assertEqual(result.exit_code, 0)
-        self.assertEqual(
-            Artifact.load(
-                os.path.join(self.output2, '0.qza')).view(int), 0)
-        self.assertEqual(
-            Artifact.load(
-                os.path.join(self.output2, '1.qza')).view(int), 1)
-        with open(os.path.join(self.output2, '.order')) as fh:
-            self.assertEqual(fh.read(), '0\n1\n')
+        self.assertEqual(collection['0'].view(int), 0)
+        self.assertEqual(collection['1'].view(int), 1)
+        self.assertEqual(list(collection.keys()), ['0', '1'])
 
     def test_collection_roundtrip_dict_keyed(self):
         result = self._run_command(
@@ -765,14 +756,11 @@ class TestCollectionSupport(unittest.TestCase):
         )
 
         self.assertEqual(result.exit_code, 0)
-        self.assertEqual(
-            Artifact.load(
-                os.path.join(self.output, 'foo.qza')).view(int), 0)
-        self.assertEqual(
-            Artifact.load(
-                os.path.join(self.output, 'bar.qza')).view(int), 1)
-        with open(os.path.join(self.output, '.order')) as fh:
-            self.assertEqual(fh.read(), 'foo\nbar\n')
+        collection = Artifact.load_collection(self.output)
+
+        self.assertEqual(collection['foo'].view(int), 0)
+        self.assertEqual(collection['bar'].view(int), 1)
+        self.assertEqual(list(collection.keys()), ['foo', 'bar'])
 
         result = self._run_command(
             'dict-of-ints', '--i-ints', self.output, '--o-output',
@@ -780,14 +768,11 @@ class TestCollectionSupport(unittest.TestCase):
         )
 
         self.assertEqual(result.exit_code, 0)
-        self.assertEqual(
-            Artifact.load(
-                os.path.join(self.output2, 'foo.qza')).view(int), 0)
-        self.assertEqual(
-            Artifact.load(
-                os.path.join(self.output2, 'bar.qza')).view(int), 1)
-        with open(os.path.join(self.output2, '.order')) as fh:
-            self.assertEqual(fh.read(), 'foo\nbar\n')
+        collection = Artifact.load_collection(self.output)
+
+        self.assertEqual(collection['foo'].view(int), 0)
+        self.assertEqual(collection['bar'].view(int), 1)
+        self.assertEqual(list(collection.keys()), ['foo', 'bar'])
 
     def test_collection_roundtrip_dict_unkeyed(self):
         result = self._run_command(
@@ -796,14 +781,11 @@ class TestCollectionSupport(unittest.TestCase):
         )
 
         self.assertEqual(result.exit_code, 0)
-        self.assertEqual(
-            Artifact.load(
-                os.path.join(self.output, '0.qza')).view(int), 0)
-        self.assertEqual(
-            Artifact.load(
-                os.path.join(self.output, '1.qza')).view(int), 1)
-        with open(os.path.join(self.output, '.order')) as fh:
-            self.assertEqual(fh.read(), '0\n1\n')
+        collection = Artifact.load_collection(self.output)
+
+        self.assertEqual(collection['0'].view(int), 0)
+        self.assertEqual(collection['1'].view(int), 1)
+        self.assertEqual(list(collection.keys()), ['0', '1'])
 
         result = self._run_command(
             'dict-of-ints', '--i-ints', self.output, '--o-output',
@@ -811,14 +793,11 @@ class TestCollectionSupport(unittest.TestCase):
         )
 
         self.assertEqual(result.exit_code, 0)
-        self.assertEqual(
-            Artifact.load(
-                os.path.join(self.output2, '0.qza')).view(int), 0)
-        self.assertEqual(
-            Artifact.load(
-                os.path.join(self.output2, '1.qza')).view(int), 1)
-        with open(os.path.join(self.output2, '.order')) as fh:
-            self.assertEqual(fh.read(), '0\n1\n')
+        collection = Artifact.load_collection(self.output)
+
+        self.assertEqual(collection['0'].view(int), 0)
+        self.assertEqual(collection['1'].view(int), 1)
+        self.assertEqual(list(collection.keys()), ['0', '1'])
 
     def test_de_facto_list(self):
         self.art1.save(self.art1_path)
@@ -830,14 +809,11 @@ class TestCollectionSupport(unittest.TestCase):
         )
 
         self.assertEqual(result.exit_code, 0)
-        self.assertEqual(
-            Artifact.load(
-                os.path.join(self.output, '0.qza')).view(int), 0)
-        self.assertEqual(
-            Artifact.load(
-                os.path.join(self.output, '1.qza')).view(int), 1)
-        with open(os.path.join(self.output, '.order')) as fh:
-            self.assertEqual(fh.read(), '0\n1\n')
+        collection = Artifact.load_collection(self.output)
+
+        self.assertEqual(collection['0'].view(int), 0)
+        self.assertEqual(collection['1'].view(int), 1)
+        self.assertEqual(list(collection.keys()), ['0', '1'])
 
     def test_de_facto_dict_keyed(self):
         self.art1.save(self.art1_path)
@@ -849,14 +825,11 @@ class TestCollectionSupport(unittest.TestCase):
         )
 
         self.assertEqual(result.exit_code, 0)
-        self.assertEqual(
-            Artifact.load(
-                os.path.join(self.output, 'foo.qza')).view(int), 0)
-        self.assertEqual(
-            Artifact.load(
-                os.path.join(self.output, 'bar.qza')).view(int), 1)
-        with open(os.path.join(self.output, '.order')) as fh:
-            self.assertEqual(fh.read(), 'foo\nbar\n')
+        collection = Artifact.load_collection(self.output)
+
+        self.assertEqual(collection['foo'].view(int), 0)
+        self.assertEqual(collection['bar'].view(int), 1)
+        self.assertEqual(list(collection.keys()), ['foo', 'bar'])
 
     def test_de_facto_dict_unkeyed(self):
         self.art1.save(self.art1_path)
@@ -868,14 +841,11 @@ class TestCollectionSupport(unittest.TestCase):
         )
 
         self.assertEqual(result.exit_code, 0)
-        self.assertEqual(
-            Artifact.load(
-                os.path.join(self.output, '0.qza')).view(int), 0)
-        self.assertEqual(
-            Artifact.load(
-                os.path.join(self.output, '1.qza')).view(int), 1)
-        with open(os.path.join(self.output, '.order')) as fh:
-            self.assertEqual(fh.read(), '0\n1\n')
+        collection = Artifact.load_collection(self.output)
+
+        self.assertEqual(collection['0'].view(int), 0)
+        self.assertEqual(collection['1'].view(int), 1)
+        self.assertEqual(list(collection.keys()), ['0', '1'])
 
     def test_mixed_keyed_unkeyed_inputs(self):
         self.art1.save(self.art1_path)

@@ -237,14 +237,10 @@ class TestCacheCli(unittest.TestCase):
 
         self.assertEqual(result.exit_code, 0)
         collection = self.cache.load_collection(key1)
-        loaded_key = self.cache.read_key(key1)
 
         self.assertEqual(collection['0'].view(int), 0)
         self.assertEqual(collection['1'].view(int), 1)
-
-        self.assertEqual(loaded_key['order'],
-                         [{'0': str(collection['0'].uuid)},
-                          {'1': str(collection['1'].uuid)}])
+        self.assertEqual(list(collection.keys()), ['0', '1'])
 
         result = self._run_command(
             'list-of-ints', '--i-ints', collection_out1, '--o-output',
@@ -253,14 +249,10 @@ class TestCacheCli(unittest.TestCase):
 
         self.assertEqual(result.exit_code, 0)
         collection = self.cache.load_collection(key2)
-        loaded_key = self.cache.read_key(key2)
 
         self.assertEqual(collection['0'].view(int), 0)
         self.assertEqual(collection['1'].view(int), 1)
-
-        self.assertEqual(loaded_key['order'],
-                         [{'0': str(collection['0'].uuid)},
-                          {'1': str(collection['1'].uuid)}])
+        self.assertEqual(list(collection.keys()), ['0', '1'])
 
     def test_collection_roundtrip_dict_keyed(self):
         key1 = 'out1'
@@ -276,14 +268,10 @@ class TestCacheCli(unittest.TestCase):
 
         self.assertEqual(result.exit_code, 0)
         collection = self.cache.load_collection(key1)
-        loaded_key = self.cache.read_key(key1)
 
         self.assertEqual(collection['foo'].view(int), 0)
         self.assertEqual(collection['bar'].view(int), 1)
-
-        self.assertEqual(loaded_key['order'],
-                         [{'foo': str(collection['foo'].uuid)},
-                          {'bar': str(collection['bar'].uuid)}])
+        self.assertEqual(list(collection.keys()), ['foo', 'bar'])
 
         result = self._run_command(
             'dict-of-ints', '--i-ints', collection_out1, '--o-output',
@@ -292,14 +280,10 @@ class TestCacheCli(unittest.TestCase):
 
         self.assertEqual(result.exit_code, 0)
         collection = self.cache.load_collection(key2)
-        loaded_key = self.cache.read_key(key2)
 
         self.assertEqual(collection['foo'].view(int), 0)
         self.assertEqual(collection['bar'].view(int), 1)
-
-        self.assertEqual(loaded_key['order'],
-                         [{'foo': str(collection['foo'].uuid)},
-                          {'bar': str(collection['bar'].uuid)}])
+        self.assertEqual(list(collection.keys()), ['foo', 'bar'])
 
     def test_collection_roundtrip_dict_unkeyed(self):
         key1 = 'out1'
@@ -315,14 +299,10 @@ class TestCacheCli(unittest.TestCase):
 
         self.assertEqual(result.exit_code, 0)
         collection = self.cache.load_collection(key1)
-        loaded_key = self.cache.read_key(key1)
 
         self.assertEqual(collection['0'].view(int), 0)
         self.assertEqual(collection['1'].view(int), 1)
-
-        self.assertEqual(loaded_key['order'],
-                         [{'0': str(collection['0'].uuid)},
-                          {'1': str(collection['1'].uuid)}])
+        self.assertEqual(list(collection.keys()), ['0', '1'])
 
         result = self._run_command(
             'dict-of-ints', '--i-ints', collection_out1, '--o-output',
@@ -331,14 +311,10 @@ class TestCacheCli(unittest.TestCase):
 
         self.assertEqual(result.exit_code, 0)
         collection = self.cache.load_collection(key2)
-        loaded_key = self.cache.read_key(key2)
 
         self.assertEqual(collection['0'].view(int), 0)
         self.assertEqual(collection['1'].view(int), 1)
-
-        self.assertEqual(loaded_key['order'],
-                         [{'0': str(collection['0'].uuid)},
-                          {'1': str(collection['1'].uuid)}])
+        self.assertEqual(list(collection.keys()), ['0', '1'])
 
     def test_de_facto_list(self):
         self.cache.save(self.art4, 'art4')
@@ -355,14 +331,10 @@ class TestCacheCli(unittest.TestCase):
 
         self.assertEqual(result.exit_code, 0)
         collection = self.cache.load_collection('output')
-        loaded_key = self.cache.read_key('output')
 
         self.assertEqual(collection['0'].view(int), 0)
         self.assertEqual(collection['1'].view(int), 1)
-
-        self.assertEqual(loaded_key['order'],
-                         [{'0': str(collection['0'].uuid)},
-                          {'1': str(collection['1'].uuid)}])
+        self.assertEqual(list(collection.keys()), ['0', '1'])
 
     def test_de_facto_dict_keyed(self):
         self.cache.save(self.art4, 'art4')
@@ -379,14 +351,10 @@ class TestCacheCli(unittest.TestCase):
 
         self.assertEqual(result.exit_code, 0)
         collection = self.cache.load_collection('output')
-        loaded_key = self.cache.read_key('output')
 
         self.assertEqual(collection['foo'].view(int), 0)
         self.assertEqual(collection['bar'].view(int), 1)
-
-        self.assertEqual(loaded_key['order'],
-                         [{'foo': str(collection['foo'].uuid)},
-                          {'bar': str(collection['bar'].uuid)}])
+        self.assertEqual(list(collection.keys()), ['foo', 'bar'])
 
     def test_de_facto_dict_unkeyed(self):
         self.cache.save(self.art4, 'art4')
@@ -403,14 +371,10 @@ class TestCacheCli(unittest.TestCase):
 
         self.assertEqual(result.exit_code, 0)
         collection = self.cache.load_collection('output')
-        loaded_key = self.cache.read_key('output')
 
         self.assertEqual(collection['0'].view(int), 0)
         self.assertEqual(collection['1'].view(int), 1)
-
-        self.assertEqual(loaded_key['order'],
-                         [{'0': str(collection['0'].uuid)},
-                          {'1': str(collection['1'].uuid)}])
+        self.assertEqual(list(collection.keys()), ['0', '1'])
 
     def test_mixed_cached_uncached_inputs(self):
         art4_path = os.path.join(self.tempdir, 'art4.qza')
@@ -428,14 +392,10 @@ class TestCacheCli(unittest.TestCase):
 
         self.assertEqual(result.exit_code, 0)
         collection = self.cache.load_collection('output')
-        loaded_key = self.cache.read_key('output')
 
         self.assertEqual(collection['0'].view(int), 0)
         self.assertEqual(collection['1'].view(int), 1)
-
-        self.assertEqual(loaded_key['order'],
-                         [{'0': str(collection['0'].uuid)},
-                          {'1': str(collection['1'].uuid)}])
+        self.assertEqual(list(collection.keys()), ['0', '1'])
 
         self.cache.remove('output')
 
@@ -446,14 +406,10 @@ class TestCacheCli(unittest.TestCase):
 
         self.assertEqual(result.exit_code, 0)
         collection = self.cache.load_collection('output')
-        loaded_key = self.cache.read_key('output')
 
         self.assertEqual(collection['foo'].view(int), 0)
         self.assertEqual(collection['bar'].view(int), 1)
-
-        self.assertEqual(loaded_key['order'],
-                         [{'foo': str(collection['foo'].uuid)},
-                          {'bar': str(collection['bar'].uuid)}])
+        self.assertEqual(list(collection.keys()), ['foo', 'bar'])
 
     def test_pipeline_resumption(self):
         FIRST_SPLIT = 'Plugin error from dummy-plugin:'
@@ -498,8 +454,6 @@ class TestCacheCli(unittest.TestCase):
         )
 
         self.assertEqual(result.exit_code, 0)
-        # Open the artifacts saved to output and assert they are aliases of
-        # what we picked apart from the exception
 
     def test_mixed_keyed_unkeyed_inputs(self):
         art4_uncached_path = os.path.join(self.tempdir, 'art4.qza')

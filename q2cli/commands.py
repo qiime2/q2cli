@@ -461,7 +461,10 @@ class ActionCommand(BaseCommandMixin, click.Command):
                     path = output
             else:
                 if isinstance(result, dict):
-                    path = self._save_collection(result, output)
+                    from qiime2.sdk import Result
+
+                    Result.save_collection(output, result)
+                    path = output
                 else:
                     path = result.save(output)
 
@@ -474,21 +477,6 @@ class ActionCommand(BaseCommandMixin, click.Command):
                 click.echo(
                     CONFIG.cfg_style('success', 'Saved %s to: %s' %
                                      (type, path)))
-
-    def _save_collection(self, output_collection, output_directory):
-        import os
-
-        # Click already errors if this is an existing directory, we do not need
-        # to explicitly check for that anywhere
-        os.makedirs(output_directory)
-
-        with open(os.path.join(output_directory, '.order'), 'w') as fh:
-            for key, value in output_collection.items():
-                path = os.path.join(output_directory, key)
-                value.save(path)
-                fh.write(f'{key}\n')
-
-        return output_directory
 
     def _order_outputs(self, outputs):
         ordered = []
