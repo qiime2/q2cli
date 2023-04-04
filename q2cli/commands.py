@@ -407,7 +407,7 @@ class ActionCommand(BaseCommandMixin, click.Command):
                 if recycle_pool is None:
                     results = action(**arguments)
                 else:
-                    if used_cache is not None and not\
+                    if used_cache is not None and not \
                             Cache.is_cache(used_cache):
                         raise ValueError(f"The path '{used_cache}' is not a "
                                          "valid cache, please supply a path "
