@@ -403,7 +403,7 @@ def _load_collection(fp):
     artifacts = {}
     order_fp = os.path.join(fp, '.order')
 
-    if os.path.exists(order_fp) and os.path.isfile(order_fp):
+    if os.path.isfile(order_fp):
         artifacts, error = _load_ordered_collection(fp, order_fp)
     else:
         warnings.warn(f'The directory {fp} does not contain a .order file. '
@@ -416,7 +416,7 @@ def _load_collection(fp):
             if error:
                 return None, error
 
-    return artifacts, None
+    return artifacts, error
 
 
 def _load_ordered_collection(fp, order_fp):
