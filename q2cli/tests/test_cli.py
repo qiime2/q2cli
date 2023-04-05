@@ -883,7 +883,7 @@ class TestCollectionSupport(unittest.TestCase):
 
         result = self._run_command(
             'dict-of-ints', '--i-ints', f'foo:{self.art1_path}', '--i-ints',
-            self.art2_path,'--o-output', self.output, '--verbose'
+            self.art2_path, '--o-output', self.output, '--verbose'
         )
 
         self.assertEqual(result.exit_code, 1)

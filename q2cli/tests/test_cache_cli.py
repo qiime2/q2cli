@@ -423,7 +423,7 @@ class TestCacheCli(unittest.TestCase):
 
         result = self._run_command(
             'dict-of-ints', '--i-ints', art4_path, '--i-ints',
-            art5_path,'--o-output', output, '--verbose'
+            art5_path, '--o-output', output, '--verbose'
         )
 
         self.assertEqual(result.exit_code, 0)
@@ -441,7 +441,7 @@ class TestCacheCli(unittest.TestCase):
 
         result = self._run_command(
             'dict-of-ints', '--i-ints', f'foo:{art4_path}', '--i-ints',
-            f'bar:{art5_path}','--o-output', output, '--verbose'
+            f'bar:{art5_path}', '--o-output', output, '--verbose'
         )
 
         self.assertEqual(result.exit_code, 0)
@@ -468,7 +468,7 @@ class TestCacheCli(unittest.TestCase):
 
         result = self._run_command(
             'dict-of-ints', '--i-ints', f'foo:{art4_path}', '--i-ints',
-            art5_path,'--o-output', output, '--verbose'
+            art5_path, '--o-output', output, '--verbose'
         )
 
         self.assertEqual(result.exit_code, 1)
@@ -477,7 +477,7 @@ class TestCacheCli(unittest.TestCase):
 
         result = self._run_command(
             'dict-of-ints', '--i-ints', f'foo:{art4_uncached_path}',
-            '--i-ints', art5_path,'--o-output', output, '--verbose'
+            '--i-ints', art5_path, '--o-output', output, '--verbose'
         )
 
         self.assertEqual(result.exit_code, 1)
@@ -486,7 +486,7 @@ class TestCacheCli(unittest.TestCase):
 
         result = self._run_command(
             'dict-of-ints', '--i-ints', f'foo:{art4_path}',
-            '--i-ints', art4_uncached_path,'--o-output', output, '--verbose'
+            '--i-ints', art4_uncached_path, '--o-output', output, '--verbose'
         )
 
         self.assertEqual(result.exit_code, 1)
