@@ -17,6 +17,7 @@ from qiime2 import Artifact
 from qiime2.core.testing.type import (IntSequence1, IntSequence2, Mapping,
                                       SingleInt)
 from qiime2.core.testing.util import get_dummy_plugin
+from qiime2.core.util import load_action_yaml
 from qiime2.core.cache import Cache
 
 from q2cli.commands import RootCommand
@@ -454,6 +455,18 @@ class TestCacheCli(unittest.TestCase):
         )
 
         self.assertEqual(result.exit_code, 0)
+
+        ints1_ret_fp = os.path.join(output, 'ints1_return')
+        ints2_ret_fp = os.path.join(output, 'ints2_return')
+        int1_ret_fp = os.path.join(output, 'int1_return.qza')
+        list_ret_fp = os.path.join(output, 'list_return')
+        dict_ret_fp = os.path.join(output, 'dict_return')
+
+        ints1_ret = Artifact.load_collection(ints1_ret_fp)
+        ints2_ret = Artifact.load_collection(ints2_ret_fp)
+        int1_ret = Artifact.load(int1_ret_fp)
+        list_ret = Artifact.load_collection(list_ret_fp)
+        dict_ret = Artifact.load_collection(dict_ret_fp)
 
     def test_mixed_keyed_unkeyed_inputs(self):
         art4_uncached_path = os.path.join(self.tempdir, 'art4.qza')
