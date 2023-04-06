@@ -302,6 +302,7 @@ def _load_metadata_artifact(fp):
     import sys
 
     artifact, error = _load_input(fp)
+    artifact = artifact[1]
     if isinstance(error, OutOfDisk):
         raise error
 
@@ -337,17 +338,48 @@ def _load_metadata_artifact(fp):
 def _load_input(fp, view=False):
     # Just initialize the plugin manager. This is slow and not necessary if we
     # called this from qiime tools view.
+    import os
+
+    key = None
+
     if not view:
         _ = get_plugin_manager()
 
-    if ':' in fp:
-        artifact, error = _load_input_cache(fp)
-        if error:
-            artifact, _ = _load_input_file(fp)
-            if artifact is not None:
-                error = None
-            # ignore this error (`_`), it was more likely
-            # a bad cache than an really weird filepath
+    # We are loading a collection from outside of a cache. This cannot be keyed
+    if os.path.isdir(fp):
+        if len(os.listdir(fp)) == 0:
+            raise ValueError(f"Provided directory '{fp}' is empty.")
+
+        artifact, error = _load_collection(fp)
+    # We may be loading something from a cache with or without and additional
+    # key, or we may be loading a piece of data from outside of a cache with a
+    # key. We could also be loading a normal unkeyed artifact with a : in its
+    # path
+    elif ':' in fp:
+        # First we assume this is just a weird filepath
+        artifact, _ = _load_input_file(fp)
+        # Then we check if it is a key:path
+        if artifact is None:
+            key, new_fp = _get_path_and_collection_key(fp)
+            artifact, _ = _load_input_file(new_fp)
+
+        # If we still have nothing
+        if artifact is None:
+            key = None
+            # We assume this is a cache:key. We keep this error because we
+            # assume if they had a : in their path they were trying to load
+            # something from a cache
+            artifact, error = _load_input_cache(fp)
+            if error:
+                # Then we check if it is a key:cache:key
+                key, new_fp = _get_path_and_collection_key(fp)
+                artifact, _ = _load_input_cache(new_fp)
+
+        # If we ended up with an artifact, we disregard our error
+        if artifact is not None:
+            error = None
+    # We are just loading a normal artifact on disk without silly colons in the
+    # filepath
     else:
         artifact, error = _load_input_file(fp)
 
@@ -361,7 +393,49 @@ def _load_input(fp, view=False):
                                f'setting $TMPDIR to a directory with more '
                                f'space, or increasing the size of {path!r})')
 
-    return artifact, error
+    return (key, artifact), error
+
+
+def _load_collection(fp):
+    import os
+    import warnings
+
+    artifacts = {}
+    order_fp = os.path.join(fp, '.order')
+
+    if os.path.isfile(order_fp):
+        artifacts, error = _load_ordered_collection(fp, order_fp)
+    else:
+        warnings.warn(f'The directory {fp} does not contain a .order file. '
+                      'The files will be read into the collection in the '
+                      'order the filesystem provides them in.')
+        for artifact in os.listdir(fp):
+            artifact_fp = os.path.join(fp, artifact)
+            artifacts[artifact], error = _load_input_file(artifact_fp)
+
+            if error:
+                return None, error
+
+    return artifacts, error
+
+
+def _load_ordered_collection(fp, order_fp):
+    import os
+
+    artifacts = {}
+
+    with open(order_fp) as order_fh:
+        for key in order_fh:
+            # Get rid of white space in key (it will probably have a trailing
+            # newline)
+            key = key.strip()
+            artifact_path = os.path.join(fp, f'{key}.qza')
+            artifacts[key], error = _load_input_file(artifact_path)
+
+            if error:
+                return None, error
+
+    return artifacts, None
 
 
 def _load_input_cache(fp):
@@ -376,11 +450,6 @@ def _load_input_cache(fp):
 
 def _load_input_file(fp):
     import qiime2.sdk
-    import os
-
-    if os.path.exists(fp) and os.path.isdir(fp):
-        return None, ValueError(
-            f"{fp!r} is a directory, not a QIIME 2 Artifact.")
 
     # test if valid
     peek = None
@@ -430,3 +499,7 @@ def try_as_cache_input(fp):
 
 def _get_cache_path_and_key(fp):
     return fp.rsplit(':', 1)
+
+
+def _get_path_and_collection_key(fp):
+    return fp.split(':', 1)
