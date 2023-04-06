@@ -25,6 +25,12 @@ from q2cli.builtin.tools import tools
 from q2cli.util import get_default_recycle_pool
 
 
+# What to split the errors raised by intentionally failed pipeline on to get
+# at the uuids needed for testing
+FIRST_SPLIT = 'Plugin error from dummy-plugin:\n\n  '
+SECOND_SPLIT = '\n\nSee above for debug info.'
+
+
 class TestCacheCli(unittest.TestCase):
     def setUp(self):
         get_dummy_plugin()
@@ -416,9 +422,6 @@ class TestCacheCli(unittest.TestCase):
         self.assertEqual(list(collection.keys()), ['foo', 'bar'])
 
     def test_pipeline_resumption_default(self):
-        FIRST_SPLIT = 'Plugin error from dummy-plugin:\n\n  '
-        SECOND_SPLIT = '\n\nSee above for debug info.'
-
         plugin_action = 'dummy_plugin_resumable_varied_pipeline'
         default_pool = get_default_recycle_pool(plugin_action)
         default_pool_fp = os.path.join(self.cache.pools, default_pool)
@@ -489,9 +492,6 @@ class TestCacheCli(unittest.TestCase):
         self.assertFalse(os.path.exists(default_pool_fp))
 
     def test_pipeline_resumption_different_arg(self):
-        FIRST_SPLIT = 'Plugin error from dummy-plugin:\n\n  '
-        SECOND_SPLIT = '\n\nSee above for debug info.'
-
         plugin_action = 'dummy_plugin_resumable_varied_pipeline'
         default_pool = get_default_recycle_pool(plugin_action)
         default_pool_fp = os.path.join(self.cache.pools, default_pool)
@@ -562,9 +562,6 @@ class TestCacheCli(unittest.TestCase):
         self.assertFalse(os.path.exists(default_pool_fp))
 
     def test_pipeline_resumption_different_pool(self):
-        FIRST_SPLIT = 'Plugin error from dummy-plugin:\n\n  '
-        SECOND_SPLIT = '\n\nSee above for debug info.'
-
         pool = 'pool'
         pool_fp = os.path.join(self.cache.pools, pool)
         output = os.path.join(self.tempdir, 'output')
@@ -673,6 +670,104 @@ class TestCacheCli(unittest.TestCase):
 
         # Assert that the pool is still here
         self.assertTrue(os.path.exists(pool_fp))
+
+    def test_pipeline_resumption_no_recycle(self):
+        plugin_action = 'dummy_plugin_resumable_varied_pipeline'
+        default_pool = get_default_recycle_pool(plugin_action)
+        default_pool_fp = os.path.join(self.cache.pools, default_pool)
+        output = os.path.join(self.tempdir, 'output')
+
+        self.cache.save_collection(self.ints1, 'ints1')
+        self.cache.save_collection(self.ints2, 'ints2')
+        self.cache.save(self.art4, 'int1')
+
+        ints1_path = str(self.cache.path) + ':ints1'
+        ints2_path = str(self.cache.path) + ':ints2'
+        int1_path = str(self.cache.path) + ':int1'
+
+        result = self._run_command(
+            'resumable-varied-pipeline', '--i-ints1', ints1_path, '--i-ints2',
+            ints2_path, '--i-int1', int1_path, '--p-string', 'Hi', '--p-fail',
+            'True', '--output-dir', output, '--use-cache',
+            str(self.cache.path), '--no-recycle', '--verbose'
+        )
+
+        self.assertEqual(result.exit_code, 1)
+        # Assert that the pool was not created
+        self.assertFalse(os.path.exists(default_pool_fp))
+
+        exception = result.output.split(FIRST_SPLIT)[-1]
+        exception = exception.split(SECOND_SPLIT)[0]
+
+        ints1_uuids, ints2_uuids, int1_uuid, list_uuids, dict_uuids = \
+            exception.split('_')
+
+        result = self._run_command(
+            'resumable-varied-pipeline', '--i-ints1', ints1_path, '--i-ints2',
+            ints2_path, '--i-int1', int1_path, '--p-string', 'Hi',
+            '--output-dir', output, '--use-cache', str(self.cache.path),
+            '--verbose'
+        )
+
+        self.assertEqual(result.exit_code, 0)
+
+        ints1_ret_fp = os.path.join(output, 'ints1_return')
+        ints2_ret_fp = os.path.join(output, 'ints2_return')
+        int1_ret_fp = os.path.join(output, 'int1_return.qza')
+        list_ret_fp = os.path.join(output, 'list_return')
+        dict_ret_fp = os.path.join(output, 'dict_return')
+
+        ints1_ret = Artifact.load_collection(ints1_ret_fp)
+        ints2_ret = Artifact.load_collection(ints2_ret_fp)
+        int1_ret = Artifact.load(int1_ret_fp)
+        list_ret = Artifact.load_collection(list_ret_fp)
+        dict_ret = Artifact.load_collection(dict_ret_fp)
+
+        complete_ints1_uuids = load_alias_uuids(ints1_ret)
+        complete_ints2_uuids = load_alias_uuids(ints2_ret)
+        complete_int1_uuid = load_action_yaml(
+            int1_ret._archiver.path)['action']['alias-of']
+        complete_list_uuids = load_alias_uuids(list_ret)
+        complete_dict_uuids = load_alias_uuids(dict_ret)
+
+        # Assert that the artifacts returned by the completed run of the
+        # pipeline are not aliases of the failed run because they did not
+        # recycle
+        self.assertNotEqual(ints1_uuids, str(complete_ints1_uuids))
+        self.assertNotEqual(ints2_uuids, str(complete_ints2_uuids))
+        self.assertNotEqual(int1_uuid, str(complete_int1_uuid))
+        self.assertNotEqual(list_uuids, str(complete_list_uuids))
+        self.assertNotEqual(dict_uuids, str(complete_dict_uuids))
+
+        # Assert that the pool was removed
+        self.assertFalse(os.path.exists(default_pool_fp))
+
+    def test_pipeline_resumption_no_recycle_and_recycle(self):
+        pool = 'pool'
+        pool_fp = os.path.join(self.cache.pools, pool)
+        output = os.path.join(self.tempdir, 'output')
+
+        self.cache.save_collection(self.ints1, 'ints1')
+        self.cache.save_collection(self.ints2, 'ints2')
+        self.cache.save(self.art4, 'int1')
+
+        ints1_path = str(self.cache.path) + ':ints1'
+        ints2_path = str(self.cache.path) + ':ints2'
+        int1_path = str(self.cache.path) + ':int1'
+
+        result = self._run_command(
+            'resumable-varied-pipeline', '--i-ints1', ints1_path, '--i-ints2',
+            ints2_path, '--i-int1', int1_path, '--p-string', 'Hi', '--p-fail',
+            'True', '--output-dir', output, '--use-cache',
+            str(self.cache.path), '--no-recycle', '--recycle', pool,
+            '--verbose'
+        )
+
+        self.assertEqual(result.exit_code, 1)
+        # Assert that the pool was not created
+        self.assertFalse(os.path.exists(pool_fp))
+        self.assertIn('Cannot set a pool to be used for recycling and no'
+                      ' recycle simultaneously.', str(result.exception))
 
     def test_mixed_keyed_unkeyed_inputs(self):
         art4_uncached_path = os.path.join(self.tempdir, 'art4.qza')
