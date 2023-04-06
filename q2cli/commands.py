@@ -242,7 +242,7 @@ class ActionCommand(BaseCommandMixin, click.Command):
                                   'without this parameter or the --no-recycle '
                                   'flag, QIIME will default to the pool '
                                   'recycle_<plugin>_<action>_<sha1 of '
-                                  '"plugin:action">'),
+                                  '"plugin_action">'),
                 click.Option(['--no-recycle'], is_flag=True, required=False,
                              help='Specifies that you do not want to attempt '
                                   'to recycle results from a previous failed '
@@ -309,10 +309,10 @@ class ActionCommand(BaseCommandMixin, click.Command):
     def __call__(self, **kwargs):
         """Called when user hits return, **kwargs are Dict[click_names, Obj]"""
         import os
-        from hashlib import sha1
 
         import qiime2.util
-        from q2cli.util import output_in_cache, _get_cache_path_and_key
+        from q2cli.util import (output_in_cache, _get_cache_path_and_key,
+                                get_default_recycle_pool)
         from qiime2.core.cache import Cache
 
         output_dir = kwargs.pop('output_dir')
@@ -370,13 +370,11 @@ class ActionCommand(BaseCommandMixin, click.Command):
         recycle_pool = None
         if not no_recycle and action.type == 'pipeline':
             # We implicitly use a pool named
-            # recycle_<plugin>_<action>_sha1(plugin:action) if no pool is
+            # recycle_<plugin>_<action>_sha1(plugin_action) if no pool is
             # provided
             if recycle is None:
-                plugin_action = f'{action.plugin_id}:{action.id}'
-                recycle_pool = \
-                    f'recycle_{action.plugin_id}_{action.id}_' \
-                    f'{sha1(plugin_action.encode("utf-8")).hexdigest()}'
+                plugin_acton = f'{action.plugin_id}_{action.id}'
+                recycle_pool = get_default_recycle_pool(plugin_acton)
             # Otherwise we use the pool they said to use with the --recycle
             # argument
             else:

@@ -511,3 +511,10 @@ def _get_cache_path_and_key(fp):
 
 def _get_path_and_collection_key(fp):
     return fp.split(':', 1)
+
+
+def get_default_recycle_pool(plugin_action):
+    from hashlib import sha1
+
+    return f'recycle_{plugin_action}_' \
+           f'{sha1(plugin_action.encode("utf-8")).hexdigest()}'
