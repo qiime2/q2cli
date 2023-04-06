@@ -424,11 +424,6 @@ class ActionCommand(BaseCommandMixin, click.Command):
             q2cli.util.exit_with_error(e, header=header, traceback=log)
         else:
             cleanup_logfile = True
-
-            # If we used a default pool and the action succeeded, then we need
-            # to clean up the pool.
-            if recycle_pool is not None and recycle is None:
-                cache.remove(recycle_pool)
         finally:
             # OS X will reap temporary files that haven't been touched in
             # 36 hours, double check that the log is still on the filesystem
@@ -475,6 +470,13 @@ class ActionCommand(BaseCommandMixin, click.Command):
                 click.echo(
                     CONFIG.cfg_style('success', 'Saved %s to: %s' %
                                      (type, path)))
+
+        # If we used a default recycle pool for a pipeline and the pipeline
+        # succeeded, then we need to clean up the pool. Make sure to do this at
+        # the very end so if a failure happens during writing results we still
+        # have them
+        if recycle_pool is not None and recycle is None:
+            cache.remove(recycle_pool)
 
     def _order_outputs(self, outputs):
         ordered = []
