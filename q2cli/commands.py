@@ -230,6 +230,30 @@ class ActionCommand(BaseCommandMixin, click.Command):
             q2cli.util.citations_option(self._get_citation_records)
         ]
 
+        # If this aciton is a pipeline it needs the --recycle and --no-recycle
+        # options.
+        action_obj = self._get_action()
+        if action_obj.type == 'pipeline':
+            self._misc.extend([
+                click.Option(['--recycle'], required=False,
+                             type=str,
+                             help='Allows you to specify a pool to use for '
+                                  'pipeline resumption. If you run a pipeline '
+                                  'without this parameter or the --no-recycle '
+                                  'flag, QIIME will default to the pool '
+                                  'recycle_<plugin>_<action>_<sha1 of '
+                                  '"plugin_action">'),
+                click.Option(['--no-recycle'], is_flag=True, required=False,
+                             help='Specifies that you do not want to attempt '
+                                  'to recycle results from a previous failed '
+                                  'pipeline run.'),
+                click.Option(['--use-cache'], required=False,
+                             type=click.Path(exists=True, file_okay=False),
+                             help='Allows you to specify a cache to be used '
+                                  'for pipeline resumption. Otherwise the '
+                                  'default cache under /$TMP/qiime2/<uname> '
+                                  'will be used.')])
+
         options = [*self._inputs, *self._params, *self._outputs, *self._misc]
         help_ = [action['description']]
         if self.action['deprecated']:
@@ -285,8 +309,10 @@ class ActionCommand(BaseCommandMixin, click.Command):
     def __call__(self, **kwargs):
         """Called when user hits return, **kwargs are Dict[click_names, Obj]"""
         import os
+
         import qiime2.util
-        from q2cli.util import output_in_cache, _get_cache_path_and_key
+        from q2cli.util import (output_in_cache, _get_cache_path_and_key,
+                                get_default_recycle_pool)
         from qiime2.core.cache import Cache
 
         output_dir = kwargs.pop('output_dir')
@@ -300,6 +326,15 @@ class ActionCommand(BaseCommandMixin, click.Command):
                 raise ValueError(f"The given output dir '{output_dir}' "
                                  "appears to be a cache:key combo. Cache keys "
                                  "cannot be used as output dirs.")
+
+        # Args pertaining to pipeline resumption
+        recycle = kwargs.pop('recycle', None)
+        no_recycle = kwargs.pop('no_recycle', False)
+        used_cache = kwargs.pop('use_cache', None)
+
+        if recycle is not None and no_recycle:
+            raise ValueError('Cannot set a pool to be used for recycling and '
+                             'no recycle simultaneously.')
 
         verbose = kwargs.pop('verbose')
         if verbose is None:
@@ -327,6 +362,24 @@ class ActionCommand(BaseCommandMixin, click.Command):
 
         outputs = self._order_outputs(init_outputs)
         action = self._get_action()
+
+        # If --no-recycle is not set, pipelines attempt to recycle their
+        # outputs from a pool by default allowing recovery of failed pipelines
+        # from point of failure without needing to restart the pipeline from
+        # the beginning
+        recycle_pool = None
+        if not no_recycle and action.type == 'pipeline':
+            # We implicitly use a pool named
+            # recycle_<plugin>_<action>_sha1(plugin_action) if no pool is
+            # provided
+            if recycle is None:
+                plugin_acton = f'{action.plugin_id}_{action.id}'
+                recycle_pool = get_default_recycle_pool(plugin_acton)
+            # Otherwise we use the pool they said to use with the --recycle
+            # argument
+            else:
+                recycle_pool = recycle
+
         # `qiime2.util.redirected_stdio` defaults to stdout/stderr when
         # supplied `None`.
         log = None
@@ -349,7 +402,19 @@ class ActionCommand(BaseCommandMixin, click.Command):
         cleanup_logfile = False
         try:
             with qiime2.util.redirected_stdio(stdout=log, stderr=log):
-                results = action(**arguments)
+                if recycle_pool is None:
+                    results = action(**arguments)
+                else:
+                    if used_cache is not None and not \
+                            Cache.is_cache(used_cache):
+                        raise ValueError(f"The path '{used_cache}' is not a "
+                                         "valid cache, please supply a path "
+                                         "to a valid pre-existing cache.")
+
+                    cache = Cache(path=used_cache)
+                    pool = cache.create_pool(key=recycle_pool, reuse=True)
+                    with pool:
+                        results = action(**arguments)
         except Exception as e:
             header = ('Plugin error from %s:'
                       % q2cli.util.to_cli_name(self.plugin['name']))
@@ -389,7 +454,10 @@ class ActionCommand(BaseCommandMixin, click.Command):
                     path = output
             else:
                 if isinstance(result, dict):
-                    path = self._save_collection(result, output)
+                    from qiime2.sdk import Result
+
+                    Result.save_collection(output, result)
+                    path = output
                 else:
                     path = result.save(output)
 
@@ -403,20 +471,12 @@ class ActionCommand(BaseCommandMixin, click.Command):
                     CONFIG.cfg_style('success', 'Saved %s to: %s' %
                                      (type, path)))
 
-    def _save_collection(self, output_collection, output_directory):
-        import os
-
-        # Click already errors if this is an existing directory, we do not need
-        # to explicitly check for that anywhere
-        os.makedirs(output_directory)
-
-        with open(os.path.join(output_directory, '.order'), 'w') as fh:
-            for key, value in output_collection.items():
-                path = os.path.join(output_directory, key)
-                value.save(path)
-                fh.write(f'{key}\n')
-
-        return output_directory
+        # If we used a default recycle pool for a pipeline and the pipeline
+        # succeeded, then we need to clean up the pool. Make sure to do this at
+        # the very end so if a failure happens during writing results we still
+        # have them
+        if recycle_pool is not None and recycle is None:
+            cache.remove(recycle_pool)
 
     def _order_outputs(self, outputs):
         ordered = []
