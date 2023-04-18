@@ -13,7 +13,6 @@ import unittest.mock
 import tempfile
 
 from click.testing import CliRunner
-from qiime2 import Artifact
 from qiime2.core.testing.type import (IntSequence1, IntSequence2, Mapping,
                                       SingleInt)
 from qiime2.core.testing.util import get_dummy_plugin
@@ -23,6 +22,7 @@ from qiime2.core.cache import Cache
 from q2cli.commands import RootCommand
 from q2cli.builtin.tools import tools
 from q2cli.util import get_default_recycle_pool
+from qiime2.sdk import Artifact, ResultCollection
 
 
 # What to split the errors raised by intentionally failed pipeline on to get
@@ -467,11 +467,11 @@ class TestCacheCli(unittest.TestCase):
         list_ret_fp = os.path.join(output, 'list_return')
         dict_ret_fp = os.path.join(output, 'dict_return')
 
-        ints1_ret = Artifact.load_collection(ints1_ret_fp)
-        ints2_ret = Artifact.load_collection(ints2_ret_fp)
+        ints1_ret = ResultCollection.load(ints1_ret_fp)
+        ints2_ret = ResultCollection.load(ints2_ret_fp)
         int1_ret = Artifact.load(int1_ret_fp)
-        list_ret = Artifact.load_collection(list_ret_fp)
-        dict_ret = Artifact.load_collection(dict_ret_fp)
+        list_ret = ResultCollection.load(list_ret_fp)
+        dict_ret = ResultCollection.load(dict_ret_fp)
 
         complete_ints1_uuids = load_alias_uuids(ints1_ret)
         complete_ints2_uuids = load_alias_uuids(ints2_ret)
@@ -537,11 +537,11 @@ class TestCacheCli(unittest.TestCase):
         list_ret_fp = os.path.join(output, 'list_return')
         dict_ret_fp = os.path.join(output, 'dict_return')
 
-        ints1_ret = Artifact.load_collection(ints1_ret_fp)
-        ints2_ret = Artifact.load_collection(ints2_ret_fp)
+        ints1_ret = ResultCollection.load(ints1_ret_fp)
+        ints2_ret = ResultCollection.load(ints2_ret_fp)
         int1_ret = Artifact.load(int1_ret_fp)
-        list_ret = Artifact.load_collection(list_ret_fp)
-        dict_ret = Artifact.load_collection(dict_ret_fp)
+        list_ret = ResultCollection.load(list_ret_fp)
+        dict_ret = ResultCollection.load(dict_ret_fp)
 
         complete_ints1_uuids = load_alias_uuids(ints1_ret)
         complete_ints2_uuids = load_alias_uuids(ints2_ret)
@@ -606,11 +606,11 @@ class TestCacheCli(unittest.TestCase):
         list_ret_fp = os.path.join(output, 'list_return')
         dict_ret_fp = os.path.join(output, 'dict_return')
 
-        ints1_ret = Artifact.load_collection(ints1_ret_fp)
-        ints2_ret = Artifact.load_collection(ints2_ret_fp)
+        ints1_ret = ResultCollection.load(ints1_ret_fp)
+        ints2_ret = ResultCollection.load(ints2_ret_fp)
         int1_ret = Artifact.load(int1_ret_fp)
-        list_ret = Artifact.load_collection(list_ret_fp)
-        dict_ret = Artifact.load_collection(dict_ret_fp)
+        list_ret = ResultCollection.load(list_ret_fp)
+        dict_ret = ResultCollection.load(dict_ret_fp)
 
         complete_ints1_uuids = load_alias_uuids(ints1_ret)
         complete_ints2_uuids = load_alias_uuids(ints2_ret)
@@ -647,11 +647,11 @@ class TestCacheCli(unittest.TestCase):
         list_ret_fp = os.path.join(output, 'list_return')
         dict_ret_fp = os.path.join(output, 'dict_return')
 
-        ints1_ret = Artifact.load_collection(ints1_ret_fp)
-        ints2_ret = Artifact.load_collection(ints2_ret_fp)
+        ints1_ret = ResultCollection.load(ints1_ret_fp)
+        ints2_ret = ResultCollection.load(ints2_ret_fp)
         int1_ret = Artifact.load(int1_ret_fp)
-        list_ret = Artifact.load_collection(list_ret_fp)
-        dict_ret = Artifact.load_collection(dict_ret_fp)
+        list_ret = ResultCollection.load(list_ret_fp)
+        dict_ret = ResultCollection.load(dict_ret_fp)
 
         complete_ints1_uuids = load_alias_uuids(ints1_ret)
         complete_ints2_uuids = load_alias_uuids(ints2_ret)
@@ -717,11 +717,11 @@ class TestCacheCli(unittest.TestCase):
         list_ret_fp = os.path.join(output, 'list_return')
         dict_ret_fp = os.path.join(output, 'dict_return')
 
-        ints1_ret = Artifact.load_collection(ints1_ret_fp)
-        ints2_ret = Artifact.load_collection(ints2_ret_fp)
+        ints1_ret = ResultCollection.load(ints1_ret_fp)
+        ints2_ret = ResultCollection.load(ints2_ret_fp)
         int1_ret = Artifact.load(int1_ret_fp)
-        list_ret = Artifact.load_collection(list_ret_fp)
-        dict_ret = Artifact.load_collection(dict_ret_fp)
+        list_ret = ResultCollection.load(list_ret_fp)
+        dict_ret = ResultCollection.load(dict_ret_fp)
 
         complete_ints1_uuids = load_alias_uuids(ints1_ret)
         complete_ints2_uuids = load_alias_uuids(ints2_ret)

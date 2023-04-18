@@ -314,6 +314,7 @@ class ActionCommand(BaseCommandMixin, click.Command):
         from q2cli.util import (output_in_cache, _get_cache_path_and_key,
                                 get_default_recycle_pool)
         from qiime2.core.cache import Cache
+        from qiime2.sdk import ResultCollection
 
         output_dir = kwargs.pop('output_dir')
         # If they gave us a cache and key combo as an output dir, we want to
@@ -446,24 +447,22 @@ class ActionCommand(BaseCommandMixin, click.Command):
                 cache_path, key = _get_cache_path_and_key(output)
                 cache = Cache(cache_path)
 
-                if isinstance(result, dict):
+                if isinstance(result, ResultCollection):
                     cache.save_collection(result, key)
                     path = output
                 else:
                     cache.save(result, key)
                     path = output
             else:
-                if isinstance(result, dict):
-                    from qiime2.sdk import Result
-
-                    Result.save_collection(output, result)
+                if isinstance(result, ResultCollection):
+                    result.save(output)
                     path = output
                 else:
                     path = result.save(output)
 
             if not quiet:
 
-                if isinstance(result, dict):
+                if isinstance(result, ResultCollection):
                     type = f'Collection[{list(result.values())[0].type}]'
                 else:
                     type = result.type
