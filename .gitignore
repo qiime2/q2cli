@@ -66,3 +66,6 @@ target/
 
 # Ignore .DS_Store files for Mac users
 .DS_Store
+
+#Parsl log
+runinfo
