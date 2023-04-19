@@ -225,6 +225,9 @@ class ActionCommand(BaseCommandMixin, click.Command):
                               'during execution of this action. Or silence '
                               'output if execution is successful (silence is '
                               'golden).'),
+            click.Option(['--parsl'], is_flag=True, required=False,
+                         help='Indicate that you want to execute your action '
+                              'with parsl.'),
             q2cli.util.example_data_option(
                 self._get_plugin, self.action['id']),
             q2cli.util.citations_option(self._get_citation_records)
@@ -337,6 +340,8 @@ class ActionCommand(BaseCommandMixin, click.Command):
             raise ValueError('Cannot set a pool to be used for recycling and '
                              'no recycle simultaneously.')
 
+        parsl = kwargs.pop('parsl', False)
+
         verbose = kwargs.pop('verbose')
         if verbose is None:
             verbose = False
@@ -403,6 +408,9 @@ class ActionCommand(BaseCommandMixin, click.Command):
         cleanup_logfile = False
         try:
             with qiime2.util.redirected_stdio(stdout=log, stderr=log):
+                if parsl:
+                    action = action.parsl
+
                 if recycle_pool is None:
                     results = action(**arguments)
                 else:
@@ -454,11 +462,7 @@ class ActionCommand(BaseCommandMixin, click.Command):
                     cache.save(result, key)
                     path = output
             else:
-                if isinstance(result, ResultCollection):
-                    result.save(output)
-                    path = output
-                else:
-                    path = result.save(output)
+                path = result.save(output)
 
             if not quiet:
 
