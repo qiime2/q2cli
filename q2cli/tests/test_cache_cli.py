@@ -504,6 +504,161 @@ class TestCacheCli(unittest.TestCase):
         # Assert that the pool was removed
         self.assertFalse(os.path.exists(default_pool_fp))
 
+    def test_pipeline_resumption_different_pool(self):
+        pool = 'pool'
+        pool_fp = os.path.join(self.cache.pools, pool)
+        output = os.path.join(self.tempdir, 'output')
+
+        self.cache.save_collection(self.ints1, 'ints1')
+        self.cache.save_collection(self.ints2, 'ints2')
+        self.cache.save(self.art4, 'int1')
+
+        ints1_path = str(self.cache.path) + ':ints1'
+        ints2_path = str(self.cache.path) + ':ints2'
+        int1_path = str(self.cache.path) + ':int1'
+
+        result = self._run_command(
+            'resumable-varied-pipeline', '--i-ints1', ints1_path, '--i-ints2',
+            ints2_path, '--i-int1', int1_path, '--p-string', 'Hi',
+            '--m-metadata-file', self.metadata, '--p-fail', 'True',
+            '--output-dir', output, '--recycle', pool, '--use-cache',
+            str(self.cache.path), '--verbose'
+        )
+
+        self.assertEqual(result.exit_code, 1)
+        # Assert that the pool exists
+        self.assertTrue(os.path.exists(pool_fp))
+
+        exception = result.output.split(FIRST_SPLIT)[-1]
+        exception = exception.split(SECOND_SPLIT)[0]
+
+        ints1_uuids, ints2_uuids, int1_uuid, list_uuids, dict_uuids, \
+            identity_uuid, viz_uuid = ast.literal_eval(exception)
+
+        result = self._run_command(
+            'resumable-varied-pipeline', '--i-ints1', ints1_path, '--i-ints2',
+            ints2_path, '--i-int1', int1_path, '--p-string', 'Hi',
+            '--m-metadata-file', self.metadata, '--output-dir', output,
+            '--recycle', pool, '--use-cache', str(self.cache.path), '--verbose'
+        )
+
+        self.assertEqual(result.exit_code, 0)
+
+        ints1_ret_fp = os.path.join(output, 'ints1_ret')
+        ints2_ret_fp = os.path.join(output, 'ints2_ret')
+        int1_ret_fp = os.path.join(output, 'int1_ret.qza')
+        list_ret_fp = os.path.join(output, 'list_ret')
+        dict_ret_fp = os.path.join(output, 'dict_ret')
+        identity_ret_fp = os.path.join(output, 'identity_ret.qza')
+        viz_ret_fp = os.path.join(output, 'viz.qzv')
+
+        ints1_ret = ResultCollection.load(ints1_ret_fp)
+        ints2_ret = ResultCollection.load(ints2_ret_fp)
+        int1_ret = Artifact.load(int1_ret_fp)
+        list_ret = ResultCollection.load(list_ret_fp)
+        dict_ret = ResultCollection.load(dict_ret_fp)
+        identity_ret = Artifact.load(identity_ret_fp)
+        viz_ret = Visualization.load(viz_ret_fp)
+
+        complete_ints1_uuids = load_alias_uuids(ints1_ret)
+        complete_ints2_uuids = load_alias_uuids(ints2_ret)
+        complete_int1_uuid = load_alias_uuid(int1_ret)
+        complete_list_uuids = load_alias_uuids(list_ret)
+        complete_dict_uuids = load_alias_uuids(dict_ret)
+        complete_identity_uuid = load_alias_uuid(identity_ret)
+        complete_viz_uuid = load_alias_uuid(viz_ret)
+
+        # Assert that the artifacts returned by the completed run of the
+        # pipeline are aliases of the artifacts created by the first failed run
+        self.assertEqual(ints1_uuids, complete_ints1_uuids)
+        self.assertEqual(ints2_uuids, complete_ints2_uuids)
+        self.assertEqual(int1_uuid, complete_int1_uuid)
+        self.assertEqual(list_uuids, complete_list_uuids)
+        self.assertEqual(dict_uuids, complete_dict_uuids)
+        self.assertEqual(identity_uuid, complete_identity_uuid)
+        self.assertEqual(viz_uuid, complete_viz_uuid)
+
+        # Assert that the pool is still there
+        self.assertTrue(os.path.exists(pool_fp))
+
+    def test_pipeline_resumption_no_recycle(self):
+        plugin_action = 'dummy_plugin_resumable_varied_pipeline'
+        default_pool = get_default_recycle_pool(plugin_action)
+        default_pool_fp = os.path.join(self.cache.pools, default_pool)
+        output = os.path.join(self.tempdir, 'output')
+
+        self.cache.save_collection(self.ints1, 'ints1')
+        self.cache.save_collection(self.ints2, 'ints2')
+        self.cache.save(self.art4, 'int1')
+
+        ints1_path = str(self.cache.path) + ':ints1'
+        ints2_path = str(self.cache.path) + ':ints2'
+        int1_path = str(self.cache.path) + ':int1'
+
+        result = self._run_command(
+            'resumable-varied-pipeline', '--i-ints1', ints1_path, '--i-ints2',
+            ints2_path, '--i-int1', int1_path, '--p-string', 'Hi',
+            '--m-metadata-file', self.metadata, '--p-fail', 'True',
+            '--output-dir', output, '--use-cache', str(self.cache.path),
+            '--no-recycle', '--verbose'
+        )
+
+        self.assertEqual(result.exit_code, 1)
+        # Assert that the pool was not created
+        self.assertFalse(os.path.exists(default_pool_fp))
+
+        exception = result.output.split(FIRST_SPLIT)[-1]
+        exception = exception.split(SECOND_SPLIT)[0]
+
+        ints1_uuids, ints2_uuids, int1_uuid, list_uuids, dict_uuids, \
+            identity_uuid, viz_uuid = ast.literal_eval(exception)
+
+        result = self._run_command(
+            'resumable-varied-pipeline', '--i-ints1', ints1_path, '--i-ints2',
+            ints2_path, '--i-int1', int1_path, '--p-string', 'Hi',
+            '--m-metadata-file', self.metadata, '--output-dir', output,
+            '--use-cache', str(self.cache.path), '--verbose'
+        )
+
+        self.assertEqual(result.exit_code, 0)
+
+        ints1_ret_fp = os.path.join(output, 'ints1_ret')
+        ints2_ret_fp = os.path.join(output, 'ints2_ret')
+        int1_ret_fp = os.path.join(output, 'int1_ret.qza')
+        list_ret_fp = os.path.join(output, 'list_ret')
+        dict_ret_fp = os.path.join(output, 'dict_ret')
+        identity_ret_fp = os.path.join(output, 'identity_ret.qza')
+        viz_ret_fp = os.path.join(output, 'viz.qzv')
+
+        ints1_ret = ResultCollection.load(ints1_ret_fp)
+        ints2_ret = ResultCollection.load(ints2_ret_fp)
+        int1_ret = Artifact.load(int1_ret_fp)
+        list_ret = ResultCollection.load(list_ret_fp)
+        dict_ret = ResultCollection.load(dict_ret_fp)
+        identity_ret = Artifact.load(identity_ret_fp)
+        viz_ret = Visualization.load(viz_ret_fp)
+
+        complete_ints1_uuids = load_alias_uuids(ints1_ret)
+        complete_ints2_uuids = load_alias_uuids(ints2_ret)
+        complete_int1_uuid = load_alias_uuid(int1_ret)
+        complete_list_uuids = load_alias_uuids(list_ret)
+        complete_dict_uuids = load_alias_uuids(dict_ret)
+        complete_identity_uuid = load_alias_uuid(identity_ret)
+        complete_viz_uuid = load_alias_uuid(viz_ret)
+
+        # Assert that the artifacts returned by the completed run of the
+        # pipeline are aliases of the artifacts created by the first failed run
+        self.assertNotEqual(ints1_uuids, complete_ints1_uuids)
+        self.assertNotEqual(ints2_uuids, complete_ints2_uuids)
+        self.assertNotEqual(int1_uuid, complete_int1_uuid)
+        self.assertNotEqual(list_uuids, complete_list_uuids)
+        self.assertNotEqual(dict_uuids, complete_dict_uuids)
+        self.assertNotEqual(identity_uuid, complete_identity_uuid)
+        self.assertNotEqual(viz_uuid, complete_viz_uuid)
+
+        # Assert that the pool was removed
+        self.assertFalse(os.path.exists(default_pool_fp))
+
     def test_mixed_keyed_unkeyed_inputs(self):
         art4_uncached_path = os.path.join(self.tempdir, 'art4.qza')
         self.art4.save(art4_uncached_path)
