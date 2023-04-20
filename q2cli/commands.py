@@ -252,7 +252,7 @@ class ActionCommand(BaseCommandMixin, click.Command):
                                   'pipeline resumption. If you run a pipeline '
                                   'without this parameter or the --no-recycle '
                                   'flag, QIIME will default to the pool '
-                                  'recycle_<plugin>_<action>_<sha1 of '
+                                  'recycle_<plugin>_<action>_<sha1> of '
                                   '"plugin_action">'),
                 click.Option(['--no-recycle'], is_flag=True, required=False,
                              help='Specifies that you do not want to attempt '
