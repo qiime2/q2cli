@@ -227,7 +227,15 @@ class ActionCommand(BaseCommandMixin, click.Command):
                               'golden).'),
             click.Option(['--parsl'], is_flag=True, required=False,
                          help='Indicate that you want to execute your action '
-                              'with parsl.'),
+                              'with parsl. This flag will check the following '
+                              'locations for a parsl config file then load a '
+                              'vendored default config located at X if it '
+                              'does not find a config elsewhere.'),
+            click.Option(['--parsl-config'], required=False,
+                         type=click.Path(exists=True, dir_okay=False),
+                         help='Indicate that you want to execute your action '
+                              'with parsl using a config at the indicated '
+                              'path.'),
             q2cli.util.example_data_option(
                 self._get_plugin, self.action['id']),
             q2cli.util.citations_option(self._get_citation_records)
@@ -341,6 +349,17 @@ class ActionCommand(BaseCommandMixin, click.Command):
                              'no recycle simultaneously.')
 
         parsl = kwargs.pop('parsl', False)
+        parsl_config_fp = kwargs.pop('parsl_config', None)
+
+        if parsl and parsl_config_fp is not None:
+            raise ValueError('Cannot use both --parsl and --parsl-config. '
+                             'Use --parsl if you want to use a parsl config '
+                             'at a pre-defined location or the vendorered '
+                             'default. Use --parsl-config if you want to pass '
+                             'in a path to a parsl config.')
+
+        if parsl_config_fp is not None:
+            parsl = True
 
         verbose = kwargs.pop('verbose')
         if verbose is None:
