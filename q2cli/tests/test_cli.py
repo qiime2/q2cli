@@ -916,10 +916,13 @@ class TestCollectionSupport(unittest.TestCase):
             self.output, '--verbose'
         )
 
-        print(result.output)
         self.assertEqual(result.exit_code, 1)
         self.assertIn(f"Provided directory '{self.tempdir}' is empty.",
                       result.output)
+
+
+class TestPipelineResumption(unittest.TestCase):
+    pass
 
 
 if __name__ == "__main__":

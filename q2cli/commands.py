@@ -359,7 +359,9 @@ class ActionCommand(BaseCommandMixin, click.Command):
                              'in a path to a parsl config.')
 
         if parsl_config_fp is not None:
+            from qiime2.sdk.parsl_config import setup_parsl
             parsl = True
+            setup_parsl(parsl_config_fp)
 
         verbose = kwargs.pop('verbose')
         if verbose is None:
@@ -398,8 +400,8 @@ class ActionCommand(BaseCommandMixin, click.Command):
             # recycle_<plugin>_<action>_sha1(plugin_action) if no pool is
             # provided
             if recycle is None:
-                plugin_acton = f'{action.plugin_id}_{action.id}'
-                recycle_pool = get_default_recycle_pool(plugin_acton)
+                plugin_action = f'{action.plugin_id}_{action.id}'
+                recycle_pool = get_default_recycle_pool(plugin_action)
             # Otherwise we use the pool they said to use with the --recycle
             # argument
             else:
@@ -443,6 +445,9 @@ class ActionCommand(BaseCommandMixin, click.Command):
                     pool = cache.create_pool(key=recycle_pool, reuse=True)
                     with pool:
                         results = action(**arguments)
+
+                        if parsl:
+                            results = results.result()
         except Exception as e:
             header = ('Plugin error from %s:'
                       % q2cli.util.to_cli_name(self.plugin['name']))
