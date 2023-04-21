@@ -446,6 +446,10 @@ class ActionCommand(BaseCommandMixin, click.Command):
                     with pool:
                         results = action(**arguments)
 
+                        # If we executed in a pool using parsl we need to get
+                        # our results inside of the context manager to ensure
+                        # that the pool is set for the entirety of the
+                        # execution
                         if parsl:
                             results = results.result()
         except Exception as e:
