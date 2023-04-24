@@ -12,6 +12,7 @@ import os.path
 import unittest
 import unittest.mock
 import tempfile
+import pkg_resources
 
 from click.testing import CliRunner
 from qiime2.core.testing.type import (IntSequence1, IntSequence2, Mapping,
@@ -24,12 +25,17 @@ from q2cli.commands import RootCommand
 from q2cli.builtin.tools import tools
 from q2cli.util import get_default_recycle_pool
 from qiime2.sdk import Artifact, Visualization, ResultCollection
+from qiime2.sdk.parsl_config import PARSL_CONFIG
 
 
 # What to split the errors raised by intentionally failed pipeline on to get
 # at the uuids needed for testing
 FIRST_SPLIT = 'Plugin error from dummy-plugin:\n\n  '
 SECOND_SPLIT = '\n\nSee above for debug info.'
+
+
+def get_data_path(filename):
+    return pkg_resources.resource_filename('q2cli.tests', 'data/%s' % filename)
 
 
 class TestCacheCli(unittest.TestCase):
@@ -57,6 +63,10 @@ class TestCacheCli(unittest.TestCase):
 
         self.non_cache_output = os.path.join(self.tempdir, 'output.qza')
         self.art3_non_cache = os.path.join(self.tempdir, 'art3.qza')
+
+        # Ensure default state prior to test
+        PARSL_CONFIG.parsl_config = None
+        PARSL_CONFIG.action_executor_mapping = {}
 
     def tearDown(self):
         shutil.rmtree(self.tempdir)
@@ -781,6 +791,120 @@ class TestCacheCli(unittest.TestCase):
         self.assertIn(
             'Cache keys cannot be used as output dirs.', str(result.exception))
 
+    def test_parsl(self):
+        output = os.path.join(self.tempdir, 'output')
+
+        self.cache.save_collection(self.ints1, 'ints1')
+        ints1_path = str(self.cache.path) + ':ints1'
+
+        result = self._run_command(
+            'resumable-collection-pipeline', '--i-int-list', ints1_path,
+            '--i-int-dict', ints1_path, '--output-dir', output, '--use-cache',
+            str(self.cache.path), '--verbose', '--parsl'
+        )
+
+        self.assertEqual(result.exit_code, 0)
+
+        list_return = ResultCollection.load(
+            os.path.join(output, 'list_return'))
+        dict_return = ResultCollection.load(
+            os.path.join(output, 'dict_return'))
+
+        list_execution_contexts = self._load_alias_execution_contexts(
+            list_return)
+        dict_execution_contexts = self._load_alias_execution_contexts(
+            dict_return)
+
+        expected = [{
+            'type': 'parsl',
+            'parsl_type':
+            "<class 'parsl.executors.high_throughput.executor."
+            "HighThroughputExecutor'>"}, {
+            'type': 'parsl',
+            'parsl_type':
+            "<class 'parsl.executors.high_throughput.executor."
+            "HighThroughputExecutor'>"}]
+
+        self.assertEqual(list_execution_contexts, expected)
+        self.assertEqual(dict_execution_contexts, expected)
+
+    def test_config_parsl(self):
+        output = os.path.join(self.tempdir, 'output')
+
+        self.cache.save_collection(self.ints1, 'ints1')
+        ints1_path = str(self.cache.path) + ':ints1'
+
+        config_path = get_data_path('mapping_config.toml')
+
+        result = self._run_command(
+            'resumable-collection-pipeline', '--i-int-list', ints1_path,
+            '--i-int-dict', ints1_path, '--output-dir', output, '--use-cache',
+            str(self.cache.path), '--verbose', '--parsl-config', config_path
+        )
+
+        self.assertEqual(result.exit_code, 0)
+
+        list_return = ResultCollection.load(
+            os.path.join(output, 'list_return'))
+        dict_return = ResultCollection.load(
+            os.path.join(output, 'dict_return'))
+
+        list_execution_contexts = self._load_alias_execution_contexts(
+            list_return)
+        dict_execution_contexts = self._load_alias_execution_contexts(
+            dict_return)
+
+        list_expected = [{
+            'type': 'parsl',
+            'parsl_type':
+            "<class 'parsl.executors.threads.ThreadPoolExecutor'>"}, {
+            'type': 'parsl',
+            'parsl_type':
+            "<class 'parsl.executors.threads.ThreadPoolExecutor'>"}]
+        dict_expected = [{
+            'type': 'parsl',
+            'parsl_type':
+            "<class 'parsl.executors.high_throughput.executor."
+            "HighThroughputExecutor'>"}, {
+            'type': 'parsl',
+            'parsl_type':
+            "<class 'parsl.executors.high_throughput.executor."
+            "HighThroughputExecutor'>"}]
+
+        self.assertEqual(list_execution_contexts, list_expected)
+        self.assertEqual(dict_execution_contexts, dict_expected)
+
+    def test_both_parsl_flags(self):
+        output = os.path.join(self.tempdir, 'output')
+
+        self.cache.save_collection(self.ints1, 'ints1')
+        ints1_path = str(self.cache.path) + ':ints1'
+
+        config_path = get_data_path('mapping_config.toml')
+
+        result = self._run_command(
+            'resumable-collection-pipeline', '--i-int-list', ints1_path,
+            '--i-int-dict', ints1_path, '--output-dir', output, '--use-cache',
+            str(self.cache.path), '--verbose', '--parsl', '--parsl-config',
+            config_path
+        )
+
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn('Cannot use both --parsl and --parsl-config',
+                      str(result.exception))
+
+    def _load_alias_execution_contexts(self, collection):
+        execution_contexts = []
+
+        for result in collection.values():
+            alias_uuid = load_action_yaml(
+                result._archiver.path)['action']['alias-of']
+            execution_contexts.append(load_action_yaml(
+                self.cache.data / alias_uuid)
+                ['execution']['execution_context'])
+
+        return execution_contexts
+
 
 def load_alias_uuid(result):
     return load_action_yaml(result._archiver.path)['action']['alias-of']
@@ -794,6 +918,19 @@ def load_alias_uuids(collection):
             artifact._archiver.path)['action']['alias-of'])
 
     return uuids
+
+
+def _load_alias_execution_contexts(self, collection):
+    execution_contexts = []
+
+    for result in collection.values():
+        alias_uuid = load_action_yaml(
+            result._archiver.path)['action']['alias-of']
+        execution_contexts.append(load_action_yaml(
+            self.cache.data / alias_uuid)
+            ['execution']['execution_context'])
+
+    return execution_contexts
 
 
 if __name__ == "__main__":
