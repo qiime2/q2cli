@@ -906,7 +906,7 @@ class TestCollectionSupport(unittest.TestCase):
             self.output, '--verbose'
         )
 
-        self.assertEquals(result.exit_code, 1)
+        self.assertEqual(result.exit_code, 1)
         self.assertIn("Invalid value for '--i-ints':", result.output)
 
     # TODO: Actually, do we want to accept empty directories?
