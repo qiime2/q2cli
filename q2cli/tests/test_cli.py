@@ -921,9 +921,5 @@ class TestCollectionSupport(unittest.TestCase):
                       result.output)
 
 
-class TestPipelineResumption(unittest.TestCase):
-    pass
-
-
 if __name__ == "__main__":
     unittest.main()
