@@ -798,7 +798,7 @@ class TestCacheCli(unittest.TestCase):
         ints1_path = str(self.cache.path) + ':ints1'
 
         result = self._run_command(
-            'resumable-collection-pipeline', '--i-int-list', ints1_path,
+            'resumable-pipeline', '--i-int-list', ints1_path,
             '--i-int-dict', ints1_path, '--output-dir', output, '--use-cache',
             str(self.cache.path), '--verbose', '--parsl'
         )
@@ -837,7 +837,7 @@ class TestCacheCli(unittest.TestCase):
         config_path = get_data_path('mapping_config.toml')
 
         result = self._run_command(
-            'resumable-collection-pipeline', '--i-int-list', ints1_path,
+            'resumable-pipeline', '--i-int-list', ints1_path,
             '--i-int-dict', ints1_path, '--output-dir', output, '--use-cache',
             str(self.cache.path), '--verbose', '--parsl-config', config_path
         )
@@ -883,7 +883,7 @@ class TestCacheCli(unittest.TestCase):
         config_path = get_data_path('mapping_config.toml')
 
         result = self._run_command(
-            'resumable-collection-pipeline', '--i-int-list', ints1_path,
+            'resumable-pipeline', '--i-int-list', ints1_path,
             '--i-int-dict', ints1_path, '--output-dir', output, '--use-cache',
             str(self.cache.path), '--verbose', '--parsl', '--parsl-config',
             config_path
