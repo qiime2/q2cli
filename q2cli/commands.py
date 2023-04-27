@@ -426,6 +426,7 @@ class ActionCommand(BaseCommandMixin, click.Command):
 
                 if recycle_pool is None:
                     results = action(**arguments)
+                    results = results.result()
                 else:
                     if used_cache is not None and not \
                             Cache.is_cache(used_cache):
@@ -442,8 +443,7 @@ class ActionCommand(BaseCommandMixin, click.Command):
                         # our results inside of the context manager to ensure
                         # that the pool is set for the entirety of the
                         # execution
-                        if parsl:
-                            results = results.result()
+                        results = results.result()
         except Exception as e:
             header = ('Plugin error from %s:'
                       % q2cli.util.to_cli_name(self.plugin['name']))
