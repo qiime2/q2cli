@@ -227,10 +227,9 @@ class ActionCommand(BaseCommandMixin, click.Command):
                               'golden).'),
             click.Option(['--parsl'], is_flag=True, required=False,
                          help='Indicate that you want to execute your action '
-                              'with parsl. This flag will check the following '
-                              'locations for a parsl config file then load a '
-                              'vendored default config located at X if it '
-                              'does not find a config elsewhere.'),
+                              'with parsl. This flag will check in the '
+                              'following pre-defined locations for a parsl '
+                              'config:\n\n1. It will'),
             click.Option(['--parsl-config'], required=False,
                          type=click.Path(exists=True, dir_okay=False),
                          help='Indicate that you want to execute your action '
@@ -350,13 +349,6 @@ class ActionCommand(BaseCommandMixin, click.Command):
 
         parsl = kwargs.pop('parsl', False)
         parsl_config_fp = kwargs.pop('parsl_config', None)
-
-        if parsl and parsl_config_fp is not None:
-            raise ValueError('Cannot use both --parsl and --parsl-config. '
-                             'Use --parsl if you want to use a parsl config '
-                             'at a pre-defined location or the vendorered '
-                             'default. Use --parsl-config if you want to pass '
-                             'in a path to a parsl config.')
 
         if parsl_config_fp is not None:
             from qiime2.sdk.parsl_config import setup_parsl

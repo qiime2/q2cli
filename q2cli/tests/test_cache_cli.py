@@ -890,9 +890,40 @@ class TestCacheCli(unittest.TestCase):
             config_path
         )
 
-        self.assertEqual(result.exit_code, 1)
-        self.assertIn('Cannot use both --parsl and --parsl-config',
-                      str(result.exception))
+        self.assertEqual(result.exit_code, 0)
+
+        list_return = ResultCollection.load(
+            os.path.join(output, 'list_return'))
+        dict_return = ResultCollection.load(
+            os.path.join(output, 'dict_return'))
+
+        list_execution_contexts = self._load_alias_execution_contexts(
+            list_return)
+        dict_execution_contexts = self._load_alias_execution_contexts(
+            dict_return)
+
+        # The explicit config should override the default
+        list_expected = [{
+            'type': 'parsl',
+            'parsl_type':
+            "<class 'parsl.executors.high_throughput.executor."
+            "HighThroughputExecutor'>"}, {
+            'type': 'parsl',
+            'parsl_type':
+            "<class 'parsl.executors.high_throughput.executor."
+            "HighThroughputExecutor'>"
+        }]
+        dict_expected = [{
+            'type': 'parsl',
+            'parsl_type':
+            "<class 'parsl.executors.threads.ThreadPoolExecutor'>"}, {
+            'type': 'parsl',
+            'parsl_type':
+            "<class 'parsl.executors.threads.ThreadPoolExecutor'>"
+        }]
+
+        self.assertEqual(list_execution_contexts, list_expected)
+        self.assertEqual(dict_execution_contexts, dict_expected)
 
     def _load_alias_execution_contexts(self, collection):
         execution_contexts = []
