@@ -816,12 +816,8 @@ class TestCacheCli(unittest.TestCase):
             dict_return)
 
         expected = [{
-            'type': 'parsl',
-            'parsl_type':
-            "<class 'parsl.executors.threads.ThreadPoolExecutor'>"}, {
-            'type': 'parsl',
-            'parsl_type':
-            "<class 'parsl.executors.threads.ThreadPoolExecutor'>"
+            'type': 'parsl', 'parsl_type': 'ThreadPoolExecutor'}, {
+            'type': 'parsl', 'parsl_type': 'ThreadPoolExecutor'
         }]
 
         self.assertEqual(list_execution_contexts, expected)
@@ -854,22 +850,12 @@ class TestCacheCli(unittest.TestCase):
             dict_return)
 
         list_expected = [{
-            'type': 'parsl',
-            'parsl_type':
-            "<class 'parsl.executors.high_throughput.executor."
-            "HighThroughputExecutor'>"}, {
-            'type': 'parsl',
-            'parsl_type':
-            "<class 'parsl.executors.high_throughput.executor."
-            "HighThroughputExecutor'>"
+            'type': 'parsl', 'parsl_type': 'HighThroughputExecutor'}, {
+            'type': 'parsl', 'parsl_type': 'HighThroughputExecutor'
         }]
         dict_expected = [{
-            'type': 'parsl',
-            'parsl_type':
-            "<class 'parsl.executors.threads.ThreadPoolExecutor'>"}, {
-            'type': 'parsl',
-            'parsl_type':
-            "<class 'parsl.executors.threads.ThreadPoolExecutor'>"
+            'type': 'parsl', 'parsl_type': 'ThreadPoolExecutor'}, {
+            'type': 'parsl', 'parsl_type': 'ThreadPoolExecutor'
         }]
 
         self.assertEqual(list_execution_contexts, list_expected)
@@ -904,22 +890,12 @@ class TestCacheCli(unittest.TestCase):
 
         # The explicit config should override the default
         list_expected = [{
-            'type': 'parsl',
-            'parsl_type':
-            "<class 'parsl.executors.high_throughput.executor."
-            "HighThroughputExecutor'>"}, {
-            'type': 'parsl',
-            'parsl_type':
-            "<class 'parsl.executors.high_throughput.executor."
-            "HighThroughputExecutor'>"
+            'type': 'parsl', 'parsl_type': 'HighThroughputExecutor'}, {
+            'type': 'parsl', 'parsl_type': 'HighThroughputExecutor'
         }]
         dict_expected = [{
-            'type': 'parsl',
-            'parsl_type':
-            "<class 'parsl.executors.threads.ThreadPoolExecutor'>"}, {
-            'type': 'parsl',
-            'parsl_type':
-            "<class 'parsl.executors.threads.ThreadPoolExecutor'>"
+            'type': 'parsl', 'parsl_type': 'ThreadPoolExecutor'}, {
+            'type': 'parsl', 'parsl_type': 'ThreadPoolExecutor'
         }]
 
         self.assertEqual(list_execution_contexts, list_expected)
