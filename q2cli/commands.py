@@ -229,7 +229,21 @@ class ActionCommand(BaseCommandMixin, click.Command):
                          help='Indicate that you want to execute your action '
                               'with parsl. This flag will check in the '
                               'following pre-defined locations for a parsl '
-                              'config:\n\n1. It will'),
+                              'config:'
+                              '\n\n1. It will check for a file at the '
+                              'filepath set by the QIIME2_CONFIG environment '
+                              'variable.'
+                              '\n\n2. It will check for a file at '
+                              'appdirs.user_config_dir(qiime2)/'
+                              'qiime2_config.toml.'
+                              '\n\n3. It will check for a file at '
+                              'appdirs.site_config_dir(qiime2)/'
+                              'qiime2_config.toml.'
+                              '\n\n4. It will check for a file at '
+                              '$CONDA_PREIFX/etc/qiime2_config.toml'
+                              '\n\n5. If none of the others are found, it '
+                              'will write the default config to $CONDA_PREFIX/'
+                              'etc/qiime2_config.toml and use that.'),
             click.Option(['--parsl-config'], required=False,
                          type=click.Path(exists=True, dir_okay=False),
                          help='Indicate that you want to execute your action '
