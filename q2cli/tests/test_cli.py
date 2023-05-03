@@ -15,10 +15,10 @@ import click
 import errno
 
 from click.testing import CliRunner
-from qiime2 import Artifact, Visualization
 from qiime2.core.cache import get_cache
 from qiime2.core.testing.type import IntSequence1, IntSequence2, SingleInt
 from qiime2.core.testing.util import get_dummy_plugin
+from qiime2.sdk import Artifact, Visualization, ResultCollection
 
 from q2cli.builtin.info import info
 from q2cli.builtin.tools import tools
@@ -734,7 +734,7 @@ class TestCollectionSupport(unittest.TestCase):
         )
 
         self.assertEqual(result.exit_code, 0)
-        collection = Artifact.load_collection(self.output)
+        collection = ResultCollection.load(self.output)
 
         self.assertEqual(collection['0'].view(int), 0)
         self.assertEqual(collection['1'].view(int), 1)
@@ -756,7 +756,7 @@ class TestCollectionSupport(unittest.TestCase):
         )
 
         self.assertEqual(result.exit_code, 0)
-        collection = Artifact.load_collection(self.output)
+        collection = ResultCollection.load(self.output)
 
         self.assertEqual(collection['foo'].view(int), 0)
         self.assertEqual(collection['bar'].view(int), 1)
@@ -768,7 +768,7 @@ class TestCollectionSupport(unittest.TestCase):
         )
 
         self.assertEqual(result.exit_code, 0)
-        collection = Artifact.load_collection(self.output)
+        collection = ResultCollection.load(self.output)
 
         self.assertEqual(collection['foo'].view(int), 0)
         self.assertEqual(collection['bar'].view(int), 1)
@@ -781,7 +781,7 @@ class TestCollectionSupport(unittest.TestCase):
         )
 
         self.assertEqual(result.exit_code, 0)
-        collection = Artifact.load_collection(self.output)
+        collection = ResultCollection.load(self.output)
 
         self.assertEqual(collection['0'].view(int), 0)
         self.assertEqual(collection['1'].view(int), 1)
@@ -793,7 +793,7 @@ class TestCollectionSupport(unittest.TestCase):
         )
 
         self.assertEqual(result.exit_code, 0)
-        collection = Artifact.load_collection(self.output)
+        collection = ResultCollection.load(self.output)
 
         self.assertEqual(collection['0'].view(int), 0)
         self.assertEqual(collection['1'].view(int), 1)
@@ -809,7 +809,7 @@ class TestCollectionSupport(unittest.TestCase):
         )
 
         self.assertEqual(result.exit_code, 0)
-        collection = Artifact.load_collection(self.output)
+        collection = ResultCollection.load(self.output)
 
         self.assertEqual(collection['0'].view(int), 0)
         self.assertEqual(collection['1'].view(int), 1)
@@ -825,7 +825,7 @@ class TestCollectionSupport(unittest.TestCase):
         )
 
         self.assertEqual(result.exit_code, 0)
-        collection = Artifact.load_collection(self.output)
+        collection = ResultCollection.load(self.output)
 
         self.assertEqual(collection['foo'].view(int), 0)
         self.assertEqual(collection['bar'].view(int), 1)
@@ -841,7 +841,7 @@ class TestCollectionSupport(unittest.TestCase):
         )
 
         self.assertEqual(result.exit_code, 0)
-        collection = Artifact.load_collection(self.output)
+        collection = ResultCollection.load(self.output)
 
         self.assertEqual(collection['0'].view(int), 0)
         self.assertEqual(collection['1'].view(int), 1)
@@ -906,7 +906,7 @@ class TestCollectionSupport(unittest.TestCase):
             self.output, '--verbose'
         )
 
-        self.assertEquals(result.exit_code, 1)
+        self.assertEqual(result.exit_code, 1)
         self.assertIn("Invalid value for '--i-ints':", result.output)
 
     # TODO: Actually, do we want to accept empty directories?
@@ -916,7 +916,6 @@ class TestCollectionSupport(unittest.TestCase):
             self.output, '--verbose'
         )
 
-        print(result.output)
         self.assertEqual(result.exit_code, 1)
         self.assertIn(f"Provided directory '{self.tempdir}' is empty.",
                       result.output)

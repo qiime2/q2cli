@@ -225,6 +225,15 @@ class ActionCommand(BaseCommandMixin, click.Command):
                               'during execution of this action. Or silence '
                               'output if execution is successful (silence is '
                               'golden).'),
+            click.Option(['--parsl'], is_flag=True, required=False,
+                         help='Indicate that you want to execute your action '
+                              'with parsl. This flag will use a vendored '
+                              'parsl config.'),
+            click.Option(['--parsl-config'], required=False,
+                         type=click.Path(exists=True, dir_okay=False),
+                         help='Indicate that you want to execute your action '
+                              'with parsl using a config at the indicated '
+                              'path.'),
             q2cli.util.example_data_option(
                 self._get_plugin, self.action['id']),
             q2cli.util.citations_option(self._get_citation_records)
@@ -241,7 +250,7 @@ class ActionCommand(BaseCommandMixin, click.Command):
                                   'pipeline resumption. If you run a pipeline '
                                   'without this parameter or the --no-recycle '
                                   'flag, QIIME will default to the pool '
-                                  'recycle_<plugin>_<action>_<sha1 of '
+                                  'recycle_<plugin>_<action>_<sha1> of '
                                   '"plugin_action">'),
                 click.Option(['--no-recycle'], is_flag=True, required=False,
                              help='Specifies that you do not want to attempt '
@@ -314,6 +323,7 @@ class ActionCommand(BaseCommandMixin, click.Command):
         from q2cli.util import (output_in_cache, _get_cache_path_and_key,
                                 get_default_recycle_pool)
         from qiime2.core.cache import Cache
+        from qiime2.sdk import ResultCollection
 
         output_dir = kwargs.pop('output_dir')
         # If they gave us a cache and key combo as an output dir, we want to
@@ -335,6 +345,14 @@ class ActionCommand(BaseCommandMixin, click.Command):
         if recycle is not None and no_recycle:
             raise ValueError('Cannot set a pool to be used for recycling and '
                              'no recycle simultaneously.')
+
+        parsl = kwargs.pop('parsl', False)
+        parsl_config_fp = kwargs.pop('parsl_config', None)
+
+        if parsl_config_fp is not None:
+            from qiime2.sdk.parsl_config import setup_parsl
+            parsl = True
+            setup_parsl(parsl_config_fp)
 
         verbose = kwargs.pop('verbose')
         if verbose is None:
@@ -373,8 +391,8 @@ class ActionCommand(BaseCommandMixin, click.Command):
             # recycle_<plugin>_<action>_sha1(plugin_action) if no pool is
             # provided
             if recycle is None:
-                plugin_acton = f'{action.plugin_id}_{action.id}'
-                recycle_pool = get_default_recycle_pool(plugin_acton)
+                plugin_action = f'{action.plugin_id}_{action.id}'
+                recycle_pool = get_default_recycle_pool(plugin_action)
             # Otherwise we use the pool they said to use with the --recycle
             # argument
             else:
@@ -402,8 +420,12 @@ class ActionCommand(BaseCommandMixin, click.Command):
         cleanup_logfile = False
         try:
             with qiime2.util.redirected_stdio(stdout=log, stderr=log):
+                if parsl:
+                    action = action.parsl
+
                 if recycle_pool is None:
                     results = action(**arguments)
+                    results = results._result()
                 else:
                     if used_cache is not None and not \
                             Cache.is_cache(used_cache):
@@ -415,6 +437,12 @@ class ActionCommand(BaseCommandMixin, click.Command):
                     pool = cache.create_pool(key=recycle_pool, reuse=True)
                     with pool:
                         results = action(**arguments)
+
+                        # If we executed in a pool using parsl we need to get
+                        # our results inside of the context manager to ensure
+                        # that the pool is set for the entirety of the
+                        # execution
+                        results = results._result()
         except Exception as e:
             header = ('Plugin error from %s:'
                       % q2cli.util.to_cli_name(self.plugin['name']))
@@ -446,24 +474,18 @@ class ActionCommand(BaseCommandMixin, click.Command):
                 cache_path, key = _get_cache_path_and_key(output)
                 cache = Cache(cache_path)
 
-                if isinstance(result, dict):
+                if isinstance(result, ResultCollection):
                     cache.save_collection(result, key)
                     path = output
                 else:
                     cache.save(result, key)
                     path = output
             else:
-                if isinstance(result, dict):
-                    from qiime2.sdk import Result
-
-                    Result.save_collection(output, result)
-                    path = output
-                else:
-                    path = result.save(output)
+                path = result.save(output)
 
             if not quiet:
 
-                if isinstance(result, dict):
+                if isinstance(result, ResultCollection):
                     type = f'Collection[{list(result.values())[0].type}]'
                 else:
                     type = result.type

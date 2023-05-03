@@ -6,14 +6,15 @@
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 
+import ast
 import shutil
 import os.path
 import unittest
 import unittest.mock
 import tempfile
+import pkg_resources
 
 from click.testing import CliRunner
-from qiime2 import Artifact
 from qiime2.core.testing.type import (IntSequence1, IntSequence2, Mapping,
                                       SingleInt)
 from qiime2.core.testing.util import get_dummy_plugin
@@ -23,12 +24,18 @@ from qiime2.core.cache import Cache
 from q2cli.commands import RootCommand
 from q2cli.builtin.tools import tools
 from q2cli.util import get_default_recycle_pool
+from qiime2.sdk import Artifact, Visualization, ResultCollection
+from qiime2.sdk.parsl_config import PARSL_CONFIG
 
 
 # What to split the errors raised by intentionally failed pipeline on to get
 # at the uuids needed for testing
 FIRST_SPLIT = 'Plugin error from dummy-plugin:\n\n  '
 SECOND_SPLIT = '\n\nSee above for debug info.'
+
+
+def get_data_path(filename):
+    return pkg_resources.resource_filename('q2cli.tests', 'data/%s' % filename)
 
 
 class TestCacheCli(unittest.TestCase):
@@ -50,8 +57,16 @@ class TestCacheCli(unittest.TestCase):
         self.ints2 = {'1': self.art1, '2': self.art2}
         self.mapping = Artifact.import_data(Mapping, {'a': '1', 'b': '2'})
 
+        self.metadata = os.path.join(self.tempdir, 'metadata.tsv')
+        with open(self.metadata, 'w') as fh:
+            fh.write('#SampleID\tcol1\n0\tfoo\nid1\tbar\n')
+
         self.non_cache_output = os.path.join(self.tempdir, 'output.qza')
         self.art3_non_cache = os.path.join(self.tempdir, 'art3.qza')
+
+        # Ensure default state prior to test
+        PARSL_CONFIG.parsl_config = None
+        PARSL_CONFIG.action_executor_mapping = {}
 
     def tearDown(self):
         shutil.rmtree(self.tempdir)
@@ -437,9 +452,10 @@ class TestCacheCli(unittest.TestCase):
 
         result = self._run_command(
             'resumable-varied-pipeline', '--i-ints1', ints1_path, '--i-ints2',
-            ints2_path, '--i-int1', int1_path, '--p-string', 'Hi', '--p-fail',
-            'True', '--output-dir', output, '--use-cache',
-            str(self.cache.path), '--verbose'
+            ints2_path, '--i-int1', int1_path, '--p-string', 'Hi',
+            '--m-metadata-file', self.metadata, '--p-fail', 'True',
+            '--output-dir', output, '--use-cache', str(self.cache.path),
+            '--verbose'
         )
 
         self.assertEqual(result.exit_code, 1)
@@ -449,114 +465,51 @@ class TestCacheCli(unittest.TestCase):
         exception = result.output.split(FIRST_SPLIT)[-1]
         exception = exception.split(SECOND_SPLIT)[0]
 
-        ints1_uuids, ints2_uuids, int1_uuid, list_uuids, dict_uuids = \
-            exception.split('_')
+        ints1_uuids, ints2_uuids, int1_uuid, list_uuids, dict_uuids, \
+            identity_uuid, viz_uuid = ast.literal_eval(exception)
 
         result = self._run_command(
             'resumable-varied-pipeline', '--i-ints1', ints1_path, '--i-ints2',
             ints2_path, '--i-int1', int1_path, '--p-string', 'Hi',
-            '--output-dir', output, '--use-cache', str(self.cache.path),
-            '--verbose'
+            '--m-metadata-file', self.metadata, '--output-dir', output,
+            '--use-cache', str(self.cache.path), '--verbose'
         )
 
         self.assertEqual(result.exit_code, 0)
 
-        ints1_ret_fp = os.path.join(output, 'ints1_return')
-        ints2_ret_fp = os.path.join(output, 'ints2_return')
-        int1_ret_fp = os.path.join(output, 'int1_return.qza')
-        list_ret_fp = os.path.join(output, 'list_return')
-        dict_ret_fp = os.path.join(output, 'dict_return')
+        ints1_ret_fp = os.path.join(output, 'ints1_ret')
+        ints2_ret_fp = os.path.join(output, 'ints2_ret')
+        int1_ret_fp = os.path.join(output, 'int1_ret.qza')
+        list_ret_fp = os.path.join(output, 'list_ret')
+        dict_ret_fp = os.path.join(output, 'dict_ret')
+        identity_ret_fp = os.path.join(output, 'identity_ret.qza')
+        viz_ret_fp = os.path.join(output, 'viz.qzv')
 
-        ints1_ret = Artifact.load_collection(ints1_ret_fp)
-        ints2_ret = Artifact.load_collection(ints2_ret_fp)
+        ints1_ret = ResultCollection.load(ints1_ret_fp)
+        ints2_ret = ResultCollection.load(ints2_ret_fp)
         int1_ret = Artifact.load(int1_ret_fp)
-        list_ret = Artifact.load_collection(list_ret_fp)
-        dict_ret = Artifact.load_collection(dict_ret_fp)
+        list_ret = ResultCollection.load(list_ret_fp)
+        dict_ret = ResultCollection.load(dict_ret_fp)
+        identity_ret = Artifact.load(identity_ret_fp)
+        viz_ret = Visualization.load(viz_ret_fp)
 
         complete_ints1_uuids = load_alias_uuids(ints1_ret)
         complete_ints2_uuids = load_alias_uuids(ints2_ret)
-        complete_int1_uuid = load_action_yaml(
-            int1_ret._archiver.path)['action']['alias-of']
+        complete_int1_uuid = load_alias_uuid(int1_ret)
         complete_list_uuids = load_alias_uuids(list_ret)
         complete_dict_uuids = load_alias_uuids(dict_ret)
+        complete_identity_uuid = load_alias_uuid(identity_ret)
+        complete_viz_uuid = load_alias_uuid(viz_ret)
 
         # Assert that the artifacts returned by the completed run of the
         # pipeline are aliases of the artifacts created by the first failed run
-        self.assertEqual(ints1_uuids, str(complete_ints1_uuids))
-        self.assertEqual(ints2_uuids, str(complete_ints2_uuids))
-        self.assertEqual(int1_uuid, str(complete_int1_uuid))
-        self.assertEqual(list_uuids, str(complete_list_uuids))
-        self.assertEqual(dict_uuids, str(complete_dict_uuids))
-
-        # Assert that the pool was removed
-        self.assertFalse(os.path.exists(default_pool_fp))
-
-    def test_pipeline_resumption_different_arg(self):
-        plugin_action = 'dummy_plugin_resumable_varied_pipeline'
-        default_pool = get_default_recycle_pool(plugin_action)
-        default_pool_fp = os.path.join(self.cache.pools, default_pool)
-        output = os.path.join(self.tempdir, 'output')
-
-        self.cache.save_collection(self.ints1, 'ints1')
-        self.cache.save_collection(self.ints2, 'ints2')
-        self.cache.save(self.art4, 'int1')
-
-        ints1_path = str(self.cache.path) + ':ints1'
-        ints2_path = str(self.cache.path) + ':ints2'
-        int1_path = str(self.cache.path) + ':int1'
-
-        result = self._run_command(
-            'resumable-varied-pipeline', '--i-ints1', ints1_path, '--i-ints2',
-            ints2_path, '--i-int1', int1_path, '--p-string', 'Hi', '--p-fail',
-            'True', '--output-dir', output, '--use-cache',
-            str(self.cache.path), '--verbose'
-        )
-
-        self.assertEqual(result.exit_code, 1)
-        # Assert that the pool exists
-        self.assertTrue(os.path.exists(default_pool_fp))
-
-        exception = result.output.split(FIRST_SPLIT)[-1]
-        exception = exception.split(SECOND_SPLIT)[0]
-
-        ints1_uuids, ints2_uuids, int1_uuid, list_uuids, dict_uuids = \
-            exception.split('_')
-
-        result = self._run_command(
-            'resumable-varied-pipeline', '--i-ints1', ints1_path, '--i-ints2',
-            ints2_path, '--i-int1', int1_path, '--p-string', 'Bye',
-            '--output-dir', output, '--use-cache', str(self.cache.path),
-            '--verbose'
-        )
-
-        self.assertEqual(result.exit_code, 0)
-
-        ints1_ret_fp = os.path.join(output, 'ints1_return')
-        ints2_ret_fp = os.path.join(output, 'ints2_return')
-        int1_ret_fp = os.path.join(output, 'int1_return.qza')
-        list_ret_fp = os.path.join(output, 'list_return')
-        dict_ret_fp = os.path.join(output, 'dict_return')
-
-        ints1_ret = Artifact.load_collection(ints1_ret_fp)
-        ints2_ret = Artifact.load_collection(ints2_ret_fp)
-        int1_ret = Artifact.load(int1_ret_fp)
-        list_ret = Artifact.load_collection(list_ret_fp)
-        dict_ret = Artifact.load_collection(dict_ret_fp)
-
-        complete_ints1_uuids = load_alias_uuids(ints1_ret)
-        complete_ints2_uuids = load_alias_uuids(ints2_ret)
-        complete_int1_uuid = load_action_yaml(
-            int1_ret._archiver.path)['action']['alias-of']
-        complete_list_uuids = load_alias_uuids(list_ret)
-        complete_dict_uuids = load_alias_uuids(dict_ret)
-
-        # Assert that the artifacts returned by varied_method are different but
-        # the others are the same
-        self.assertNotEqual(ints1_uuids, str(complete_ints1_uuids))
-        self.assertNotEqual(ints2_uuids, str(complete_ints2_uuids))
-        self.assertNotEqual(int1_uuid, str(complete_int1_uuid))
-        self.assertEqual(list_uuids, str(complete_list_uuids))
-        self.assertEqual(dict_uuids, str(complete_dict_uuids))
+        self.assertEqual(ints1_uuids, complete_ints1_uuids)
+        self.assertEqual(ints2_uuids, complete_ints2_uuids)
+        self.assertEqual(int1_uuid, complete_int1_uuid)
+        self.assertEqual(list_uuids, complete_list_uuids)
+        self.assertEqual(dict_uuids, complete_dict_uuids)
+        self.assertEqual(identity_uuid, complete_identity_uuid)
+        self.assertEqual(viz_uuid, complete_viz_uuid)
 
         # Assert that the pool was removed
         self.assertFalse(os.path.exists(default_pool_fp))
@@ -576,8 +529,9 @@ class TestCacheCli(unittest.TestCase):
 
         result = self._run_command(
             'resumable-varied-pipeline', '--i-ints1', ints1_path, '--i-ints2',
-            ints2_path, '--i-int1', int1_path, '--p-string', 'Hi', '--p-fail',
-            'True', '--output-dir', output, '--recycle', pool, '--use-cache',
+            ints2_path, '--i-int1', int1_path, '--p-string', 'Hi',
+            '--m-metadata-file', self.metadata, '--p-fail', 'True',
+            '--output-dir', output, '--recycle', pool, '--use-cache',
             str(self.cache.path), '--verbose'
         )
 
@@ -588,87 +542,53 @@ class TestCacheCli(unittest.TestCase):
         exception = result.output.split(FIRST_SPLIT)[-1]
         exception = exception.split(SECOND_SPLIT)[0]
 
-        ints1_uuids, ints2_uuids, int1_uuid, list_uuids, dict_uuids = \
-            exception.split('_')
+        ints1_uuids, ints2_uuids, int1_uuid, list_uuids, dict_uuids, \
+            identity_uuid, viz_uuid = ast.literal_eval(exception)
 
         result = self._run_command(
             'resumable-varied-pipeline', '--i-ints1', ints1_path, '--i-ints2',
             ints2_path, '--i-int1', int1_path, '--p-string', 'Hi',
-            '--output-dir', output, '--recycle', pool, '--use-cache',
-            str(self.cache.path), '--verbose'
+            '--m-metadata-file', self.metadata, '--output-dir', output,
+            '--recycle', pool, '--use-cache', str(self.cache.path), '--verbose'
         )
 
         self.assertEqual(result.exit_code, 0)
 
-        ints1_ret_fp = os.path.join(output, 'ints1_return')
-        ints2_ret_fp = os.path.join(output, 'ints2_return')
-        int1_ret_fp = os.path.join(output, 'int1_return.qza')
-        list_ret_fp = os.path.join(output, 'list_return')
-        dict_ret_fp = os.path.join(output, 'dict_return')
+        ints1_ret_fp = os.path.join(output, 'ints1_ret')
+        ints2_ret_fp = os.path.join(output, 'ints2_ret')
+        int1_ret_fp = os.path.join(output, 'int1_ret.qza')
+        list_ret_fp = os.path.join(output, 'list_ret')
+        dict_ret_fp = os.path.join(output, 'dict_ret')
+        identity_ret_fp = os.path.join(output, 'identity_ret.qza')
+        viz_ret_fp = os.path.join(output, 'viz.qzv')
 
-        ints1_ret = Artifact.load_collection(ints1_ret_fp)
-        ints2_ret = Artifact.load_collection(ints2_ret_fp)
+        ints1_ret = ResultCollection.load(ints1_ret_fp)
+        ints2_ret = ResultCollection.load(ints2_ret_fp)
         int1_ret = Artifact.load(int1_ret_fp)
-        list_ret = Artifact.load_collection(list_ret_fp)
-        dict_ret = Artifact.load_collection(dict_ret_fp)
+        list_ret = ResultCollection.load(list_ret_fp)
+        dict_ret = ResultCollection.load(dict_ret_fp)
+        identity_ret = Artifact.load(identity_ret_fp)
+        viz_ret = Visualization.load(viz_ret_fp)
 
         complete_ints1_uuids = load_alias_uuids(ints1_ret)
         complete_ints2_uuids = load_alias_uuids(ints2_ret)
-        complete_int1_uuid = load_action_yaml(
-            int1_ret._archiver.path)['action']['alias-of']
+        complete_int1_uuid = load_alias_uuid(int1_ret)
         complete_list_uuids = load_alias_uuids(list_ret)
         complete_dict_uuids = load_alias_uuids(dict_ret)
+        complete_identity_uuid = load_alias_uuid(identity_ret)
+        complete_viz_uuid = load_alias_uuid(viz_ret)
 
-        # Assert that the artifacts returned by varied_method are different but
-        # the others are the same
-        self.assertEqual(ints1_uuids, str(complete_ints1_uuids))
-        self.assertEqual(ints2_uuids, str(complete_ints2_uuids))
-        self.assertEqual(int1_uuid, str(complete_int1_uuid))
-        self.assertEqual(list_uuids, str(complete_list_uuids))
-        self.assertEqual(dict_uuids, str(complete_dict_uuids))
+        # Assert that the artifacts returned by the completed run of the
+        # pipeline are aliases of the artifacts created by the first failed run
+        self.assertEqual(ints1_uuids, complete_ints1_uuids)
+        self.assertEqual(ints2_uuids, complete_ints2_uuids)
+        self.assertEqual(int1_uuid, complete_int1_uuid)
+        self.assertEqual(list_uuids, complete_list_uuids)
+        self.assertEqual(dict_uuids, complete_dict_uuids)
+        self.assertEqual(identity_uuid, complete_identity_uuid)
+        self.assertEqual(viz_uuid, complete_viz_uuid)
 
-        # Assert that the pool was removed
-        self.assertTrue(os.path.exists(pool_fp))
-        # Remove so I can use it again
-        shutil.rmtree(output)
-
-        result = self._run_command(
-            'resumable-varied-pipeline', '--i-ints1', ints1_path, '--i-ints2',
-            ints2_path, '--i-int1', int1_path, '--p-string', 'Bye',
-            '--output-dir', output, '--recycle', pool, '--use-cache',
-            str(self.cache.path), '--verbose'
-        )
-
-        self.assertEqual(result.exit_code, 0)
-
-        ints1_ret_fp = os.path.join(output, 'ints1_return')
-        ints2_ret_fp = os.path.join(output, 'ints2_return')
-        int1_ret_fp = os.path.join(output, 'int1_return.qza')
-        list_ret_fp = os.path.join(output, 'list_return')
-        dict_ret_fp = os.path.join(output, 'dict_return')
-
-        ints1_ret = Artifact.load_collection(ints1_ret_fp)
-        ints2_ret = Artifact.load_collection(ints2_ret_fp)
-        int1_ret = Artifact.load(int1_ret_fp)
-        list_ret = Artifact.load_collection(list_ret_fp)
-        dict_ret = Artifact.load_collection(dict_ret_fp)
-
-        complete_ints1_uuids = load_alias_uuids(ints1_ret)
-        complete_ints2_uuids = load_alias_uuids(ints2_ret)
-        complete_int1_uuid = load_action_yaml(
-            int1_ret._archiver.path)['action']['alias-of']
-        complete_list_uuids = load_alias_uuids(list_ret)
-        complete_dict_uuids = load_alias_uuids(dict_ret)
-
-        # Assert that the artifacts returned by varied_method are different but
-        # the others are the same
-        self.assertNotEqual(ints1_uuids, str(complete_ints1_uuids))
-        self.assertNotEqual(ints2_uuids, str(complete_ints2_uuids))
-        self.assertNotEqual(int1_uuid, str(complete_int1_uuid))
-        self.assertEqual(list_uuids, str(complete_list_uuids))
-        self.assertEqual(dict_uuids, str(complete_dict_uuids))
-
-        # Assert that the pool is still here
+        # Assert that the pool is still there
         self.assertTrue(os.path.exists(pool_fp))
 
     def test_pipeline_resumption_no_recycle(self):
@@ -687,9 +607,10 @@ class TestCacheCli(unittest.TestCase):
 
         result = self._run_command(
             'resumable-varied-pipeline', '--i-ints1', ints1_path, '--i-ints2',
-            ints2_path, '--i-int1', int1_path, '--p-string', 'Hi', '--p-fail',
-            'True', '--output-dir', output, '--use-cache',
-            str(self.cache.path), '--no-recycle', '--verbose'
+            ints2_path, '--i-int1', int1_path, '--p-string', 'Hi',
+            '--m-metadata-file', self.metadata, '--p-fail', 'True',
+            '--output-dir', output, '--use-cache', str(self.cache.path),
+            '--no-recycle', '--verbose'
         )
 
         self.assertEqual(result.exit_code, 1)
@@ -699,75 +620,54 @@ class TestCacheCli(unittest.TestCase):
         exception = result.output.split(FIRST_SPLIT)[-1]
         exception = exception.split(SECOND_SPLIT)[0]
 
-        ints1_uuids, ints2_uuids, int1_uuid, list_uuids, dict_uuids = \
-            exception.split('_')
+        ints1_uuids, ints2_uuids, int1_uuid, list_uuids, dict_uuids, \
+            identity_uuid, viz_uuid = ast.literal_eval(exception)
 
         result = self._run_command(
             'resumable-varied-pipeline', '--i-ints1', ints1_path, '--i-ints2',
             ints2_path, '--i-int1', int1_path, '--p-string', 'Hi',
-            '--output-dir', output, '--use-cache', str(self.cache.path),
-            '--verbose'
+            '--m-metadata-file', self.metadata, '--output-dir', output,
+            '--use-cache', str(self.cache.path), '--verbose'
         )
 
         self.assertEqual(result.exit_code, 0)
 
-        ints1_ret_fp = os.path.join(output, 'ints1_return')
-        ints2_ret_fp = os.path.join(output, 'ints2_return')
-        int1_ret_fp = os.path.join(output, 'int1_return.qza')
-        list_ret_fp = os.path.join(output, 'list_return')
-        dict_ret_fp = os.path.join(output, 'dict_return')
+        ints1_ret_fp = os.path.join(output, 'ints1_ret')
+        ints2_ret_fp = os.path.join(output, 'ints2_ret')
+        int1_ret_fp = os.path.join(output, 'int1_ret.qza')
+        list_ret_fp = os.path.join(output, 'list_ret')
+        dict_ret_fp = os.path.join(output, 'dict_ret')
+        identity_ret_fp = os.path.join(output, 'identity_ret.qza')
+        viz_ret_fp = os.path.join(output, 'viz.qzv')
 
-        ints1_ret = Artifact.load_collection(ints1_ret_fp)
-        ints2_ret = Artifact.load_collection(ints2_ret_fp)
+        ints1_ret = ResultCollection.load(ints1_ret_fp)
+        ints2_ret = ResultCollection.load(ints2_ret_fp)
         int1_ret = Artifact.load(int1_ret_fp)
-        list_ret = Artifact.load_collection(list_ret_fp)
-        dict_ret = Artifact.load_collection(dict_ret_fp)
+        list_ret = ResultCollection.load(list_ret_fp)
+        dict_ret = ResultCollection.load(dict_ret_fp)
+        identity_ret = Artifact.load(identity_ret_fp)
+        viz_ret = Visualization.load(viz_ret_fp)
 
         complete_ints1_uuids = load_alias_uuids(ints1_ret)
         complete_ints2_uuids = load_alias_uuids(ints2_ret)
-        complete_int1_uuid = load_action_yaml(
-            int1_ret._archiver.path)['action']['alias-of']
+        complete_int1_uuid = load_alias_uuid(int1_ret)
         complete_list_uuids = load_alias_uuids(list_ret)
         complete_dict_uuids = load_alias_uuids(dict_ret)
+        complete_identity_uuid = load_alias_uuid(identity_ret)
+        complete_viz_uuid = load_alias_uuid(viz_ret)
 
         # Assert that the artifacts returned by the completed run of the
-        # pipeline are not aliases of the failed run because they did not
-        # recycle
-        self.assertNotEqual(ints1_uuids, str(complete_ints1_uuids))
-        self.assertNotEqual(ints2_uuids, str(complete_ints2_uuids))
-        self.assertNotEqual(int1_uuid, str(complete_int1_uuid))
-        self.assertNotEqual(list_uuids, str(complete_list_uuids))
-        self.assertNotEqual(dict_uuids, str(complete_dict_uuids))
+        # pipeline are aliases of the artifacts created by the first failed run
+        self.assertNotEqual(ints1_uuids, complete_ints1_uuids)
+        self.assertNotEqual(ints2_uuids, complete_ints2_uuids)
+        self.assertNotEqual(int1_uuid, complete_int1_uuid)
+        self.assertNotEqual(list_uuids, complete_list_uuids)
+        self.assertNotEqual(dict_uuids, complete_dict_uuids)
+        self.assertNotEqual(identity_uuid, complete_identity_uuid)
+        self.assertNotEqual(viz_uuid, complete_viz_uuid)
 
         # Assert that the pool was removed
         self.assertFalse(os.path.exists(default_pool_fp))
-
-    def test_pipeline_resumption_no_recycle_and_recycle(self):
-        pool = 'pool'
-        pool_fp = os.path.join(self.cache.pools, pool)
-        output = os.path.join(self.tempdir, 'output')
-
-        self.cache.save_collection(self.ints1, 'ints1')
-        self.cache.save_collection(self.ints2, 'ints2')
-        self.cache.save(self.art4, 'int1')
-
-        ints1_path = str(self.cache.path) + ':ints1'
-        ints2_path = str(self.cache.path) + ':ints2'
-        int1_path = str(self.cache.path) + ':int1'
-
-        result = self._run_command(
-            'resumable-varied-pipeline', '--i-ints1', ints1_path, '--i-ints2',
-            ints2_path, '--i-int1', int1_path, '--p-string', 'Hi', '--p-fail',
-            'True', '--output-dir', output, '--use-cache',
-            str(self.cache.path), '--no-recycle', '--recycle', pool,
-            '--verbose'
-        )
-
-        self.assertEqual(result.exit_code, 1)
-        # Assert that the pool was not created
-        self.assertFalse(os.path.exists(pool_fp))
-        self.assertIn('Cannot set a pool to be used for recycling and no'
-                      ' recycle simultaneously.', str(result.exception))
 
     def test_mixed_keyed_unkeyed_inputs(self):
         art4_uncached_path = os.path.join(self.tempdir, 'art4.qza')
@@ -891,6 +791,132 @@ class TestCacheCli(unittest.TestCase):
         self.assertIn(
             'Cache keys cannot be used as output dirs.', str(result.exception))
 
+    def test_parsl(self):
+        output = os.path.join(self.tempdir, 'output')
+
+        self.cache.save_collection(self.ints1, 'ints1')
+        ints1_path = str(self.cache.path) + ':ints1'
+
+        result = self._run_command(
+            'resumable-pipeline', '--i-int-list', ints1_path,
+            '--i-int-dict', ints1_path, '--output-dir', output, '--use-cache',
+            str(self.cache.path), '--verbose', '--parsl'
+        )
+
+        self.assertEqual(result.exit_code, 0)
+
+        list_return = ResultCollection.load(
+            os.path.join(output, 'list_return'))
+        dict_return = ResultCollection.load(
+            os.path.join(output, 'dict_return'))
+
+        list_execution_contexts = self._load_alias_execution_contexts(
+            list_return)
+        dict_execution_contexts = self._load_alias_execution_contexts(
+            dict_return)
+
+        expected = [{
+            'type': 'parsl', 'parsl_type': 'ThreadPoolExecutor'}, {
+            'type': 'parsl', 'parsl_type': 'ThreadPoolExecutor'
+        }]
+
+        self.assertEqual(list_execution_contexts, expected)
+        self.assertEqual(dict_execution_contexts, expected)
+
+    def test_config_parsl(self):
+        output = os.path.join(self.tempdir, 'output')
+
+        self.cache.save_collection(self.ints1, 'ints1')
+        ints1_path = str(self.cache.path) + ':ints1'
+
+        config_path = get_data_path('mapping_config.toml')
+
+        result = self._run_command(
+            'resumable-pipeline', '--i-int-list', ints1_path,
+            '--i-int-dict', ints1_path, '--output-dir', output, '--use-cache',
+            str(self.cache.path), '--verbose', '--parsl-config', config_path
+        )
+
+        self.assertEqual(result.exit_code, 0)
+
+        list_return = ResultCollection.load(
+            os.path.join(output, 'list_return'))
+        dict_return = ResultCollection.load(
+            os.path.join(output, 'dict_return'))
+
+        list_execution_contexts = self._load_alias_execution_contexts(
+            list_return)
+        dict_execution_contexts = self._load_alias_execution_contexts(
+            dict_return)
+
+        list_expected = [{
+            'type': 'parsl', 'parsl_type': 'HighThroughputExecutor'}, {
+            'type': 'parsl', 'parsl_type': 'HighThroughputExecutor'
+        }]
+        dict_expected = [{
+            'type': 'parsl', 'parsl_type': 'ThreadPoolExecutor'}, {
+            'type': 'parsl', 'parsl_type': 'ThreadPoolExecutor'
+        }]
+
+        self.assertEqual(list_execution_contexts, list_expected)
+        self.assertEqual(dict_execution_contexts, dict_expected)
+
+    def test_both_parsl_flags(self):
+        output = os.path.join(self.tempdir, 'output')
+
+        self.cache.save_collection(self.ints1, 'ints1')
+        ints1_path = str(self.cache.path) + ':ints1'
+
+        config_path = get_data_path('mapping_config.toml')
+
+        result = self._run_command(
+            'resumable-pipeline', '--i-int-list', ints1_path,
+            '--i-int-dict', ints1_path, '--output-dir', output, '--use-cache',
+            str(self.cache.path), '--verbose', '--parsl', '--parsl-config',
+            config_path
+        )
+
+        self.assertEqual(result.exit_code, 0)
+
+        list_return = ResultCollection.load(
+            os.path.join(output, 'list_return'))
+        dict_return = ResultCollection.load(
+            os.path.join(output, 'dict_return'))
+
+        list_execution_contexts = self._load_alias_execution_contexts(
+            list_return)
+        dict_execution_contexts = self._load_alias_execution_contexts(
+            dict_return)
+
+        # The explicit config should override the default
+        list_expected = [{
+            'type': 'parsl', 'parsl_type': 'HighThroughputExecutor'}, {
+            'type': 'parsl', 'parsl_type': 'HighThroughputExecutor'
+        }]
+        dict_expected = [{
+            'type': 'parsl', 'parsl_type': 'ThreadPoolExecutor'}, {
+            'type': 'parsl', 'parsl_type': 'ThreadPoolExecutor'
+        }]
+
+        self.assertEqual(list_execution_contexts, list_expected)
+        self.assertEqual(dict_execution_contexts, dict_expected)
+
+    def _load_alias_execution_contexts(self, collection):
+        execution_contexts = []
+
+        for result in collection.values():
+            alias_uuid = load_action_yaml(
+                result._archiver.path)['action']['alias-of']
+            execution_contexts.append(load_action_yaml(
+                self.cache.data / alias_uuid)
+                ['execution']['execution_context'])
+
+        return execution_contexts
+
+
+def load_alias_uuid(result):
+    return load_action_yaml(result._archiver.path)['action']['alias-of']
+
 
 def load_alias_uuids(collection):
     uuids = []
@@ -900,6 +926,19 @@ def load_alias_uuids(collection):
             artifact._archiver.path)['action']['alias-of'])
 
     return uuids
+
+
+def _load_alias_execution_contexts(self, collection):
+    execution_contexts = []
+
+    for result in collection.values():
+        alias_uuid = load_action_yaml(
+            result._archiver.path)['action']['alias-of']
+        execution_contexts.append(load_action_yaml(
+            self.cache.data / alias_uuid)
+            ['execution']['execution_context'])
+
+    return execution_contexts
 
 
 if __name__ == "__main__":
