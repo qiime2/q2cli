@@ -531,7 +531,7 @@ class TestCacheCli(unittest.TestCase):
             'resumable-varied-pipeline', '--i-ints1', ints1_path, '--i-ints2',
             ints2_path, '--i-int1', int1_path, '--p-string', 'Hi',
             '--m-metadata-file', self.metadata, '--p-fail', 'True',
-            '--output-dir', output, '--recycle', pool, '--use-cache',
+            '--output-dir', output, '--recycle-pool', pool, '--use-cache',
             str(self.cache.path), '--verbose'
         )
 
@@ -549,7 +549,8 @@ class TestCacheCli(unittest.TestCase):
             'resumable-varied-pipeline', '--i-ints1', ints1_path, '--i-ints2',
             ints2_path, '--i-int1', int1_path, '--p-string', 'Hi',
             '--m-metadata-file', self.metadata, '--output-dir', output,
-            '--recycle', pool, '--use-cache', str(self.cache.path), '--verbose'
+            '--recycle-pool', pool, '--use-cache', str(self.cache.path),
+            '--verbose'
         )
 
         self.assertEqual(result.exit_code, 0)

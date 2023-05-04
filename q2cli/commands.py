@@ -239,12 +239,12 @@ class ActionCommand(BaseCommandMixin, click.Command):
             q2cli.util.citations_option(self._get_citation_records)
         ]
 
-        # If this aciton is a pipeline it needs the --recycle and --no-recycle
-        # options.
+        # If this aciton is a pipeline it needs the --recycle-pool and
+        # --no-recycle options.
         action_obj = self._get_action()
         if action_obj.type == 'pipeline':
             self._misc.extend([
-                click.Option(['--recycle'], required=False,
+                click.Option(['--recycle-pool'], required=False,
                              type=str,
                              help='Allows you to specify a pool to use for '
                                   'pipeline resumption. If you run a pipeline '
@@ -338,11 +338,11 @@ class ActionCommand(BaseCommandMixin, click.Command):
                                  "cannot be used as output dirs.")
 
         # Args pertaining to pipeline resumption
-        recycle = kwargs.pop('recycle', None)
+        recycle_pool = kwargs.pop('recycle_pool', None)
         no_recycle = kwargs.pop('no_recycle', False)
         used_cache = kwargs.pop('use_cache', None)
 
-        if recycle is not None and no_recycle:
+        if recycle_pool is not None and no_recycle:
             raise ValueError('Cannot set a pool to be used for recycling and '
                              'no recycle simultaneously.')
 
@@ -385,18 +385,14 @@ class ActionCommand(BaseCommandMixin, click.Command):
         # outputs from a pool by default allowing recovery of failed pipelines
         # from point of failure without needing to restart the pipeline from
         # the beginning
-        recycle_pool = None
-        if not no_recycle and action.type == 'pipeline':
+        default_pool = get_default_recycle_pool(
+            f'{action.plugin_id}_{action.id}')
+        if not no_recycle and action.type == 'pipeline' and \
+                recycle_pool is None:
             # We implicitly use a pool named
             # recycle_<plugin>_<action>_sha1(plugin_action) if no pool is
             # provided
-            if recycle is None:
-                plugin_action = f'{action.plugin_id}_{action.id}'
-                recycle_pool = get_default_recycle_pool(plugin_action)
-            # Otherwise we use the pool they said to use with the --recycle
-            # argument
-            else:
-                recycle_pool = recycle
+            recycle_pool = default_pool
 
         # `qiime2.util.redirected_stdio` defaults to stdout/stderr when
         # supplied `None`.
@@ -497,7 +493,7 @@ class ActionCommand(BaseCommandMixin, click.Command):
         # succeeded, then we need to clean up the pool. Make sure to do this at
         # the very end so if a failure happens during writing results we still
         # have them
-        if recycle_pool is not None and recycle is None:
+        if recycle_pool == default_pool:
             cache.remove(recycle_pool)
 
     def _order_outputs(self, outputs):
