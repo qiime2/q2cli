@@ -326,6 +326,7 @@ class ActionCommand(BaseCommandMixin, click.Command):
     def __call__(self, **kwargs):
         """Called when user hits return, **kwargs are Dict[click_names, Obj]"""
         import os
+        import click
 
         import qiime2.util
         from q2cli.util import (output_in_cache, _get_cache_path_and_key,
@@ -348,11 +349,17 @@ class ActionCommand(BaseCommandMixin, click.Command):
         # Args pertaining to pipeline resumption
         recycle_pool = kwargs.pop('recycle_pool', None)
         no_recycle = kwargs.pop('no_recycle', False)
-        used_cache = kwargs.pop('use_cache', None)
 
         if recycle_pool is not None and no_recycle:
             raise ValueError('Cannot set a pool to be used for recycling and '
                              'no recycle simultaneously.')
+
+        used_cache = kwargs.pop('use_cache', None)
+
+        if used_cache is not None and not Cache.is_cache(used_cache):
+            raise ValueError(f"The path '{used_cache}' is not a valid cache, "
+                             "please supply a path to a valid pre-existing "
+                             "cache.")
 
         parsl = kwargs.pop('parsl', False)
         parsl_config_fp = kwargs.pop('parsl_config', None)
@@ -421,6 +428,15 @@ class ActionCommand(BaseCommandMixin, click.Command):
                    (q2cli.util.to_cli_name(self.plugin['name']), self.name))
             click.echo(CONFIG.cfg_style('warning', msg))
 
+        # This needs to happen outside of the redirected_stdio so we can have
+        # our warning instead of it being swallowed.
+        cache = Cache(path=used_cache)
+        if recycle_pool is not None and recycle_pool != default_pool and \
+                recycle_pool not in cache.get_pools():
+            msg = ("The pool '%s' does not exist on the cache at '%s'. It "
+                   "will be created." % (recycle_pool, cache.path))
+            click.echo(CONFIG.cfg_style('warning', msg))
+
         cleanup_logfile = False
         try:
             with qiime2.util.redirected_stdio(stdout=log, stderr=log):
@@ -431,13 +447,6 @@ class ActionCommand(BaseCommandMixin, click.Command):
                     results = action(**arguments)
                     results = results._result()
                 else:
-                    if used_cache is not None and not \
-                            Cache.is_cache(used_cache):
-                        raise ValueError(f"The path '{used_cache}' is not a "
-                                         "valid cache, please supply a path "
-                                         "to a valid pre-existing cache.")
-
-                    cache = Cache(path=used_cache)
                     pool = cache.create_pool(key=recycle_pool, reuse=True)
                     with pool:
                         results = action(**arguments)
