@@ -239,7 +239,7 @@ class ActionCommand(BaseCommandMixin, click.Command):
             q2cli.util.citations_option(self._get_citation_records)
         ]
 
-        # If this aciton is a pipeline it needs the --recycle-pool and
+        # If this action is a pipeline it needs the --recycle-pool and
         # --no-recycle options.
         action_obj = self._get_action()
         if action_obj.type == 'pipeline':
@@ -250,12 +250,18 @@ class ActionCommand(BaseCommandMixin, click.Command):
                                   'pipeline resumption. If you run a pipeline '
                                   'without this parameter or the --no-recycle '
                                   'flag, QIIME will default to the pool '
-                                  'recycle_<plugin>_<action>_<sha1> of '
-                                  '"plugin_action">'),
+                                  'recycle_<plugin>_<action>_<sha1 of '
+                                  '"plugin_action">. QIIME will cache your '
+                                  'results in this pool then attempt to reuse '
+                                  'them later if you specify the same pool '
+                                  'instead of recalculating them. If you use '
+                                  'the default pool and your action succeeds, '
+                                  'QIIME removes the pool.'),
                 click.Option(['--no-recycle'], is_flag=True, required=False,
                              help='Specifies that you do not want to attempt '
                                   'to recycle results from a previous failed '
-                                  'pipeline run.'),
+                                  'pipeline run or to save the results from '
+                                  'this run for future recycling.'),
                 click.Option(['--use-cache'], required=False,
                              type=click.Path(exists=True, file_okay=False),
                              help='Allows you to specify a cache to be used '
@@ -390,7 +396,7 @@ class ActionCommand(BaseCommandMixin, click.Command):
         if not no_recycle and action.type == 'pipeline' and \
                 recycle_pool is None:
             # We implicitly use a pool named
-            # recycle_<plugin>_<action>_sha1(plugin_action) if no pool is
+            # recycle_<plugin>_<action>_<sha1(plugin_action)> if no pool is
             # provided
             recycle_pool = default_pool
 
