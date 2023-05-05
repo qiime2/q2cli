@@ -65,7 +65,7 @@ class TestCacheCli(unittest.TestCase):
         self.art3_non_cache = os.path.join(self.tempdir, 'art3.qza')
 
         # Ensure default state prior to test
-        PARALLEL_CONFIG.parsl_config = None
+        PARALLEL_CONFIG.parallel_config = None
         PARALLEL_CONFIG.action_executor_mapping = {}
 
     def tearDown(self):
