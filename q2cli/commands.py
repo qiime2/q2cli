@@ -225,14 +225,14 @@ class ActionCommand(BaseCommandMixin, click.Command):
                               'during execution of this action. Or silence '
                               'output if execution is successful (silence is '
                               'golden).'),
-            click.Option(['--parsl'], is_flag=True, required=False,
+            click.Option(['--parallel'], is_flag=True, required=False,
                          help='Indicate that you want to execute your action '
-                              'with parsl. This flag will use a vendored '
-                              'parsl config.'),
-            click.Option(['--parsl-config'], required=False,
+                              'in parallel. This flag will use a vendored '
+                              'parallel config.'),
+            click.Option(['--parallel-config'], required=False,
                          type=click.Path(exists=True, dir_okay=False),
                          help='Indicate that you want to execute your action '
-                              'with parsl using a config at the indicated '
+                              'in parallel using a config at the indicated '
                               'path.'),
             q2cli.util.example_data_option(
                 self._get_plugin, self.action['id']),
@@ -361,13 +361,13 @@ class ActionCommand(BaseCommandMixin, click.Command):
                              "please supply a path to a valid pre-existing "
                              "cache.")
 
-        parsl = kwargs.pop('parsl', False)
-        parsl_config_fp = kwargs.pop('parsl_config', None)
+        parallel = kwargs.pop('parallel', False)
+        parallel_config_fp = kwargs.pop('parallel_config', None)
 
-        if parsl_config_fp is not None:
-            from qiime2.sdk.parsl_config import setup_parsl
-            parsl = True
-            setup_parsl(parsl_config_fp)
+        if parallel_config_fp is not None:
+            from qiime2.sdk.parallel_config import setup_parallel
+            parallel = True
+            setup_parallel(parallel_config_fp)
 
         verbose = kwargs.pop('verbose')
         if verbose is None:
@@ -440,8 +440,8 @@ class ActionCommand(BaseCommandMixin, click.Command):
         cleanup_logfile = False
         try:
             with qiime2.util.redirected_stdio(stdout=log, stderr=log):
-                if parsl:
-                    action = action.parsl
+                if parallel:
+                    action = action.parallel
 
                 if recycle_pool is None:
                     results = action(**arguments)

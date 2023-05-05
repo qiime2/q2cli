@@ -25,7 +25,7 @@ from q2cli.commands import RootCommand
 from q2cli.builtin.tools import tools
 from q2cli.util import get_default_recycle_pool
 from qiime2.sdk import Artifact, Visualization, ResultCollection
-from qiime2.sdk.parsl_config import PARSL_CONFIG
+from qiime2.sdk.parallel_config import PARALLEL_CONFIG
 
 
 # What to split the errors raised by intentionally failed pipeline on to get
@@ -65,8 +65,8 @@ class TestCacheCli(unittest.TestCase):
         self.art3_non_cache = os.path.join(self.tempdir, 'art3.qza')
 
         # Ensure default state prior to test
-        PARSL_CONFIG.parsl_config = None
-        PARSL_CONFIG.action_executor_mapping = {}
+        PARALLEL_CONFIG.parsl_config = None
+        PARALLEL_CONFIG.action_executor_mapping = {}
 
     def tearDown(self):
         shutil.rmtree(self.tempdir)
@@ -801,7 +801,7 @@ class TestCacheCli(unittest.TestCase):
         result = self._run_command(
             'resumable-pipeline', '--i-int-list', ints1_path,
             '--i-int-dict', ints1_path, '--output-dir', output, '--use-cache',
-            str(self.cache.path), '--verbose', '--parsl'
+            str(self.cache.path), '--verbose', '--parallel'
         )
 
         self.assertEqual(result.exit_code, 0)
@@ -835,7 +835,7 @@ class TestCacheCli(unittest.TestCase):
         result = self._run_command(
             'resumable-pipeline', '--i-int-list', ints1_path,
             '--i-int-dict', ints1_path, '--output-dir', output, '--use-cache',
-            str(self.cache.path), '--verbose', '--parsl-config', config_path
+            str(self.cache.path), '--verbose', '--parallel-config', config_path
         )
 
         self.assertEqual(result.exit_code, 0)
@@ -873,8 +873,8 @@ class TestCacheCli(unittest.TestCase):
         result = self._run_command(
             'resumable-pipeline', '--i-int-list', ints1_path,
             '--i-int-dict', ints1_path, '--output-dir', output, '--use-cache',
-            str(self.cache.path), '--verbose', '--parsl', '--parsl-config',
-            config_path
+            str(self.cache.path), '--verbose', '--parallel',
+            '--parallel-config', config_path
         )
 
         self.assertEqual(result.exit_code, 0)
