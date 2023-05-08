@@ -378,6 +378,8 @@ class ActionCommand(BaseCommandMixin, click.Command):
         else:
             quiet = True
 
+        cache = Cache(path=used_cache)
+
         arguments = {}
         init_outputs = {}
         for key, value in kwargs.items():
@@ -390,6 +392,27 @@ class ActionCommand(BaseCommandMixin, click.Command):
                 init_outputs[key] = value
             elif prefix == 'm':
                 arguments[key[:-len('_file')]] = value
+            # Make sure our inputs are backed by the cache we are using. This
+            # is necessary for HPCs where our input .qzas may be in a location
+            # that is not globally accessible to the cluster. The user should
+            # be using a cache that is in a globally accessible location. We
+            # need to ensure we put our artifacts in that cache.
+            elif prefix == 'i':
+                value_ = value
+
+                if isinstance(value, list):
+                    value_ = [cache.process_pool.save(v) for v in value]
+                elif isinstance(value, dict) or \
+                        isinstance(value, ResultCollection):
+                    value_ = {
+                        k: cache.process_pool.save(v)
+                        for k, v in value.items()}
+                elif isinstance(value, set):
+                    value_ = set([cache.process_pool.save(v) for v in value])
+                elif value is not None:
+                    value_ = cache.process_pool.save(value)
+
+                arguments[key] = value_
             else:
                 arguments[key] = value
 
@@ -409,6 +432,12 @@ class ActionCommand(BaseCommandMixin, click.Command):
             # provided
             recycle_pool = default_pool
 
+        if recycle_pool is not None and recycle_pool != default_pool and \
+                recycle_pool not in cache.get_pools():
+            msg = ("The pool '%s' does not exist on the cache at '%s'. It "
+                   "will be created." % (recycle_pool, cache.path))
+            click.echo(CONFIG.cfg_style('warning', msg))
+
         # `qiime2.util.redirected_stdio` defaults to stdout/stderr when
         # supplied `None`.
         log = None
@@ -426,15 +455,6 @@ class ActionCommand(BaseCommandMixin, click.Command):
             msg = ('Plugin warning from %s:\n\n%s is deprecated and '
                    'will be removed in a future version of this plugin.' %
                    (q2cli.util.to_cli_name(self.plugin['name']), self.name))
-            click.echo(CONFIG.cfg_style('warning', msg))
-
-        # This needs to happen outside of the redirected_stdio so we can have
-        # our warning instead of it being swallowed.
-        cache = Cache(path=used_cache)
-        if recycle_pool is not None and recycle_pool != default_pool and \
-                recycle_pool not in cache.get_pools():
-            msg = ("The pool '%s' does not exist on the cache at '%s'. It "
-                   "will be created." % (recycle_pool, cache.path))
             click.echo(CONFIG.cfg_style('warning', msg))
 
         cleanup_logfile = False
