@@ -266,10 +266,14 @@ class ActionCommand(BaseCommandMixin, click.Command):
                                   'this run for future recycling.'),
                 click.Option(['--use-cache'], required=False,
                              type=click.Path(exists=True, file_okay=False),
-                             help='Allows you to specify a cache to be used '
-                                  'for pipeline resumption. Otherwise the '
-                                  'default cache under /$TMP/qiime2/<uname> '
-                                  'will be used.')])
+                             help='<IMPORTANT FOR HPC USERS> Allows you to '
+                                  'specify a cache to be used for this '
+                                  'pipeline. Otherwise the default cache '
+                                  'under /$TMP/qiime2/<uname> will be used. '
+                                  'NOTE: IF YOU ARE ON AN HPC AND ARE USING '
+                                  'PARALLEL EXECUTION IT IS IMPORTANT TO SET '
+                                  'THIS TO A CACHE THAT IS IN A LOCATION '
+                                  'ACCESSIBLE GLOBALLY TO THE CLUSTER.')])
 
         options = [*self._inputs, *self._params, *self._outputs, *self._misc]
         help_ = [action['description']]
