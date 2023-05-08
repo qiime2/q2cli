@@ -397,7 +397,7 @@ class ActionCommand(BaseCommandMixin, click.Command):
             # that is not globally accessible to the cluster. The user should
             # be using a cache that is in a globally accessible location. We
             # need to ensure we put our artifacts in that cache.
-            elif prefix == 'i':
+            elif prefix == 'i' and used_cache is not None:
                 value_ = value
 
                 if isinstance(value, list):
