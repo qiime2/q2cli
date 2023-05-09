@@ -876,11 +876,13 @@ def cache_status(cache):
             for key in _cache.get_keys():
                 key_values = _cache.read_key(key)
 
-                if (data := key_values['data']) is not None:
+                if 'data' in key_values:
+                    data = key_values['data']
                     data_output.append(
                         'data: %s -> %s' %
                         (key, str(Result.peek(_cache.data / data))))
-                elif (pool := key_values['pool']) is not None:
+                elif 'pool' in key_values:
+                    pool = key_values['pool']
                     pool_output.append(
                         'pool: %s -> size = %s' %
                         (key, str(len(os.listdir(_cache.pools / pool)))))
