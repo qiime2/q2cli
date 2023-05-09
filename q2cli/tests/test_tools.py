@@ -759,12 +759,12 @@ class TestListTypes(unittest.TestCase):
         self.assertEqual(len(result.output.split('\n\n')) - 1, len(types))
 
         result = self.runner.invoke(tools, ['list-types', '--strict',
-                                            'nonsense', 'morenonesense'])
+                                            types[0] + 'x'])
         self.assertEqual(result.exit_code, 0)
         self.assertEqual(len(result.output), 0)
 
         result = self.runner.invoke(tools, ['list-types', '--strict', *types,
-                                            'nonsense', 'morenonesense'])
+                                            types[0] + 'x'])
         self.assertEqual(result.exit_code, 0)
         self.assertEqual(len(result.output.split('\n\n')) - 1, len(types))
 
@@ -838,14 +838,13 @@ class TestListFormats(unittest.TestCase):
         self.assertEqual(len(result.output.split('\n\n')) - 1, len(formats))
 
         result = self.runner.invoke(tools, ['list-formats', '--exportable',
-                                            '--strict', 'nonsense',
-                                            'morenonesense'])
+                                            '--strict', formats[0] + 'x'])
         self.assertEqual(result.exit_code, 0)
         self.assertEqual(len(result.output), 0)
 
         result = self.runner.invoke(tools, ['list-formats', '--exportable',
-                                            '--strict', *formats, 'nonsense',
-                                            'morenonesense'])
+                                            '--strict', *formats,
+                                            formats[0] + 'x'])
         self.assertEqual(result.exit_code, 0)
         self.assertEqual(len(result.output.split('\n\n')) - 1, len(formats))
 
