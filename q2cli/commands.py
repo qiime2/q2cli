@@ -484,14 +484,15 @@ class ActionCommand(BaseCommandMixin, click.Command):
                 path = result.save(output)
 
             if not quiet:
-
-                if isinstance(result, ResultCollection):
-                    type = f'Collection[{list(result.values())[0].type}]'
+                if output_in_cache(output):
+                    message = \
+                        f"Added {result.type} to cache: {cache_path} as: {key}"
                 else:
-                    type = result.type
-                click.echo(
-                    CONFIG.cfg_style('success', 'Saved %s to: %s' %
-                                     (type, path)))
+                    type = f'Collection[{list(result.values())[0].type}]' if \
+                        isinstance(result, ResultCollection) else result.type
+                    message = f"Saved {type} to: {path}"
+
+                click.echo(CONFIG.cfg_style('success', message))
 
         # If we used a default recycle pool for a pipeline and the pipeline
         # succeeded, then we need to clean up the pool. Make sure to do this at
