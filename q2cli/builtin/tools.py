@@ -90,11 +90,11 @@ def _print_descriptions(descriptions, tsv):
                 click.echo()
     else:
         import textwrap
+        tabsize = 8
         for value, description in descriptions.items():
             click.secho(value, bold=True)
             if description:
                 description = _deformat_description(description)
-                tabsize = 8
                 wrapped_description = textwrap.wrap(description,
                                                     width=72-tabsize,
                                                     initial_indent='\t',
@@ -114,22 +114,27 @@ def _deformat_description(description):
     return despaced
 
 
-def _get_matches(words, possibilities, cutoff=0.5):
+def _get_matches(words, possibilities, strict=False):
     from difflib import get_close_matches
-    matches = []
+    if strict:
+        cutoff = 1
+    else:
+        cutoff = 0.6
+
+    matches = set()
+    num_possibilities = len(possibilities)
     for word in words:
-        matches += get_close_matches(word,
-                                     possibilities,
-                                     n=len(possibilities),
-                                     cutoff=cutoff)
+        matches.update(get_close_matches(word,
+                                         possibilities,
+                                         n=num_possibilities,
+                                         cutoff=cutoff))
         # substring search
         if cutoff != 1:
             for possibility in possibilities:
                 if word.lower() in possibility.lower():
-                    if possibility not in matches:
-                        matches.append(possibility)
+                    matches.add(possibility)
 
-    return matches
+    return list(matches)
 
 
 @tools.command(
@@ -138,23 +143,21 @@ def _get_matches(words, possibilities, cutoff=0.5):
         short_help='',
         cls=ToolCommand
 )
-@click.argument('types', nargs=-1)
+@click.argument('queries', nargs=-1)
 @click.option('--strict', is_flag=True,
               help='Show only exact matches for the type argument(s).')
 @click.option('--tsv', is_flag=True,
               help='Print as machine readable tab-separated values.')
-def show_types(types, strict, tsv):
+def show_types(queries, strict, tsv):
     pm = q2cli.util.get_plugin_manager()
 
-    if types and strict:
-        matches = _get_matches(types, list(pm.artifact_classes), 1)
-    elif types:
-        matches = _get_matches(types, list(pm.artifact_classes))
+    if queries:
+        matches = _get_matches(queries, list(pm.artifact_classes), strict)
     else:
-        matches = list(pm.artifact_classes)
+        matches = sorted(list(pm.artifact_classes))
 
     descriptions = {}
-    for match in sorted(matches):
+    for match in matches:
         description = pm.artifact_classes[match].description
         descriptions[match] = description
 
@@ -167,7 +170,7 @@ def show_types(types, strict, tsv):
         short_help='',
         cls=ToolCommand
 )
-@click.argument('formats', nargs=-1)
+@click.argument('queries', nargs=-1)
 @click.option('--importable', is_flag=True,
               help='List the importable formats.')
 @click.option('--exportable', is_flag=True,
@@ -176,7 +179,7 @@ def show_types(types, strict, tsv):
               help='Show only exact matches for the format argument(s).')
 @click.option('--tsv', is_flag=True,
               help='Print as machine readable tab-separated values.')
-def show_formats(formats, importable, exportable, strict, tsv):
+def show_formats(queries, importable, exportable, strict, tsv):
     if importable and exportable:
         raise click.UsageError("'--importable' and '--exportable' flags are "
                                "mutually exclusive.")
@@ -187,17 +190,14 @@ def show_formats(formats, importable, exportable, strict, tsv):
     pm = q2cli.util.get_plugin_manager()
     portable_formats = pm.importable_formats if importable \
         else pm.exportable_formats
-    available_formats = list(portable_formats)
 
-    if formats and strict:
-        matches = _get_matches(formats, available_formats, 1)
-    elif formats:
-        matches = _get_matches(formats, available_formats)
+    if queries:
+        matches = _get_matches(queries, portable_formats.keys(), strict)
     else:
-        matches = available_formats
+        matches = sorted(portable_formats.keys())
 
     descriptions = {}
-    for match in sorted(matches):
+    for match in matches:
         docstring = portable_formats[match].format.__doc__
         first_docstring_line = docstring.split('\n\n')[0].strip() \
             if docstring else ''
