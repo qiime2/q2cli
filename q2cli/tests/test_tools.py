@@ -725,7 +725,7 @@ class TestPeek(unittest.TestCase):
         self.assertEqual(result.output.count('\n'), 3)
 
 
-class TestShowTypes(unittest.TestCase):
+class TestListTypes(unittest.TestCase):
     def setUp(self):
         self.runner = CliRunner()
         self.pm = PluginManager()
@@ -733,17 +733,17 @@ class TestShowTypes(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def test_show_all_types(self):
-        result = self.runner.invoke(tools, ['show-types'])
+    def test_list_all_types(self):
+        result = self.runner.invoke(tools, ['list-types'])
         self.assertEqual(result.exit_code, 0)
 
         for name, artifact_class_record in self.pm.artifact_classes.items():
             self.assertIn(name, result.output)
             self.assertIn(artifact_class_record.description, result.output)
 
-    def test_show_types_fuzzy(self):
+    def test_list_types_fuzzy(self):
         types = list(self.pm.artifact_classes)[:5]
-        result = self.runner.invoke(tools, ['show-types', *types])
+        result = self.runner.invoke(tools, ['list-types', *types])
         self.assertEqual(result.exit_code, 0)
 
         # split on \n\n because types and their description are separated
@@ -752,24 +752,24 @@ class TestShowTypes(unittest.TestCase):
         self.assertGreaterEqual(len(result.output.split('\n\n')) - 1,
                                 len(types))
 
-    def test_show_types_strict(self):
+    def test_list_types_strict(self):
         types = list(self.pm.artifact_classes)[:5]
-        result = self.runner.invoke(tools, ['show-types', '--strict', *types])
+        result = self.runner.invoke(tools, ['list-types', '--strict', *types])
         self.assertEqual(result.exit_code, 0)
         self.assertEqual(len(result.output.split('\n\n')) - 1, len(types))
 
-        result = self.runner.invoke(tools, ['show-types', '--strict',
+        result = self.runner.invoke(tools, ['list-types', '--strict',
                                             'nonsense', 'morenonesense'])
         self.assertEqual(result.exit_code, 0)
         self.assertEqual(len(result.output), 0)
 
-        result = self.runner.invoke(tools, ['show-types', '--strict', *types,
+        result = self.runner.invoke(tools, ['list-types', '--strict', *types,
                                             'nonsense', 'morenonesense'])
         self.assertEqual(result.exit_code, 0)
         self.assertEqual(len(result.output.split('\n\n')) - 1, len(types))
 
-    def test_show_types_tsv(self):
-        result = self.runner.invoke(tools, ['show-types', '--tsv'])
+    def test_list_types_tsv(self):
+        result = self.runner.invoke(tools, ['list-types', '--tsv'])
         self.assertEqual(result.exit_code, 0)
 
         # len - 1 because \n split produces a final ''
@@ -786,7 +786,7 @@ class TestShowTypes(unittest.TestCase):
         self.assertEqual(no_description_count, result.output.count('\t\n'))
 
 
-class TestShowFormats(unittest.TestCase):
+class TestListFormats(unittest.TestCase):
     def setUp(self):
         self.runner = CliRunner()
         self.pm = PluginManager()
@@ -794,8 +794,8 @@ class TestShowFormats(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def test_show_all_importable_formats(self):
-        result = self.runner.invoke(tools, ['show-formats', '--importable'])
+    def test_list_all_importable_formats(self):
+        result = self.runner.invoke(tools, ['list-formats', '--importable'])
         self.assertEqual(result.exit_code, 0)
 
         for name, format_record in self.pm.importable_formats.items():
@@ -806,8 +806,8 @@ class TestShowFormats(unittest.TestCase):
                 for word in description:
                     self.assertIn(word.strip(), result.output)
 
-    def test_show_all_exportable_formats(self):
-        result = self.runner.invoke(tools, ['show-formats', '--exportable'])
+    def test_list_all_exportable_formats(self):
+        result = self.runner.invoke(tools, ['list-formats', '--exportable'])
         self.assertEqual(result.exit_code, 0)
 
         for name, format_record in self.pm.exportable_formats.items():
@@ -818,39 +818,39 @@ class TestShowFormats(unittest.TestCase):
                 for word in description:
                     self.assertIn(word.strip(), result.output)
 
-    def test_show_formats_fuzzy(self):
+    def test_list_formats_fuzzy(self):
         formats = list(self.pm.importable_formats)[:5]
-        result = self.runner.invoke(tools, ['show-formats', '--importable',
+        result = self.runner.invoke(tools, ['list-formats', '--importable',
                                             *formats])
         self.assertEqual(result.exit_code, 0)
 
-        # see TestShowTypes.test_show_types_fuzzy
+        # see TestListTypes.test_list_types_fuzzy
         self.assertGreaterEqual(len(result.output.split('\n\n')) - 1,
                                 len(formats))
 
-    def test_show_formats_strict(self):
+    def test_list_formats_strict(self):
         formats = list(self.pm.exportable_formats)[:5]
-        result = self.runner.invoke(tools, ['show-formats', '--exportable',
+        result = self.runner.invoke(tools, ['list-formats', '--exportable',
                                             '--strict', *formats])
         self.assertEqual(result.exit_code, 0)
         print(formats)
         print(result.output)
         self.assertEqual(len(result.output.split('\n\n')) - 1, len(formats))
 
-        result = self.runner.invoke(tools, ['show-formats', '--exportable',
+        result = self.runner.invoke(tools, ['list-formats', '--exportable',
                                             '--strict', 'nonsense',
                                             'morenonesense'])
         self.assertEqual(result.exit_code, 0)
         self.assertEqual(len(result.output), 0)
 
-        result = self.runner.invoke(tools, ['show-formats', '--exportable',
+        result = self.runner.invoke(tools, ['list-formats', '--exportable',
                                             '--strict', *formats, 'nonsense',
                                             'morenonesense'])
         self.assertEqual(result.exit_code, 0)
         self.assertEqual(len(result.output.split('\n\n')) - 1, len(formats))
 
-    def test_show_formats_tsv(self):
-        result = self.runner.invoke(tools, ['show-formats', '--importable',
+    def test_list_formats_tsv(self):
+        result = self.runner.invoke(tools, ['list-formats', '--importable',
                                             '--tsv'])
         self.assertEqual(result.exit_code, 0)
 
