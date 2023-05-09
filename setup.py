@@ -22,5 +22,8 @@ setup(
         [console_scripts]
         qiime=q2cli.__main__:qiime
     ''',
+    package_data={
+        'q2cli.tests': ['data/*'],
+    },
     zip_safe=False,
 )

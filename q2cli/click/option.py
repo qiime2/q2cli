@@ -23,7 +23,12 @@ class GeneratedOption(click.Option):
         if metadata is not None:
             prefix = 'm'
         if multiple is not None:
-            multiple = list if multiple == 'list' else set
+            if multiple == 'list':
+                multiple = list
+            elif multiple == 'dict':
+                multiple = dict
+            else:
+                multiple = set
 
         if is_bool_flag:
             yes = q2cli.util.to_cli_name(name)
@@ -180,16 +185,44 @@ class GeneratedOption(click.Option):
                 return None
             elif self.q2_prefix == 'i':
                 value = super().type_cast_value(ctx, value)
+                keys, value = self._split_and_validate_input_keys(value)
+
                 if self.q2_multiple is set:
                     self._check_length(value, ctx)
-                value = self.q2_multiple(value)
+
+                # This means we loaded a proper Collection directory. When we
+                # load in a Collection directory for an action that takes a
+                # Collection input, we get a tuple containing a dictionary of
+                # the Collection we wanted. When we load in a Collection
+                # directory for an action that takes a List, we get a list
+                # containing a dictionary of the Collection we wanted. We just
+                # extract that dictionary.
+                if (isinstance(value, tuple) or isinstance(value, list)) \
+                        and len(value) == 1 and isinstance(value[0], dict):
+                    value = value[0]
+
+                # We already have a dict, so we already have keys
+                if isinstance(value, dict):
+                    keys = value.keys()
+                    value = list(value.values())
+                elif self.q2_multiple is dict:
+                    if keys is None:
+                        keys = range(len(value))
+                    value = value
+                else:
+                    value = self.q2_multiple(value)
+
                 type_expr = qiime2.sdk.util.type_from_ast(self.q2_ast)
                 args = ', '.join(map(repr, (x.type for x in value)))
+
                 if value not in type_expr:
                     raise click.BadParameter(
                         'received <%s> as an argument, which is incompatible'
                         ' with parameter type: %r' % (args, type_expr),
                         ctx=ctx, param=self)
+
+                if self.q2_multiple is dict:
+                    value = {k: v for k, v in zip(keys, value)}
                 return value
             elif self.q2_metadata == 'file':
                 value = super().type_cast_value(ctx, value)
@@ -206,9 +239,43 @@ class GeneratedOption(click.Option):
                             e, header=header, traceback=tb)
             elif self.q2_prefix == 'p':
                 try:
+                    _values = []
+
                     if self.q2_multiple is set:
                         self._check_length(value, ctx)
-                    value = qiime2.sdk.util.parse_primitive(self.q2_ast, value)
+
+                    keys = []
+                    if self.q2_multiple is dict:
+                        _values = {}
+
+                        keyed = False
+                        unkeyed = False
+                        # All params in a Collection must be either keyed or
+                        # unkeyed. We cannot have a mix because it makes things
+                        # ambiguous
+                        for idx, item in enumerate(value):
+                            if ':' in item:
+                                if unkeyed:
+                                    raise KeyError(
+                                        'The keyed value <%s> has been mixed'
+                                        ' with unkeyed values. All values must'
+                                        ' be keyed or unkeyed.' % item)
+                                key, _value = item.split(':', 1)
+                                _values[key] = _value
+                                keyed = True
+                            else:
+                                if keyed:
+                                    raise KeyError(
+                                        'The unkeyed value <%s> has been'
+                                        ' mixed with keyed values. All values'
+                                        ' must be keyed or unkeyed.' % item)
+                                _values[str(idx)] = item
+                                unkeyed = True
+                    else:
+                        _values = value
+
+                    value = \
+                        qiime2.sdk.util.parse_primitive(self.q2_ast, _values)
                 except ValueError:
                     args = ', '.join(map(repr, value))
                     expr = qiime2.sdk.util.type_from_ast(self.q2_ast)
@@ -217,13 +284,57 @@ class GeneratedOption(click.Option):
                         ' with parameter type: %r' % (args, expr),
                         ctx=ctx, param=self)
                 return value
+        elif self.q2_prefix == 'i':
+            value = super().type_cast_value(ctx, value)
+            if value is not None:
+                return value[1]
+            return value
 
+        # We have an output here
         return super().type_cast_value(ctx, value)
+
+    def _split_and_validate_input_keys(self, value):
+        """ This function ensures that if a user passed in a de-facto
+            collection they did so properly.
+        """
+        keys = [t[0] for t in value]
+        values = [t[1] for t in value]
+
+        if any(key is not None and not key.isidentifier() for key in keys):
+            raise ValueError('All keys must be valid Python identifiers.'
+                             ' Python identifier rules may be found here'
+                             ' https://www.askpython.com/python/'
+                             'python-identifiers-rules-best-practices')
+
+        # If we had no keys, we are fine
+        if all(key is None for key in keys):
+            return None, values
+
+        has_nones = any(key is None for key in keys)
+        has_keys = any(key is not None for key in keys)
+
+        # We cannot have keys for something that isn't a dict
+        if self.q2_multiple is not dict and has_keys:
+            raise ValueError('Keyed values may only be supplied for '
+                             'Collection inputs.')
+        # We cannot have a mixture of keyed and unkeyed values
+        elif self.q2_multiple is dict and has_keys and has_nones:
+            raise ValueError('Keyed values cannot be mixed with unkeyed '
+                             'values.')
+
+        return keys, values
 
     def _check_length(self, value, ctx):
         import collections
 
+        # TODO: Ok seriously though figure out why value is in a tuple if it is
+        # a Collection
+        if isinstance(value, tuple) and len(value) == 1 and \
+                isinstance(value[0], dict):
+            value = list(value[0].values())
+
         counter = collections.Counter(value)
+
         dups = ', '.join(map(repr, (v for v, n in counter.items() if n > 1)))
         args = ', '.join(map(repr, value))
         if dups:

@@ -15,10 +15,10 @@ import click
 import errno
 
 from click.testing import CliRunner
-from qiime2 import Artifact, Visualization
 from qiime2.core.cache import get_cache
-from qiime2.core.testing.type import IntSequence1, IntSequence2
+from qiime2.core.testing.type import IntSequence1, IntSequence2, SingleInt
 from qiime2.core.testing.util import get_dummy_plugin
+from qiime2.sdk import Artifact, Visualization, ResultCollection
 
 from q2cli.builtin.info import info
 from q2cli.builtin.tools import tools
@@ -289,11 +289,6 @@ class CliTests(unittest.TestCase):
 
     def test_input_conversion(self):
         obj = QIIME2Type(IntSequence1.to_ast(), repr(IntSequence1))
-
-        with self.assertRaisesRegex(click.exceptions.BadParameter,
-                                    f'{self.tempdir!r} is a directory,'
-                                    ' not a QIIME 2 Artifact'):
-            obj._convert_input(self.tempdir, None, None)
 
         with self.assertRaisesRegex(click.exceptions.BadParameter,
                                     "x does not exist"):
@@ -708,6 +703,222 @@ class TestMetadataColumnSupport(MetadataTestsBase):
         self.assertIn("Metadata column", result.output)
         self.assertIn("categorical", result.output)
         self.assertIn("expected Numeric", result.output)
+
+
+class TestCollectionSupport(unittest.TestCase):
+    def setUp(self):
+        get_dummy_plugin()
+        self.runner = CliRunner()
+        self.plugin_command = RootCommand().get_command(
+            ctx=None, name='dummy-plugin')
+        self.tempdir = tempfile.mkdtemp(prefix='qiime2-q2cli-test-temp-')
+
+        self.art1_path = os.path.join(self.tempdir, 'art1.qza')
+        self.art2_path = os.path.join(self.tempdir, 'art2.qza')
+        self.art1 = Artifact.import_data(SingleInt, 0)
+        self.art2 = Artifact.import_data(SingleInt, 1)
+
+        self.output = os.path.join(self.tempdir, 'out')
+        self.output2 = os.path.join(self.tempdir, 'out2')
+
+    def tearDown(self):
+        shutil.rmtree(self.tempdir)
+
+    def _run_command(self, *args):
+        return self.runner.invoke(self.plugin_command, args)
+
+    def test_collection_roundtrip_list(self):
+        result = self._run_command(
+            'list-params', '--p-ints', '0', '--p-ints', '1', '--o-output',
+            self.output, '--verbose'
+        )
+
+        self.assertEqual(result.exit_code, 0)
+        collection = ResultCollection.load(self.output)
+
+        self.assertEqual(collection['0'].view(int), 0)
+        self.assertEqual(collection['1'].view(int), 1)
+        self.assertEqual(list(collection.keys()), ['0', '1'])
+
+        result = self._run_command(
+            'list-of-ints', '--i-ints', self.output, '--o-output',
+            self.output2, '--verbose'
+        )
+
+        self.assertEqual(collection['0'].view(int), 0)
+        self.assertEqual(collection['1'].view(int), 1)
+        self.assertEqual(list(collection.keys()), ['0', '1'])
+
+    def test_collection_roundtrip_dict_keyed(self):
+        result = self._run_command(
+            'dict-params', '--p-ints', 'foo:0', '--p-ints', 'bar:1',
+            '--o-output', self.output, '--verbose'
+        )
+
+        self.assertEqual(result.exit_code, 0)
+        collection = ResultCollection.load(self.output)
+
+        self.assertEqual(collection['foo'].view(int), 0)
+        self.assertEqual(collection['bar'].view(int), 1)
+        self.assertEqual(list(collection.keys()), ['foo', 'bar'])
+
+        result = self._run_command(
+            'dict-of-ints', '--i-ints', self.output, '--o-output',
+            self.output2, '--verbose'
+        )
+
+        self.assertEqual(result.exit_code, 0)
+        collection = ResultCollection.load(self.output)
+
+        self.assertEqual(collection['foo'].view(int), 0)
+        self.assertEqual(collection['bar'].view(int), 1)
+        self.assertEqual(list(collection.keys()), ['foo', 'bar'])
+
+    def test_collection_roundtrip_dict_unkeyed(self):
+        result = self._run_command(
+            'dict-params', '--p-ints', '0', '--p-ints', '1',
+            '--o-output', self.output, '--verbose'
+        )
+
+        self.assertEqual(result.exit_code, 0)
+        collection = ResultCollection.load(self.output)
+
+        self.assertEqual(collection['0'].view(int), 0)
+        self.assertEqual(collection['1'].view(int), 1)
+        self.assertEqual(list(collection.keys()), ['0', '1'])
+
+        result = self._run_command(
+            'dict-of-ints', '--i-ints', self.output, '--o-output',
+            self.output2, '--verbose'
+        )
+
+        self.assertEqual(result.exit_code, 0)
+        collection = ResultCollection.load(self.output)
+
+        self.assertEqual(collection['0'].view(int), 0)
+        self.assertEqual(collection['1'].view(int), 1)
+        self.assertEqual(list(collection.keys()), ['0', '1'])
+
+    def test_de_facto_list(self):
+        self.art1.save(self.art1_path)
+        self.art2.save(self.art2_path)
+
+        result = self._run_command(
+            'list-of-ints', '--i-ints', self.art1_path, '--i-ints',
+            self.art2_path, '--o-output', self.output, '--verbose'
+        )
+
+        self.assertEqual(result.exit_code, 0)
+        collection = ResultCollection.load(self.output)
+
+        self.assertEqual(collection['0'].view(int), 0)
+        self.assertEqual(collection['1'].view(int), 1)
+        self.assertEqual(list(collection.keys()), ['0', '1'])
+
+    def test_de_facto_dict_keyed(self):
+        self.art1.save(self.art1_path)
+        self.art2.save(self.art2_path)
+
+        result = self._run_command(
+            'dict-of-ints', '--i-ints', f'foo:{self.art1_path}', '--i-ints',
+            f'bar:{self.art2_path}', '--o-output', self.output, '--verbose'
+        )
+
+        self.assertEqual(result.exit_code, 0)
+        collection = ResultCollection.load(self.output)
+
+        self.assertEqual(collection['foo'].view(int), 0)
+        self.assertEqual(collection['bar'].view(int), 1)
+        self.assertEqual(list(collection.keys()), ['foo', 'bar'])
+
+    def test_de_facto_dict_unkeyed(self):
+        self.art1.save(self.art1_path)
+        self.art2.save(self.art2_path)
+
+        result = self._run_command(
+            'dict-of-ints', '--i-ints', self.art1_path, '--i-ints',
+            self.art2_path, '--o-output', self.output, '--verbose'
+        )
+
+        self.assertEqual(result.exit_code, 0)
+        collection = ResultCollection.load(self.output)
+
+        self.assertEqual(collection['0'].view(int), 0)
+        self.assertEqual(collection['1'].view(int), 1)
+        self.assertEqual(list(collection.keys()), ['0', '1'])
+
+    def test_mixed_keyed_unkeyed_inputs(self):
+        self.art1.save(self.art1_path)
+        self.art2.save(self.art2_path)
+
+        result = self._run_command(
+            'dict-of-ints', '--i-ints', f'foo:{self.art1_path}', '--i-ints',
+            self.art2_path, '--o-output', self.output, '--verbose'
+        )
+
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn('Keyed values cannot be mixed with unkeyed values.',
+                      str(result.exception))
+
+        result = self._run_command(
+            'dict-of-ints', '--i-ints', self.art1_path, '--i-ints',
+            f'bar:{self.art2_path}', '--o-output', self.output, '--verbose'
+        )
+
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn('Keyed values cannot be mixed with unkeyed values.',
+                      str(result.exception))
+
+    def test_mixed_keyed_unkeyed_params(self):
+        result = self._run_command(
+            'dict-params', '--p-ints', 'foo:0', '--p-ints', '1',
+            '--o-output', self.output, '--verbose'
+        )
+
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn('The unkeyed value <1> has been mixed with keyed values.'
+                      ' All values must be keyed or unkeyed',
+                      str(result.exception))
+
+        result = self._run_command(
+            'dict-params', '--p-ints', '0', '--p-ints', 'bar:1',
+            '--o-output', self.output, '--verbose'
+        )
+
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn('The keyed value <bar:1> has been mixed with unkeyed'
+                      ' values. All values must be keyed or unkeyed',
+                      str(result.exception))
+
+    def test_directory_with_non_artifacts(self):
+        input_dir = os.path.join(self.tempdir, 'in')
+        os.mkdir(input_dir)
+
+        artifact_path = os.path.join(input_dir, 'a.qza')
+        artifact = Artifact.import_data(IntSequence1, [0, 42, 43])
+        artifact.save(artifact_path)
+
+        with open(os.path.join(input_dir, 'bad.txt'), 'w') as fh:
+            fh.write('This file is not an artifact')
+
+        result = self._run_command(
+            'list-of-ints', '--i-ints', input_dir, '--o-output',
+            self.output, '--verbose'
+        )
+
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn("Invalid value for '--i-ints':", result.output)
+
+    # TODO: Actually, do we want to accept empty directories?
+    def test_empty_directory(self):
+        result = self._run_command(
+            'list-of-ints', '--i-ints', self.tempdir, '--o-output',
+            self.output, '--verbose'
+        )
+
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn(f"Provided directory '{self.tempdir}' is empty.",
+                      result.output)
 
 
 if __name__ == "__main__":
