@@ -93,30 +93,6 @@ class CliTests(unittest.TestCase):
             '10', '--output-dir', output_dir, '--verbose'])
         self.assertEqual(result.exit_code, 0)
 
-    def test_show_importable_types(self):
-        result = self.runner.invoke(
-            tools, ['import', '--show-importable-types'])
-        self.assertEqual(result.exit_code, 0)
-        self.assertIn('FourInts', result.output)
-        self.assertIn('IntSequence1', result.output)
-        self.assertIn('IntSequence2', result.output)
-        self.assertIn('Kennel[Cat]', result.output)
-        self.assertIn('Kennel[Dog]', result.output)
-        self.assertIn('Mapping', result.output)
-
-    def test_show_importable_formats(self):
-        result = self.runner.invoke(
-            tools, ['import', '--show-importable-formats'])
-        self.assertEqual(result.exit_code, 0)
-        self.assertIn('FourIntsDirectoryFormat', result.output)
-        self.assertIn('IntSequenceDirectoryFormat', result.output)
-        self.assertNotIn('UnimportableFormat', result.output)
-        self.assertNotIn('UnimportableDirectoryFormat', result.output)
-        self.assertIn('MappingDirectoryFormat', result.output)
-        self.assertIn('IntSequenceFormat', result.output)
-        self.assertIn('IntSequenceFormatV2', result.output)
-        self.assertIn('IntSequenceV2DirectoryFormat', result.output)
-
     def test_extract(self):
         result = self.runner.invoke(
             tools, ['extract', '--input-path', self.artifact1_path,

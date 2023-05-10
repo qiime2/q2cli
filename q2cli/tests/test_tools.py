@@ -18,6 +18,7 @@ from qiime2.core.testing.util import get_dummy_plugin
 from qiime2.metadata.base import SUPPORTED_COLUMN_TYPES
 from qiime2.core.cache import Cache
 from qiime2.sdk.result import Result
+from qiime2.sdk.plugin_manager import PluginManager
 
 from q2cli.util import load_metadata
 from q2cli.builtin.tools import tools
@@ -722,6 +723,154 @@ class TestPeek(unittest.TestCase):
         self.assertIn("viz.qzv", result.output)
         self.assertEqual(result.output.count('\t'), 9)
         self.assertEqual(result.output.count('\n'), 3)
+
+
+class TestListTypes(unittest.TestCase):
+    def setUp(self):
+        self.runner = CliRunner()
+        self.pm = PluginManager()
+
+    def tearDown(self):
+        pass
+
+    def test_list_all_types(self):
+        result = self.runner.invoke(tools, ['list-types'])
+        self.assertEqual(result.exit_code, 0)
+
+        for name, artifact_class_record in self.pm.artifact_classes.items():
+            self.assertIn(name, result.output)
+            self.assertIn(artifact_class_record.description, result.output)
+
+    def test_list_types_fuzzy(self):
+        types = list(self.pm.artifact_classes)[:5]
+        result = self.runner.invoke(tools, ['list-types', *types])
+        self.assertEqual(result.exit_code, 0)
+
+        # split on \n\n because types and their description are separated
+        # by two newlines
+        # len - 1 because split includes '' for the last \n\n split
+        self.assertGreaterEqual(len(result.output.split('\n\n')) - 1,
+                                len(types))
+
+    def test_list_types_strict(self):
+        types = list(self.pm.artifact_classes)[:5]
+        result = self.runner.invoke(tools, ['list-types', '--strict', *types])
+        self.assertEqual(result.exit_code, 0)
+        self.assertEqual(len(result.output.split('\n\n')) - 1, len(types))
+
+        result = self.runner.invoke(tools, ['list-types', '--strict',
+                                            types[0] + 'x'])
+        self.assertEqual(result.exit_code, 0)
+        self.assertEqual(len(result.output), 0)
+
+        result = self.runner.invoke(tools, ['list-types', '--strict', *types,
+                                            types[0] + 'x'])
+        self.assertEqual(result.exit_code, 0)
+        self.assertEqual(len(result.output.split('\n\n')) - 1, len(types))
+
+    def test_list_types_tsv(self):
+        result = self.runner.invoke(tools, ['list-types', '--tsv'])
+        self.assertEqual(result.exit_code, 0)
+
+        # len - 1 because \n split produces a final ''
+        self.assertEqual(len(result.output.split('\n')) - 1,
+                         len(self.pm.artifact_classes))
+
+        no_description_count = 0
+        for name, artifact_class_record in self.pm.artifact_classes.items():
+            self.assertIn(name, result.output)
+            self.assertIn(artifact_class_record.description, result.output)
+            if artifact_class_record.description == '':
+                no_description_count += 1
+
+        self.assertEqual(no_description_count, result.output.count('\t\n'))
+
+
+class TestListFormats(unittest.TestCase):
+    def setUp(self):
+        self.runner = CliRunner()
+        self.pm = PluginManager()
+
+    def tearDown(self):
+        pass
+
+    def test_list_all_importable_formats(self):
+        result = self.runner.invoke(tools, ['list-formats', '--importable'])
+        self.assertEqual(result.exit_code, 0)
+
+        for name, format_record in self.pm.importable_formats.items():
+            self.assertIn(name, result.output)
+            docstring = format_record.format.__doc__
+            if docstring:
+                description = docstring.split('\n\n')[0].strip()
+                for word in description:
+                    self.assertIn(word.strip(), result.output)
+
+    def test_list_all_exportable_formats(self):
+        result = self.runner.invoke(tools, ['list-formats', '--exportable'])
+        self.assertEqual(result.exit_code, 0)
+
+        for name, format_record in self.pm.exportable_formats.items():
+            self.assertIn(name, result.output)
+            docstring = format_record.format.__doc__
+            if docstring:
+                description = docstring.split('\n\n')[0].strip()
+                for word in description:
+                    self.assertIn(word.strip(), result.output)
+
+    def test_list_formats_fuzzy(self):
+        formats = list(self.pm.importable_formats)[:5]
+        result = self.runner.invoke(tools, ['list-formats', '--importable',
+                                            *formats])
+        self.assertEqual(result.exit_code, 0)
+
+        # see TestListTypes.test_list_types_fuzzy
+        self.assertGreaterEqual(len(result.output.split('\n\n')) - 1,
+                                len(formats))
+
+    def test_list_formats_strict(self):
+        formats = list(self.pm.exportable_formats)[:5]
+        result = self.runner.invoke(tools, ['list-formats', '--exportable',
+                                            '--strict', *formats])
+        self.assertEqual(result.exit_code, 0)
+        print(formats)
+        print(result.output)
+        self.assertEqual(len(result.output.split('\n\n')) - 1, len(formats))
+
+        result = self.runner.invoke(tools, ['list-formats', '--exportable',
+                                            '--strict', formats[0] + 'x'])
+        self.assertEqual(result.exit_code, 0)
+        self.assertEqual(len(result.output), 0)
+
+        result = self.runner.invoke(tools, ['list-formats', '--exportable',
+                                            '--strict', *formats,
+                                            formats[0] + 'x'])
+        self.assertEqual(result.exit_code, 0)
+        self.assertEqual(len(result.output.split('\n\n')) - 1, len(formats))
+
+    def test_list_formats_tsv(self):
+        result = self.runner.invoke(tools, ['list-formats', '--importable',
+                                            '--tsv'])
+        self.assertEqual(result.exit_code, 0)
+
+        # len - 1 because \n split produces a final ''
+        print(result.output)
+        print(self.pm.importable_formats.keys())
+        self.assertEqual(len(result.output.split('\n')) - 1,
+                         len(self.pm.importable_formats))
+
+        no_description_count = 0
+        for name, format_record in self.pm.importable_formats.items():
+            self.assertIn(name, result.output)
+            docstring = format_record.format.__doc__
+            if docstring:
+                description = docstring.split('\n\n')[0].strip()
+                for word in description:
+                    self.assertIn(word.strip(), result.output)
+
+            if format_record.format.__doc__ is None:
+                no_description_count += 1
+        self.assertEqual(no_description_count, result.output.count('\t\n'))
 
 
 if __name__ == "__main__":

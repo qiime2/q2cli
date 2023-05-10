@@ -80,40 +80,149 @@ def export_data(input_path, output_path, output_format):
     click.echo(CONFIG.cfg_style('success', success))
 
 
+def _print_descriptions(descriptions, tsv):
+    if tsv:
+        for value, description in descriptions.items():
+            click.echo(f"{value}\t", nl=False)
+            if description:
+                click.echo(_deformat_description(description))
+            else:
+                click.echo()
+    else:
+        import textwrap
+        tabsize = 8
+        for value, description in descriptions.items():
+            click.secho(value, bold=True)
+            if description:
+                description = _deformat_description(description)
+                wrapped_description = textwrap.wrap(description,
+                                                    width=72-tabsize,
+                                                    initial_indent='\t',
+                                                    subsequent_indent='\t',
+                                                    tabsize=tabsize)
+                for line in wrapped_description:
+                    click.echo(f"{line}")
+            else:
+                click.secho("\tNo description", italic=True)
+            click.echo()
+
+
+def _deformat_description(description):
+    import re
+    deformatted = re.sub(r"[\t\n]+", ' ', description)
+    despaced = re.sub(r" +", ' ', deformatted)
+    return despaced
+
+
+def _get_matches(words, possibilities, strict=False):
+    from difflib import get_close_matches
+    if strict:
+        cutoff = 1
+    else:
+        cutoff = 0.6
+
+    matches = set()
+    num_possibilities = len(possibilities)
+    for word in words:
+        matches.update(get_close_matches(word,
+                                         possibilities,
+                                         n=num_possibilities,
+                                         cutoff=cutoff))
+        # substring search
+        if cutoff != 1:
+            for possibility in possibilities:
+                if word.lower() in possibility.lower():
+                    matches.add(possibility)
+
+    return list(matches)
+
+
+@tools.command(
+        name='list-types',
+        help='List the available semantic types.',
+        short_help='',
+        cls=ToolCommand
+)
+@click.argument('queries', nargs=-1)
+@click.option('--strict', is_flag=True,
+              help='Show only exact matches for the type argument(s).')
+@click.option('--tsv', is_flag=True,
+              help='Print as machine readable tab-separated values.')
+def show_types(queries, strict, tsv):
+    pm = q2cli.util.get_plugin_manager()
+
+    if len(queries) > 0:
+        matches = _get_matches(queries, list(pm.artifact_classes), strict)
+    else:
+        matches = sorted(list(pm.artifact_classes))
+
+    descriptions = {}
+    for match in matches:
+        description = pm.artifact_classes[match].description
+        descriptions[match] = description
+
+    _print_descriptions(descriptions, tsv)
+
+
+@tools.command(
+        name='list-formats',
+        help='List the available formats.',
+        short_help='',
+        cls=ToolCommand
+)
+@click.argument('queries', nargs=-1)
+@click.option('--importable', is_flag=True,
+              help='List the importable formats.')
+@click.option('--exportable', is_flag=True,
+              help='List the exportable formats.')
+@click.option('--strict', is_flag=True,
+              help='Show only exact matches for the format argument(s).')
+@click.option('--tsv', is_flag=True,
+              help='Print as machine readable tab-separated values.')
+def show_formats(queries, importable, exportable, strict, tsv):
+    if importable and exportable:
+        raise click.UsageError("'--importable' and '--exportable' flags are "
+                               "mutually exclusive.")
+    if not importable and not exportable:
+        raise click.UsageError("One of '--importable' or '--exportable' flags "
+                               "is required.")
+
+    pm = q2cli.util.get_plugin_manager()
+    portable_formats = pm.importable_formats if importable \
+        else pm.exportable_formats
+
+    if len(queries) > 0:
+        matches = _get_matches(queries, portable_formats.keys(), strict)
+    else:
+        matches = sorted(portable_formats.keys())
+
+    descriptions = {}
+    for match in matches:
+        docstring = portable_formats[match].format.__doc__
+        first_docstring_line = docstring.split('\n\n')[0].strip() \
+            if docstring else ''
+        descriptions[match] = first_docstring_line
+
+    _print_descriptions(descriptions, tsv)
+
+
 def show_importable_types(ctx, param, value):
     if not value or ctx.resilient_parsing:
         return
-
-    import q2cli.util
-
-    importable_types = sorted(q2cli.util.get_plugin_manager().importable_types,
-                              key=repr)
-
-    if importable_types:
-        for name in importable_types:
-            click.echo(name)
-    else:
-        click.echo('There are no importable types in the current deployment.')
-
+    click.secho('This functionality has been moved to the list-types command.',
+                fg='red', bold=True)
+    click.secho('Run `qiime tools list-types --help` for more information.',
+                fg='red', bold=True)
     ctx.exit()
 
 
 def show_importable_formats(ctx, param, value):
     if not value or ctx.resilient_parsing:
         return
-
-    import q2cli.util
-
-    importable_formats = sorted(
-            q2cli.util.get_plugin_manager().importable_formats)
-
-    if importable_formats:
-        for format in importable_formats:
-            click.echo(format)
-    else:
-        click.echo('There are no importable formats '
-                   'in the current deployment.')
-
+    click.secho('This functionality has been moved to the list-formats '
+                'command.', fg='red', bold=True)
+    click.secho('Run `qiime tools list-formats --help` for more information.',
+                fg='red', bold=True)
     ctx.exit()
 
 
@@ -181,7 +290,7 @@ def import_data(type, input_path, output_path, input_format):
                 type=click.Path(exists=True, file_okay=True, dir_okay=False,
                                 readable=True), metavar=_COMBO_METAVAR)
 @click.option('--tsv/--no-tsv', default=False,
-              help='Print as machine-readable tab separated values.')
+              help='Print as machine-readable tab-separated values.')
 def peek(paths, tsv):
     import qiime2.sdk
     from q2cli.core.config import CONFIG
@@ -454,7 +563,7 @@ def view(visualization_path, index_extension):
     if index_extension.startswith('.'):
         index_extension = index_extension[1:]
 
-    key, visualization = _load_input(visualization_path, view=True)[0]
+    visualization = _load_input(visualization_path, view=True)[0]
     if not isinstance(visualization, Visualization):
         raise click.BadParameter(
             '%s is not a QIIME 2 Visualization. Only QIIME 2 Visualizations '
