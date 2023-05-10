@@ -151,7 +151,7 @@ def _get_matches(words, possibilities, strict=False):
 def show_types(queries, strict, tsv):
     pm = q2cli.util.get_plugin_manager()
 
-    if queries:
+    if len(queries) > 0:
         matches = _get_matches(queries, list(pm.artifact_classes), strict)
     else:
         matches = sorted(list(pm.artifact_classes))
@@ -191,7 +191,7 @@ def show_formats(queries, importable, exportable, strict, tsv):
     portable_formats = pm.importable_formats if importable \
         else pm.exportable_formats
 
-    if queries:
+    if len(queries) > 0:
         matches = _get_matches(queries, portable_formats.keys(), strict)
     else:
         matches = sorted(portable_formats.keys())
