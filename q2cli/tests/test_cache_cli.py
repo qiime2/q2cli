@@ -902,6 +902,38 @@ class TestCacheCli(unittest.TestCase):
         self.assertEqual(list_execution_contexts, list_expected)
         self.assertEqual(dict_execution_contexts, dict_expected)
 
+    def test_parallel_flags_on_non_pipeline(self):
+        self.cache.save(self.art1, 'art1')
+        self.cache.save(self.art2, 'art2')
+        self.cache.save(self.art3, 'art3')
+
+        art1_path = str(self.cache.path) + ':art1'
+        art2_path = str(self.cache.path) + ':art2'
+        art3_path = str(self.cache.path) + ':art3'
+
+        output = str(self.cache.path) + ':output'
+
+        result = self._run_command(
+            'concatenate-ints', '--i-ints1', art1_path, '--i-ints2', art2_path,
+            '--i-ints3', art3_path, '--p-int1', '9', '--p-int2', '10',
+            '--o-concatenated-ints', output, '--verbose', '--parallel'
+        )
+
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn('No such option: --parallel', result.output)
+
+        config_path = get_data_path('mapping_config.toml')
+
+        result = self._run_command(
+            'concatenate-ints', '--i-ints1', art1_path, '--i-ints2', art2_path,
+            '--i-ints3', art3_path, '--p-int1', '9', '--p-int2', '10',
+            '--o-concatenated-ints', output, '--verbose', '--parallel-config',
+            config_path
+        )
+
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn('No such option: --parallel-config', result.output)
+
     def _load_alias_execution_contexts(self, collection):
         execution_contexts = []
 
