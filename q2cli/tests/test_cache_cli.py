@@ -493,13 +493,13 @@ class TestCacheCli(unittest.TestCase):
         identity_ret = Artifact.load(identity_ret_fp)
         viz_ret = Visualization.load(viz_ret_fp)
 
-        complete_ints1_uuids = load_alias_uuids(ints1_ret)
-        complete_ints2_uuids = load_alias_uuids(ints2_ret)
-        complete_int1_uuid = load_alias_uuid(int1_ret)
-        complete_list_uuids = load_alias_uuids(list_ret)
-        complete_dict_uuids = load_alias_uuids(dict_ret)
-        complete_identity_uuid = load_alias_uuid(identity_ret)
-        complete_viz_uuid = load_alias_uuid(viz_ret)
+        complete_ints1_uuids = self._load_alias_uuids(ints1_ret)
+        complete_ints2_uuids = self._load_alias_uuids(ints2_ret)
+        complete_int1_uuid = self._load_alias_uuid(int1_ret)
+        complete_list_uuids = self._load_alias_uuids(list_ret)
+        complete_dict_uuids = self._load_alias_uuids(dict_ret)
+        complete_identity_uuid = self._load_alias_uuid(identity_ret)
+        complete_viz_uuid = self._load_alias_uuid(viz_ret)
 
         # Assert that the artifacts returned by the completed run of the
         # pipeline are aliases of the artifacts created by the first failed run
@@ -571,13 +571,13 @@ class TestCacheCli(unittest.TestCase):
         identity_ret = Artifact.load(identity_ret_fp)
         viz_ret = Visualization.load(viz_ret_fp)
 
-        complete_ints1_uuids = load_alias_uuids(ints1_ret)
-        complete_ints2_uuids = load_alias_uuids(ints2_ret)
-        complete_int1_uuid = load_alias_uuid(int1_ret)
-        complete_list_uuids = load_alias_uuids(list_ret)
-        complete_dict_uuids = load_alias_uuids(dict_ret)
-        complete_identity_uuid = load_alias_uuid(identity_ret)
-        complete_viz_uuid = load_alias_uuid(viz_ret)
+        complete_ints1_uuids = self._load_alias_uuids(ints1_ret)
+        complete_ints2_uuids = self._load_alias_uuids(ints2_ret)
+        complete_int1_uuid = self._load_alias_uuid(int1_ret)
+        complete_list_uuids = self._load_alias_uuids(list_ret)
+        complete_dict_uuids = self._load_alias_uuids(dict_ret)
+        complete_identity_uuid = self._load_alias_uuid(identity_ret)
+        complete_viz_uuid = self._load_alias_uuid(viz_ret)
 
         # Assert that the artifacts returned by the completed run of the
         # pipeline are aliases of the artifacts created by the first failed run
@@ -649,13 +649,13 @@ class TestCacheCli(unittest.TestCase):
         identity_ret = Artifact.load(identity_ret_fp)
         viz_ret = Visualization.load(viz_ret_fp)
 
-        complete_ints1_uuids = load_alias_uuids(ints1_ret)
-        complete_ints2_uuids = load_alias_uuids(ints2_ret)
-        complete_int1_uuid = load_alias_uuid(int1_ret)
-        complete_list_uuids = load_alias_uuids(list_ret)
-        complete_dict_uuids = load_alias_uuids(dict_ret)
-        complete_identity_uuid = load_alias_uuid(identity_ret)
-        complete_viz_uuid = load_alias_uuid(viz_ret)
+        complete_ints1_uuids = self._load_alias_uuids(ints1_ret)
+        complete_ints2_uuids = self._load_alias_uuids(ints2_ret)
+        complete_int1_uuid = self._load_alias_uuid(int1_ret)
+        complete_list_uuids = self._load_alias_uuids(list_ret)
+        complete_dict_uuids = self._load_alias_uuids(dict_ret)
+        complete_identity_uuid = self._load_alias_uuid(identity_ret)
+        complete_viz_uuid = self._load_alias_uuid(viz_ret)
 
         # Assert that the artifacts returned by the completed run of the
         # pipeline are aliases of the artifacts created by the first failed run
@@ -914,32 +914,17 @@ class TestCacheCli(unittest.TestCase):
 
         return execution_contexts
 
+    def _load_alias_uuid(self, result):
+        return load_action_yaml(result._archiver.path)['action']['alias-of']
 
-def load_alias_uuid(result):
-    return load_action_yaml(result._archiver.path)['action']['alias-of']
+    def _load_alias_uuids(self, collection):
+        uuids = []
 
+        for artifact in collection.values():
+            uuids.append(load_action_yaml(
+                artifact._archiver.path)['action']['alias-of'])
 
-def load_alias_uuids(collection):
-    uuids = []
-
-    for artifact in collection.values():
-        uuids.append(load_action_yaml(
-            artifact._archiver.path)['action']['alias-of'])
-
-    return uuids
-
-
-def _load_alias_execution_contexts(self, collection):
-    execution_contexts = []
-
-    for result in collection.values():
-        alias_uuid = load_action_yaml(
-            result._archiver.path)['action']['alias-of']
-        execution_contexts.append(load_action_yaml(
-            self.cache.data / alias_uuid)
-            ['execution']['execution_context'])
-
-    return execution_contexts
+        return uuids
 
 
 if __name__ == "__main__":
