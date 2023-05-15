@@ -792,7 +792,7 @@ class TestCacheCli(unittest.TestCase):
         self.assertIn(
             'Cache keys cannot be used as output dirs.', str(result.exception))
 
-    def test_parsl(self):
+    def test_parallel(self):
         output = os.path.join(self.tempdir, 'output')
 
         self.cache.save_collection(self.ints1, 'ints1')
@@ -824,7 +824,7 @@ class TestCacheCli(unittest.TestCase):
         self.assertEqual(list_execution_contexts, expected)
         self.assertEqual(dict_execution_contexts, expected)
 
-    def test_config_parsl(self):
+    def test_config_parallel(self):
         output = os.path.join(self.tempdir, 'output')
 
         self.cache.save_collection(self.ints1, 'ints1')
@@ -862,7 +862,7 @@ class TestCacheCli(unittest.TestCase):
         self.assertEqual(list_execution_contexts, list_expected)
         self.assertEqual(dict_execution_contexts, dict_expected)
 
-    def test_both_parsl_flags(self):
+    def test_both_parallel_flags(self):
         output = os.path.join(self.tempdir, 'output')
 
         self.cache.save_collection(self.ints1, 'ints1')
