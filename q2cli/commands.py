@@ -225,15 +225,6 @@ class ActionCommand(BaseCommandMixin, click.Command):
                               'during execution of this action. Or silence '
                               'output if execution is successful (silence is '
                               'golden).'),
-            click.Option(['--parallel'], is_flag=True, required=False,
-                         help='Indicate that you want to execute your action '
-                              'in parallel. This flag will use a vendored '
-                              'parallel config.'),
-            click.Option(['--parallel-config'], required=False,
-                         type=click.Path(exists=True, dir_okay=False),
-                         help='Indicate that you want to execute your action '
-                              'in parallel using a config at the indicated '
-                              'path.'),
             q2cli.util.example_data_option(
                 self._get_plugin, self.action['id']),
             q2cli.util.citations_option(self._get_citation_records)
@@ -264,6 +255,15 @@ class ActionCommand(BaseCommandMixin, click.Command):
                                   'to recycle results from a previous failed '
                                   'pipeline run or to save the results from '
                                   'this run for future recycling.'),
+                click.Option(['--parallel'], is_flag=True, required=False,
+                             help='Indicate that you want to execute your '
+                                  'action in parallel. This flag will use a '
+                                  'vendored parallel config.'),
+                click.Option(['--parallel-config'], required=False,
+                             type=click.Path(exists=True, dir_okay=False),
+                             help='Indicate that you want to execute your '
+                                  'action in parallel using a config at the '
+                                  'indicated path.'),
                 click.Option(['--use-cache'], required=False,
                              type=click.Path(exists=True, file_okay=False),
                              help='<IMPORTANT FOR HPC USERS> Allows you to '
