@@ -327,8 +327,6 @@ class GeneratedOption(click.Option):
     def _check_length(self, value, ctx):
         import collections
 
-        # TODO: Ok seriously though figure out why value is in a tuple if it is
-        # a Collection
         if isinstance(value, tuple) and len(value) == 1 and \
                 isinstance(value[0], dict):
             value = list(value[0].values())

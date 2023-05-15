@@ -230,8 +230,8 @@ class ActionCommand(BaseCommandMixin, click.Command):
             q2cli.util.citations_option(self._get_citation_records)
         ]
 
-        # If this action is a pipeline it needs the --recycle-pool and
-        # --no-recycle options.
+        # If this action is a pipeline it needs additional options for
+        # recycling and parallelization
         action_obj = self._get_action()
         if action_obj.type == 'pipeline':
             self._misc.extend([
@@ -502,8 +502,6 @@ class ActionCommand(BaseCommandMixin, click.Command):
             os.makedirs(output_dir)
 
         for result, output in zip(results, outputs):
-            # TODO: Having a collection output causes this to become a tuple
-            # for some reason. I don't understand why yet
             if isinstance(output, tuple) and len(output) == 1:
                 output = output[0]
 

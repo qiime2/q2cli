@@ -909,7 +909,6 @@ class TestCollectionSupport(unittest.TestCase):
         self.assertEqual(result.exit_code, 1)
         self.assertIn("Invalid value for '--i-ints':", result.output)
 
-    # TODO: Actually, do we want to accept empty directories?
     def test_empty_directory(self):
         result = self._run_command(
             'list-of-ints', '--i-ints', self.tempdir, '--o-output',
