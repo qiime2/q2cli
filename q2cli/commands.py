@@ -224,10 +224,7 @@ class ActionCommand(BaseCommandMixin, click.Command):
                          help='Display verbose output to stdout and/or stderr '
                               'during execution of this action. Or silence '
                               'output if execution is successful (silence is '
-                              'golden).'),
-            q2cli.util.example_data_option(
-                self._get_plugin, self.action['id']),
-            q2cli.util.citations_option(self._get_citation_records)
+                              'golden).')
         ]
 
         # If this action is a pipeline it needs additional options for
@@ -237,43 +234,43 @@ class ActionCommand(BaseCommandMixin, click.Command):
             self._misc.extend([
                 click.Option(['--recycle-pool'], required=False,
                              type=str,
-                             help='Allows you to specify a cache pool to use '
-                                  'for pipeline resumption. If you run a '
-                                  'pipeline without this parameter or the '
-                                  '--no-recycle flag, QIIME will default to '
-                                  'the pool recycle_<plugin>_<action>_<sha1 '
-                                  'of "plugin_action">. QIIME will cache your '
-                                  'results in this pool then attempt to reuse '
-                                  'them later if you specify the same pool '
-                                  'instead of recalculating them. If you use '
-                                  'the default pool and your action succeeds, '
-                                  'QIIME removes the pool. Note that these '
-                                  'pools are local to the cache you are '
-                                  'using.'),
+                             help='Use a cache pool for pipeline resumption. '
+                                  'QIIME 2 will cache your results in this '
+                                  'pool for reuse by future invocations. '
+                                  'These pool are retained until deleted by '
+                                  'the user. If not provided, QIIME 2 will '
+                                  'create a pool which is automatically '
+                                  'reused by invocations of the same action '
+                                  'and removed if the action is successful. '
+                                  'Note: these pools are local to the '
+                                  'cache you are using.'),
                 click.Option(['--no-recycle'], is_flag=True, required=False,
-                             help='Specifies that you do not want to attempt '
-                                  'to recycle results from a previous failed '
-                                  'pipeline run or to save the results from '
-                                  'this run for future recycling.'),
+                             help='Do not recycle results from a previous '
+                                  'failed pipeline run or save the results '
+                                  'from this run for future recycling.'),
                 click.Option(['--parallel'], is_flag=True, required=False,
-                             help='Indicate that you want to execute your '
-                                  'action in parallel. This flag will use a '
-                                  'vendored parallel config.'),
+                             help='Execute your action in parallel. This flag '
+                                  'will use your default parallel config.'),
                 click.Option(['--parallel-config'], required=False,
                              type=click.Path(exists=True, dir_okay=False),
-                             help='Indicate that you want to execute your '
-                                  'action in parallel using a config at the '
-                                  'indicated path.'),
+                             help='Execute your action in parallel using a '
+                                  'config at the indicated path.'),
                 click.Option(['--use-cache'], required=False,
                              type=click.Path(exists=True, file_okay=False),
-                             help='<IMPORTANT FOR HPC USERS> Allows you to '
-                                  'specify a cache to be used for this '
-                                  'pipeline. Otherwise the default cache '
-                                  'under /$TMP/qiime2/<uname> will be used. '
-                                  'NOTE: IF YOU ARE ON AN HPC AND ARE USING '
-                                  'PARALLEL EXECUTION IT IS IMPORTANT TO SET '
-                                  'THIS TO A CACHE THAT IS IN A LOCATION '
-                                  'ACCESSIBLE GLOBALLY TO THE CLUSTER.')])
+                             help='Specify the cache to be used for the '
+                                  'intermediate work of this pipeline. If '
+                                  'not provided, the default cache under '
+                                  '$TMP/qiime2/<uname> will be used. '
+                                  'IMPORTANT FOR HPC USERS: If you are on an '
+                                  'HPC system and are using parallel '
+                                  'execution it is important to set this to '
+                                  'a location that is globally accessible to '
+                                  'all nodes in the cluster.')])
+
+        self._misc.extend([
+            q2cli.util.example_data_option(
+                self._get_plugin, self.action['id']),
+            q2cli.util.citations_option(self._get_citation_records)])
 
         options = [*self._inputs, *self._params, *self._outputs, *self._misc]
         help_ = [action['description']]
