@@ -224,44 +224,53 @@ class ActionCommand(BaseCommandMixin, click.Command):
                          help='Display verbose output to stdout and/or stderr '
                               'during execution of this action. Or silence '
                               'output if execution is successful (silence is '
-                              'golden).'),
-            click.Option(['--parsl'], is_flag=True, required=False,
-                         help='Indicate that you want to execute your action '
-                              'with parsl. This flag will use a vendored '
-                              'parsl config.'),
-            click.Option(['--parsl-config'], required=False,
-                         type=click.Path(exists=True, dir_okay=False),
-                         help='Indicate that you want to execute your action '
-                              'with parsl using a config at the indicated '
-                              'path.'),
-            q2cli.util.example_data_option(
-                self._get_plugin, self.action['id']),
-            q2cli.util.citations_option(self._get_citation_records)
+                              'golden).')
         ]
 
-        # If this aciton is a pipeline it needs the --recycle and --no-recycle
-        # options.
+        # If this action is a pipeline it needs additional options for
+        # recycling and parallelization
         action_obj = self._get_action()
         if action_obj.type == 'pipeline':
             self._misc.extend([
-                click.Option(['--recycle'], required=False,
+                click.Option(['--recycle-pool'], required=False,
                              type=str,
-                             help='Allows you to specify a pool to use for '
-                                  'pipeline resumption. If you run a pipeline '
-                                  'without this parameter or the --no-recycle '
-                                  'flag, QIIME will default to the pool '
-                                  'recycle_<plugin>_<action>_<sha1> of '
-                                  '"plugin_action">'),
+                             help='Use a cache pool for pipeline resumption. '
+                                  'QIIME 2 will cache your results in this '
+                                  'pool for reuse by future invocations. '
+                                  'These pool are retained until deleted by '
+                                  'the user. If not provided, QIIME 2 will '
+                                  'create a pool which is automatically '
+                                  'reused by invocations of the same action '
+                                  'and removed if the action is successful. '
+                                  'Note: these pools are local to the '
+                                  'cache you are using.'),
                 click.Option(['--no-recycle'], is_flag=True, required=False,
-                             help='Specifies that you do not want to attempt '
-                                  'to recycle results from a previous failed '
-                                  'pipeline run.'),
+                             help='Do not recycle results from a previous '
+                                  'failed pipeline run or save the results '
+                                  'from this run for future recycling.'),
+                click.Option(['--parallel'], is_flag=True, required=False,
+                             help='Execute your action in parallel. This flag '
+                                  'will use your default parallel config.'),
+                click.Option(['--parallel-config'], required=False,
+                             type=click.Path(exists=True, dir_okay=False),
+                             help='Execute your action in parallel using a '
+                                  'config at the indicated path.'),
                 click.Option(['--use-cache'], required=False,
                              type=click.Path(exists=True, file_okay=False),
-                             help='Allows you to specify a cache to be used '
-                                  'for pipeline resumption. Otherwise the '
-                                  'default cache under /$TMP/qiime2/<uname> '
-                                  'will be used.')])
+                             help='Specify the cache to be used for the '
+                                  'intermediate work of this pipeline. If '
+                                  'not provided, the default cache under '
+                                  '$TMP/qiime2/<uname> will be used. '
+                                  'IMPORTANT FOR HPC USERS: If you are on an '
+                                  'HPC system and are using parallel '
+                                  'execution it is important to set this to '
+                                  'a location that is globally accessible to '
+                                  'all nodes in the cluster.')])
+
+        self._misc.extend([
+            q2cli.util.example_data_option(
+                self._get_plugin, self.action['id']),
+            q2cli.util.citations_option(self._get_citation_records)])
 
         options = [*self._inputs, *self._params, *self._outputs, *self._misc]
         help_ = [action['description']]
@@ -318,6 +327,7 @@ class ActionCommand(BaseCommandMixin, click.Command):
     def __call__(self, **kwargs):
         """Called when user hits return, **kwargs are Dict[click_names, Obj]"""
         import os
+        import click
 
         import qiime2.util
         from q2cli.util import (output_in_cache, _get_cache_path_and_key,
@@ -338,21 +348,27 @@ class ActionCommand(BaseCommandMixin, click.Command):
                                  "cannot be used as output dirs.")
 
         # Args pertaining to pipeline resumption
-        recycle = kwargs.pop('recycle', None)
+        recycle_pool = kwargs.pop('recycle_pool', None)
         no_recycle = kwargs.pop('no_recycle', False)
-        used_cache = kwargs.pop('use_cache', None)
 
-        if recycle is not None and no_recycle:
+        if recycle_pool is not None and no_recycle:
             raise ValueError('Cannot set a pool to be used for recycling and '
                              'no recycle simultaneously.')
 
-        parsl = kwargs.pop('parsl', False)
-        parsl_config_fp = kwargs.pop('parsl_config', None)
+        used_cache = kwargs.pop('use_cache', None)
 
-        if parsl_config_fp is not None:
-            from qiime2.sdk.parsl_config import setup_parsl
-            parsl = True
-            setup_parsl(parsl_config_fp)
+        if used_cache is not None and not Cache.is_cache(used_cache):
+            raise ValueError(f"The path '{used_cache}' is not a valid cache, "
+                             "please supply a path to a valid pre-existing "
+                             "cache.")
+
+        parallel = kwargs.pop('parallel', False)
+        parallel_config_fp = kwargs.pop('parallel_config', None)
+
+        if parallel_config_fp is not None:
+            from qiime2.sdk.parallel_config import setup_parallel
+            parallel = True
+            setup_parallel(parallel_config_fp)
 
         verbose = kwargs.pop('verbose')
         if verbose is None:
@@ -362,6 +378,8 @@ class ActionCommand(BaseCommandMixin, click.Command):
             quiet = False
         else:
             quiet = True
+
+        cache = Cache(path=used_cache)
 
         arguments = {}
         init_outputs = {}
@@ -375,6 +393,27 @@ class ActionCommand(BaseCommandMixin, click.Command):
                 init_outputs[key] = value
             elif prefix == 'm':
                 arguments[key[:-len('_file')]] = value
+            # Make sure our inputs are backed by the cache we are using. This
+            # is necessary for HPCs where our input .qzas may be in a location
+            # that is not globally accessible to the cluster. The user should
+            # be using a cache that is in a globally accessible location. We
+            # need to ensure we put our artifacts in that cache.
+            elif prefix == 'i' and used_cache is not None:
+                value_ = value
+
+                if isinstance(value, list):
+                    value_ = [cache.process_pool.save(v) for v in value]
+                elif isinstance(value, dict) or \
+                        isinstance(value, ResultCollection):
+                    value_ = {
+                        k: cache.process_pool.save(v)
+                        for k, v in value.items()}
+                elif isinstance(value, set):
+                    value_ = set([cache.process_pool.save(v) for v in value])
+                elif value is not None:
+                    value_ = cache.process_pool.save(value)
+
+                arguments[key] = value_
             else:
                 arguments[key] = value
 
@@ -385,18 +424,20 @@ class ActionCommand(BaseCommandMixin, click.Command):
         # outputs from a pool by default allowing recovery of failed pipelines
         # from point of failure without needing to restart the pipeline from
         # the beginning
-        recycle_pool = None
-        if not no_recycle and action.type == 'pipeline':
+        default_pool = get_default_recycle_pool(
+            f'{action.plugin_id}_{action.id}')
+        if not no_recycle and action.type == 'pipeline' and \
+                recycle_pool is None:
             # We implicitly use a pool named
-            # recycle_<plugin>_<action>_sha1(plugin_action) if no pool is
+            # recycle_<plugin>_<action>_<sha1(plugin_action)> if no pool is
             # provided
-            if recycle is None:
-                plugin_action = f'{action.plugin_id}_{action.id}'
-                recycle_pool = get_default_recycle_pool(plugin_action)
-            # Otherwise we use the pool they said to use with the --recycle
-            # argument
-            else:
-                recycle_pool = recycle
+            recycle_pool = default_pool
+
+        if recycle_pool is not None and recycle_pool != default_pool and \
+                recycle_pool not in cache.get_pools():
+            msg = ("The pool '%s' does not exist on the cache at '%s'. It "
+                   "will be created." % (recycle_pool, cache.path))
+            click.echo(CONFIG.cfg_style('warning', msg))
 
         # `qiime2.util.redirected_stdio` defaults to stdout/stderr when
         # supplied `None`.
@@ -420,20 +461,13 @@ class ActionCommand(BaseCommandMixin, click.Command):
         cleanup_logfile = False
         try:
             with qiime2.util.redirected_stdio(stdout=log, stderr=log):
-                if parsl:
-                    action = action.parsl
+                if parallel:
+                    action = action.parallel
 
                 if recycle_pool is None:
                     results = action(**arguments)
                     results = results._result()
                 else:
-                    if used_cache is not None and not \
-                            Cache.is_cache(used_cache):
-                        raise ValueError(f"The path '{used_cache}' is not a "
-                                         "valid cache, please supply a path "
-                                         "to a valid pre-existing cache.")
-
-                    cache = Cache(path=used_cache)
                     pool = cache.create_pool(key=recycle_pool, reuse=True)
                     with pool:
                         results = action(**arguments)
@@ -465,8 +499,6 @@ class ActionCommand(BaseCommandMixin, click.Command):
             os.makedirs(output_dir)
 
         for result, output in zip(results, outputs):
-            # TODO: Having a collection output causes this to become a tuple
-            # for some reason. I don't understand why yet
             if isinstance(output, tuple) and len(output) == 1:
                 output = output[0]
 
@@ -498,7 +530,7 @@ class ActionCommand(BaseCommandMixin, click.Command):
         # succeeded, then we need to clean up the pool. Make sure to do this at
         # the very end so if a failure happens during writing results we still
         # have them
-        if recycle_pool is not None and recycle is None:
+        if recycle_pool == default_pool:
             cache.remove(recycle_pool)
 
     def _order_outputs(self, outputs):
