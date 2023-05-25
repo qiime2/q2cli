@@ -25,7 +25,7 @@ from q2cli.commands import RootCommand
 from q2cli.builtin.tools import tools
 from q2cli.util import get_default_recycle_pool
 from qiime2.sdk import Artifact, Visualization, ResultCollection
-from qiime2.sdk.parsl_config import PARSL_CONFIG
+from qiime2.sdk.parallel_config import PARALLEL_CONFIG
 
 
 # What to split the errors raised by intentionally failed pipeline on to get
@@ -65,8 +65,8 @@ class TestCacheCli(unittest.TestCase):
         self.art3_non_cache = os.path.join(self.tempdir, 'art3.qza')
 
         # Ensure default state prior to test
-        PARSL_CONFIG.parsl_config = None
-        PARSL_CONFIG.action_executor_mapping = {}
+        PARALLEL_CONFIG.parallel_config = None
+        PARALLEL_CONFIG.action_executor_mapping = {}
 
     def tearDown(self):
         shutil.rmtree(self.tempdir)
@@ -493,13 +493,13 @@ class TestCacheCli(unittest.TestCase):
         identity_ret = Artifact.load(identity_ret_fp)
         viz_ret = Visualization.load(viz_ret_fp)
 
-        complete_ints1_uuids = load_alias_uuids(ints1_ret)
-        complete_ints2_uuids = load_alias_uuids(ints2_ret)
-        complete_int1_uuid = load_alias_uuid(int1_ret)
-        complete_list_uuids = load_alias_uuids(list_ret)
-        complete_dict_uuids = load_alias_uuids(dict_ret)
-        complete_identity_uuid = load_alias_uuid(identity_ret)
-        complete_viz_uuid = load_alias_uuid(viz_ret)
+        complete_ints1_uuids = self._load_alias_uuids(ints1_ret)
+        complete_ints2_uuids = self._load_alias_uuids(ints2_ret)
+        complete_int1_uuid = self._load_alias_uuid(int1_ret)
+        complete_list_uuids = self._load_alias_uuids(list_ret)
+        complete_dict_uuids = self._load_alias_uuids(dict_ret)
+        complete_identity_uuid = self._load_alias_uuid(identity_ret)
+        complete_viz_uuid = self._load_alias_uuid(viz_ret)
 
         # Assert that the artifacts returned by the completed run of the
         # pipeline are aliases of the artifacts created by the first failed run
@@ -531,7 +531,7 @@ class TestCacheCli(unittest.TestCase):
             'resumable-varied-pipeline', '--i-ints1', ints1_path, '--i-ints2',
             ints2_path, '--i-int1', int1_path, '--p-string', 'Hi',
             '--m-metadata-file', self.metadata, '--p-fail', 'True',
-            '--output-dir', output, '--recycle', pool, '--use-cache',
+            '--output-dir', output, '--recycle-pool', pool, '--use-cache',
             str(self.cache.path), '--verbose'
         )
 
@@ -549,7 +549,8 @@ class TestCacheCli(unittest.TestCase):
             'resumable-varied-pipeline', '--i-ints1', ints1_path, '--i-ints2',
             ints2_path, '--i-int1', int1_path, '--p-string', 'Hi',
             '--m-metadata-file', self.metadata, '--output-dir', output,
-            '--recycle', pool, '--use-cache', str(self.cache.path), '--verbose'
+            '--recycle-pool', pool, '--use-cache', str(self.cache.path),
+            '--verbose'
         )
 
         self.assertEqual(result.exit_code, 0)
@@ -570,13 +571,13 @@ class TestCacheCli(unittest.TestCase):
         identity_ret = Artifact.load(identity_ret_fp)
         viz_ret = Visualization.load(viz_ret_fp)
 
-        complete_ints1_uuids = load_alias_uuids(ints1_ret)
-        complete_ints2_uuids = load_alias_uuids(ints2_ret)
-        complete_int1_uuid = load_alias_uuid(int1_ret)
-        complete_list_uuids = load_alias_uuids(list_ret)
-        complete_dict_uuids = load_alias_uuids(dict_ret)
-        complete_identity_uuid = load_alias_uuid(identity_ret)
-        complete_viz_uuid = load_alias_uuid(viz_ret)
+        complete_ints1_uuids = self._load_alias_uuids(ints1_ret)
+        complete_ints2_uuids = self._load_alias_uuids(ints2_ret)
+        complete_int1_uuid = self._load_alias_uuid(int1_ret)
+        complete_list_uuids = self._load_alias_uuids(list_ret)
+        complete_dict_uuids = self._load_alias_uuids(dict_ret)
+        complete_identity_uuid = self._load_alias_uuid(identity_ret)
+        complete_viz_uuid = self._load_alias_uuid(viz_ret)
 
         # Assert that the artifacts returned by the completed run of the
         # pipeline are aliases of the artifacts created by the first failed run
@@ -648,13 +649,13 @@ class TestCacheCli(unittest.TestCase):
         identity_ret = Artifact.load(identity_ret_fp)
         viz_ret = Visualization.load(viz_ret_fp)
 
-        complete_ints1_uuids = load_alias_uuids(ints1_ret)
-        complete_ints2_uuids = load_alias_uuids(ints2_ret)
-        complete_int1_uuid = load_alias_uuid(int1_ret)
-        complete_list_uuids = load_alias_uuids(list_ret)
-        complete_dict_uuids = load_alias_uuids(dict_ret)
-        complete_identity_uuid = load_alias_uuid(identity_ret)
-        complete_viz_uuid = load_alias_uuid(viz_ret)
+        complete_ints1_uuids = self._load_alias_uuids(ints1_ret)
+        complete_ints2_uuids = self._load_alias_uuids(ints2_ret)
+        complete_int1_uuid = self._load_alias_uuid(int1_ret)
+        complete_list_uuids = self._load_alias_uuids(list_ret)
+        complete_dict_uuids = self._load_alias_uuids(dict_ret)
+        complete_identity_uuid = self._load_alias_uuid(identity_ret)
+        complete_viz_uuid = self._load_alias_uuid(viz_ret)
 
         # Assert that the artifacts returned by the completed run of the
         # pipeline are aliases of the artifacts created by the first failed run
@@ -791,7 +792,7 @@ class TestCacheCli(unittest.TestCase):
         self.assertIn(
             'Cache keys cannot be used as output dirs.', str(result.exception))
 
-    def test_parsl(self):
+    def test_parallel(self):
         output = os.path.join(self.tempdir, 'output')
 
         self.cache.save_collection(self.ints1, 'ints1')
@@ -800,7 +801,7 @@ class TestCacheCli(unittest.TestCase):
         result = self._run_command(
             'resumable-pipeline', '--i-int-list', ints1_path,
             '--i-int-dict', ints1_path, '--output-dir', output, '--use-cache',
-            str(self.cache.path), '--verbose', '--parsl'
+            str(self.cache.path), '--verbose', '--parallel'
         )
 
         self.assertEqual(result.exit_code, 0)
@@ -823,7 +824,7 @@ class TestCacheCli(unittest.TestCase):
         self.assertEqual(list_execution_contexts, expected)
         self.assertEqual(dict_execution_contexts, expected)
 
-    def test_config_parsl(self):
+    def test_config_parallel(self):
         output = os.path.join(self.tempdir, 'output')
 
         self.cache.save_collection(self.ints1, 'ints1')
@@ -834,7 +835,7 @@ class TestCacheCli(unittest.TestCase):
         result = self._run_command(
             'resumable-pipeline', '--i-int-list', ints1_path,
             '--i-int-dict', ints1_path, '--output-dir', output, '--use-cache',
-            str(self.cache.path), '--verbose', '--parsl-config', config_path
+            str(self.cache.path), '--verbose', '--parallel-config', config_path
         )
 
         self.assertEqual(result.exit_code, 0)
@@ -861,7 +862,7 @@ class TestCacheCli(unittest.TestCase):
         self.assertEqual(list_execution_contexts, list_expected)
         self.assertEqual(dict_execution_contexts, dict_expected)
 
-    def test_both_parsl_flags(self):
+    def test_both_parallel_flags(self):
         output = os.path.join(self.tempdir, 'output')
 
         self.cache.save_collection(self.ints1, 'ints1')
@@ -872,8 +873,8 @@ class TestCacheCli(unittest.TestCase):
         result = self._run_command(
             'resumable-pipeline', '--i-int-list', ints1_path,
             '--i-int-dict', ints1_path, '--output-dir', output, '--use-cache',
-            str(self.cache.path), '--verbose', '--parsl', '--parsl-config',
-            config_path
+            str(self.cache.path), '--verbose', '--parallel',
+            '--parallel-config', config_path
         )
 
         self.assertEqual(result.exit_code, 0)
@@ -901,6 +902,38 @@ class TestCacheCli(unittest.TestCase):
         self.assertEqual(list_execution_contexts, list_expected)
         self.assertEqual(dict_execution_contexts, dict_expected)
 
+    def test_parallel_flags_on_non_pipeline(self):
+        self.cache.save(self.art1, 'art1')
+        self.cache.save(self.art2, 'art2')
+        self.cache.save(self.art3, 'art3')
+
+        art1_path = str(self.cache.path) + ':art1'
+        art2_path = str(self.cache.path) + ':art2'
+        art3_path = str(self.cache.path) + ':art3'
+
+        output = str(self.cache.path) + ':output'
+
+        result = self._run_command(
+            'concatenate-ints', '--i-ints1', art1_path, '--i-ints2', art2_path,
+            '--i-ints3', art3_path, '--p-int1', '9', '--p-int2', '10',
+            '--o-concatenated-ints', output, '--verbose', '--parallel'
+        )
+
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn('No such option: --parallel', result.output)
+
+        config_path = get_data_path('mapping_config.toml')
+
+        result = self._run_command(
+            'concatenate-ints', '--i-ints1', art1_path, '--i-ints2', art2_path,
+            '--i-ints3', art3_path, '--p-int1', '9', '--p-int2', '10',
+            '--o-concatenated-ints', output, '--verbose', '--parallel-config',
+            config_path
+        )
+
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn('No such option: --parallel-config', result.output)
+
     def _load_alias_execution_contexts(self, collection):
         execution_contexts = []
 
@@ -913,32 +946,17 @@ class TestCacheCli(unittest.TestCase):
 
         return execution_contexts
 
+    def _load_alias_uuid(self, result):
+        return load_action_yaml(result._archiver.path)['action']['alias-of']
 
-def load_alias_uuid(result):
-    return load_action_yaml(result._archiver.path)['action']['alias-of']
+    def _load_alias_uuids(self, collection):
+        uuids = []
 
+        for artifact in collection.values():
+            uuids.append(load_action_yaml(
+                artifact._archiver.path)['action']['alias-of'])
 
-def load_alias_uuids(collection):
-    uuids = []
-
-    for artifact in collection.values():
-        uuids.append(load_action_yaml(
-            artifact._archiver.path)['action']['alias-of'])
-
-    return uuids
-
-
-def _load_alias_execution_contexts(self, collection):
-    execution_contexts = []
-
-    for result in collection.values():
-        alias_uuid = load_action_yaml(
-            result._archiver.path)['action']['alias-of']
-        execution_contexts.append(load_action_yaml(
-            self.cache.data / alias_uuid)
-            ['execution']['execution_context'])
-
-    return execution_contexts
+        return uuids
 
 
 if __name__ == "__main__":
