@@ -566,7 +566,7 @@ def view(visualization_path, index_extension):
     if index_extension.startswith('.'):
         index_extension = index_extension[1:]
 
-    visualization = _load_input(visualization_path, view=True)[0]
+    _, visualization = _load_input(visualization_path, view=True)[0]
     if not isinstance(visualization, Visualization):
         raise click.BadParameter(
             '%s is not a QIIME 2 Visualization. Only QIIME 2 Visualizations '

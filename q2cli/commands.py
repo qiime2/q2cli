@@ -504,13 +504,13 @@ class ActionCommand(BaseCommandMixin, click.Command):
 
             if output_in_cache(output) and output_dir is None:
                 cache_path, key = _get_cache_path_and_key(output)
-                cache = Cache(cache_path)
+                output_cache = Cache(cache_path)
 
                 if isinstance(result, ResultCollection):
-                    cache.save_collection(result, key)
+                    output_cache.save_collection(result, key)
                     path = output
                 else:
-                    cache.save(result, key)
+                    output_cache.save(result, key)
                     path = output
             else:
                 path = result.save(output)
