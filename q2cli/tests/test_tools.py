@@ -872,6 +872,64 @@ class TestListFormats(unittest.TestCase):
                 no_description_count += 1
         self.assertEqual(no_description_count, result.output.count('\t\n'))
 
+class TestReplay(unittest.TestCase):
+    def setUp(self):
+        self.runner = CliRunner()
+        self.pm = PluginManager()
+        self.data_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            'data'
+        )
+
+    def tearDown(self):
+        pass
+
+    def test_provenance_replay(self):
+        in_fp = os.path.join(self.data_path, 'concatenated_ints.qza')
+        with tempfile.TemporaryDirectory() as tmpdir:
+            out_fp = os.path.join(tmpdir, 'rendered.txt')
+            result = self.runner.invoke(
+                tools, 
+                ['replay-provenance', '--i-in-fp', in_fp, '--o-out-fp', out_fp]
+            )
+            self.assertEqual(result.exit_code, 0)
+
+            with open(out_fp, 'r') as fh:
+                rendered = fh.read()
+
+        self.assertIn('qiime tools import', rendered)
+        self.assertIn('--type \'IntSequence1\'', rendered)
+        self.assertIn('--type \'IntSequence2\'', rendered)
+        self.assertIn('--input-path <your data here>', rendered)            
+        self.assertIn('--output-path int-sequence1-0.qza', rendered)            
+        self.assertIn('--output-path int-sequence2-0.qza', rendered)            
+
+        self.assertIn('qiime dummy-plugin concatenate-ints', rendered)
+        self.assertIn('--i-ints1 int-sequence1-0.qza', rendered)
+        self.assertIn('--i-ints2 int-sequence1-0.qza', rendered)
+        self.assertIn('--i-ints3 int-sequence2-0.qza', rendered)
+        self.assertIn('--p-int1 7', rendered)
+        self.assertIn('--p-int2 7', rendered)
+        self.assertIn('--o-concatenated-ints concatenated-ints-0.qza', rendered)
+
+    def test_provenance_replay_python(self):
+        in_fp = os.path.join(self.data_path, 'concatenated_ints.qza')
+        with tempfile.TemporaryDirectory() as tmpdir:
+            out_fp = os.path.join(tmpdir, 'rendered.txt')
+            result = self.runner.invoke(
+                tools, 
+                ['replay-provenance', '--i-in-fp', in_fp, '--o-out-fp', out_fp,
+                 '--p-usage-driver', 'python3']
+            )
+            self.assertEqual(result.exit_code, 0)
+
+            with open(out_fp, 'r') as fh:
+                rendered = fh.read()
+
+        self.assertIn('from qiime2 import Artifact', rendered)
+        self.assertIn('Artifact.import_data', rendered)
+        self.assertIn('dummy_plugin_actions.concatenate_ints', rendered)
+
 
 if __name__ == "__main__":
     unittest.main()
