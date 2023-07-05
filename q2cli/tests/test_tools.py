@@ -872,6 +872,7 @@ class TestListFormats(unittest.TestCase):
                 no_description_count += 1
         self.assertEqual(no_description_count, result.output.count('\t\n'))
 
+
 class TestReplay(unittest.TestCase):
     def setUp(self):
         self.runner = CliRunner()
@@ -884,12 +885,12 @@ class TestReplay(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def test_provenance_replay(self):
+    def test_replay_provenance(self):
         in_fp = os.path.join(self.data_path, 'concatenated_ints.qza')
         with tempfile.TemporaryDirectory() as tmpdir:
             out_fp = os.path.join(tmpdir, 'rendered.txt')
             result = self.runner.invoke(
-                tools, 
+                tools,
                 ['replay-provenance', '--i-in-fp', in_fp, '--o-out-fp', out_fp]
             )
             self.assertEqual(result.exit_code, 0)
@@ -900,9 +901,9 @@ class TestReplay(unittest.TestCase):
         self.assertIn('qiime tools import', rendered)
         self.assertIn('--type \'IntSequence1\'', rendered)
         self.assertIn('--type \'IntSequence2\'', rendered)
-        self.assertIn('--input-path <your data here>', rendered)            
-        self.assertIn('--output-path int-sequence1-0.qza', rendered)            
-        self.assertIn('--output-path int-sequence2-0.qza', rendered)            
+        self.assertIn('--input-path <your data here>', rendered)
+        self.assertIn('--output-path int-sequence1-0.qza', rendered)
+        self.assertIn('--output-path int-sequence2-0.qza', rendered)
 
         self.assertIn('qiime dummy-plugin concatenate-ints', rendered)
         self.assertIn('--i-ints1 int-sequence1-0.qza', rendered)
@@ -910,14 +911,15 @@ class TestReplay(unittest.TestCase):
         self.assertIn('--i-ints3 int-sequence2-0.qza', rendered)
         self.assertIn('--p-int1 7', rendered)
         self.assertIn('--p-int2 7', rendered)
-        self.assertIn('--o-concatenated-ints concatenated-ints-0.qza', rendered)
+        self.assertIn('--o-concatenated-ints concatenated-ints-0.qza',
+                      rendered)
 
-    def test_provenance_replay_python(self):
+    def test_replay_provenance_python(self):
         in_fp = os.path.join(self.data_path, 'concatenated_ints.qza')
         with tempfile.TemporaryDirectory() as tmpdir:
             out_fp = os.path.join(tmpdir, 'rendered.txt')
             result = self.runner.invoke(
-                tools, 
+                tools,
                 ['replay-provenance', '--i-in-fp', in_fp, '--o-out-fp', out_fp,
                  '--p-usage-driver', 'python3']
             )
@@ -929,6 +931,48 @@ class TestReplay(unittest.TestCase):
         self.assertIn('from qiime2 import Artifact', rendered)
         self.assertIn('Artifact.import_data', rendered)
         self.assertIn('dummy_plugin_actions.concatenate_ints', rendered)
+
+    def test_replay_provenance_recurse(self):
+        """
+        If the directory under test is parsed recursively, two results will
+        be captured from align_to_tree_mafft_fasttree instead of one.
+
+        This is only visible in the python driver's rendering, and most users
+        will never look at the underlying ProvDAG or use, so that seems like a
+        reasonable way to test.
+        """
+        in_fp = os.path.join(self.data_path, 'parse_dir_test')
+        with tempfile.TemporaryDirectory() as tmpdir:
+            out_fp = os.path.join(tmpdir, 'rendered.txt')
+            result = self.runner.invoke(
+                tools,
+                ['replay-provenance', '--i-in-fp', in_fp, '--o-out-fp', out_fp,
+                 '--p-usage-driver', 'python3', '--p-recurse']
+            )
+            self.assertEqual(result.exit_code, 0)
+
+            with open(out_fp, 'r') as fh:
+                rendered = fh.read()
+
+        self.assertIn('left_0, right_0 = dummy_plugin_actions.split_ints',
+                      rendered)
+        self.assertIn("left_0.save('left_0')", rendered)
+        self.assertIn("right_0.save('right_0')", rendered)
+
+    def test_replay_provenance_use_md_without_parse(self):
+        in_fp = os.path.join(self.data_path, 'parse_dir_test')
+        with tempfile.TemporaryDirectory() as tmpdir:
+            out_fp = os.path.join(tmpdir, 'rendered.txt')
+            result = self.runner.invoke(
+                tools,
+                ['replay-provenance', '--i-in-fp', in_fp, '--o-out-fp', out_fp,
+                 '--p-no-parse-metadata', '--p-use-recorded-metadata']
+            )
+
+            self.assertEqual(result.exit_code, 1)
+            self.assertIsInstance(result.exception, ValueError)
+            self.assertRegex(str(result.exception),
+                             "Metadata not parsed for replay")
 
 
 if __name__ == "__main__":
