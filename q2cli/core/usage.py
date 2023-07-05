@@ -47,6 +47,7 @@ def write_plugin_example_data(plugin, output_dir):
 class CLIUsageVariable(usage.UsageVariable):
     EXT = {
         'artifact': '.qza',
+        'result_collection': '/',
         'visualization': '.qzv',
         'metadata': '.tsv',
         'column': '',
@@ -128,6 +129,13 @@ class CLIUsage(usage.Usage):
 
     def init_artifact(self, name, factory):
         variable = super().init_artifact(name, factory)
+
+        self.init_data.append(variable)
+
+        return variable
+
+    def init_result_collection(self, name, factory):
+        variable = super().init_result_collection(name, factory)
 
         self.init_data.append(variable)
 
