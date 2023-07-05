@@ -47,7 +47,10 @@ def write_plugin_example_data(plugin, output_dir):
 class CLIUsageVariable(usage.UsageVariable):
     EXT = {
         'artifact': '.qza',
-        'result_collection': '/',
+        # it would be nice to have a / as the 'ext' for collections so that
+        # it's clear that it's a directory, but that's proving to be a pain
+        # so putting on hold for now
+        'result_collection': '',
         'visualization': '.qzv',
         'metadata': '.tsv',
         'column': '',
