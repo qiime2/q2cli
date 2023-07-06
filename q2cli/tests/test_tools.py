@@ -8,9 +8,11 @@
 
 import os
 import gc
+import re
 import shutil
 import unittest
 import tempfile
+import bibtexparser as bp
 
 from click.testing import CliRunner
 from qiime2 import Artifact
@@ -877,56 +879,61 @@ class TestReplay(unittest.TestCase):
     def setUp(self):
         self.runner = CliRunner()
         self.pm = PluginManager()
-        self.data_path = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)),
-            'data'
-        )
+        self.dp = self.pm.plugins['dummy-plugin']
+        self.tempdir = tempfile.mkdtemp(prefix='q2cli-test-replay-temp-')
+
+        int_seq1 = Artifact.import_data('IntSequence1', [1, 2, 3])
+        int_seq2 = Artifact.import_data('IntSequence1', [4, 5, 6])
+        int_seq3 = Artifact.import_data('IntSequence2', [7, 8])
+        concated_ints,  = self.dp.actions['concatenate_ints'](
+            int_seq1, int_seq2, int_seq3, 9, 0)
+
+        concated_ints.save(os.path.join(self.tempdir, 'concated_ints.qza'))
 
     def tearDown(self):
-        pass
+        shutil.rmtree(self.tempdir)
 
     def test_replay_provenance(self):
-        in_fp = os.path.join(self.data_path, 'concatenated_ints.qza')
-        with tempfile.TemporaryDirectory() as tmpdir:
-            out_fp = os.path.join(tmpdir, 'rendered.txt')
-            result = self.runner.invoke(
-                tools,
-                ['replay-provenance', '--i-in-fp', in_fp, '--o-out-fp', out_fp]
-            )
-            self.assertEqual(result.exit_code, 0)
+        in_fp = os.path.join(self.tempdir, 'concated_ints.qza')
+        out_fp = os.path.join(self.tempdir, 'rendered.txt')
+        result = self.runner.invoke(
+            tools,
+            ['replay-provenance', '--i-in-fp', in_fp, '--o-out-fp', out_fp]
+        )
+        self.assertEqual(result.exit_code, 0)
 
-            with open(out_fp, 'r') as fh:
-                rendered = fh.read()
+        with open(out_fp, 'r') as fh:
+            rendered = fh.read()
 
         self.assertIn('qiime tools import', rendered)
         self.assertIn('--type \'IntSequence1\'', rendered)
         self.assertIn('--type \'IntSequence2\'', rendered)
         self.assertIn('--input-path <your data here>', rendered)
         self.assertIn('--output-path int-sequence1-0.qza', rendered)
+        self.assertIn('--output-path int-sequence1-1.qza', rendered)
         self.assertIn('--output-path int-sequence2-0.qza', rendered)
 
         self.assertIn('qiime dummy-plugin concatenate-ints', rendered)
-        self.assertIn('--i-ints1 int-sequence1-0.qza', rendered)
-        self.assertIn('--i-ints2 int-sequence1-0.qza', rendered)
+        self.assertRegex(rendered, '--i-ints[12] int-sequence1-0.qza')
+        self.assertRegex(rendered, '--i-ints[12] int-sequence1-1.qza')
         self.assertIn('--i-ints3 int-sequence2-0.qza', rendered)
-        self.assertIn('--p-int1 7', rendered)
-        self.assertIn('--p-int2 7', rendered)
+        self.assertIn('--p-int1 9', rendered)
+        self.assertIn('--p-int2 0', rendered)
         self.assertIn('--o-concatenated-ints concatenated-ints-0.qza',
                       rendered)
 
     def test_replay_provenance_python(self):
-        in_fp = os.path.join(self.data_path, 'concatenated_ints.qza')
-        with tempfile.TemporaryDirectory() as tmpdir:
-            out_fp = os.path.join(tmpdir, 'rendered.txt')
-            result = self.runner.invoke(
-                tools,
-                ['replay-provenance', '--i-in-fp', in_fp, '--o-out-fp', out_fp,
-                 '--p-usage-driver', 'python3']
-            )
-            self.assertEqual(result.exit_code, 0)
+        in_fp = os.path.join(self.tempdir, 'concated_ints.qza')
+        out_fp = os.path.join(self.tempdir, 'rendered.txt')
+        result = self.runner.invoke(
+            tools,
+            ['replay-provenance', '--i-in-fp', in_fp, '--o-out-fp', out_fp,
+                '--p-usage-driver', 'python3']
+        )
+        self.assertEqual(result.exit_code, 0)
 
-            with open(out_fp, 'r') as fh:
-                rendered = fh.read()
+        with open(out_fp, 'r') as fh:
+            rendered = fh.read()
 
         self.assertIn('from qiime2 import Artifact', rendered)
         self.assertIn('Artifact.import_data', rendered)
@@ -934,45 +941,106 @@ class TestReplay(unittest.TestCase):
 
     def test_replay_provenance_recurse(self):
         """
-        If the directory under test is parsed recursively, two results will
-        be captured from align_to_tree_mafft_fasttree instead of one.
-
-        This is only visible in the python driver's rendering, and most users
-        will never look at the underlying ProvDAG or use, so that seems like a
-        reasonable way to test.
+        If the directory is parsed recursively, both the concated_ints.qza and
+        left_ints.qza will be captured.
         """
-        in_fp = os.path.join(self.data_path, 'parse_dir_test')
-        with tempfile.TemporaryDirectory() as tmpdir:
-            out_fp = os.path.join(tmpdir, 'rendered.txt')
-            result = self.runner.invoke(
-                tools,
-                ['replay-provenance', '--i-in-fp', in_fp, '--o-out-fp', out_fp,
-                 '--p-usage-driver', 'python3', '--p-recurse']
-            )
-            self.assertEqual(result.exit_code, 0)
+        outer_dir = os.path.join(self.tempdir, 'outer_dir')
+        inner_dir = os.path.join(self.tempdir, 'outer_dir', 'inner_dir')
+        os.mkdir(outer_dir)
+        os.mkdir(inner_dir)
 
-            with open(out_fp, 'r') as fh:
-                rendered = fh.read()
+        shutil.copy(os.path.join(self.tempdir, 'concated_ints.qza'), outer_dir)
+        int_seq = Artifact.import_data('IntSequence1', [1, 2, 3, 4])
+        left_ints, right_ints = self.dp.actions['split_ints'](int_seq)
+        left_ints.save(os.path.join(inner_dir, 'left_ints.qza'))
 
-        self.assertIn('left_0, right_0 = dummy_plugin_actions.split_ints',
-                      rendered)
-        self.assertIn("left_0.save('left_0')", rendered)
-        self.assertIn("right_0.save('right_0')", rendered)
+        in_fp = outer_dir
+        out_fp = os.path.join(self.tempdir, 'rendered.txt')
+        result = self.runner.invoke(
+            tools,
+            ['replay-provenance', '--i-in-fp', in_fp, '--o-out-fp', out_fp,
+                '--p-usage-driver', 'python3', '--p-recurse']
+        )
+        self.assertEqual(result.exit_code, 0)
+
+        with open(out_fp, 'r') as fh:
+            rendered = fh.read()
+
+        self.assertIn('dummy_plugin_actions.concatenate_ints', rendered)
+        self.assertIn('dummy_plugin_actions.split_ints', rendered)
 
     def test_replay_provenance_use_md_without_parse(self):
-        in_fp = os.path.join(self.data_path, 'parse_dir_test')
-        with tempfile.TemporaryDirectory() as tmpdir:
-            out_fp = os.path.join(tmpdir, 'rendered.txt')
-            result = self.runner.invoke(
-                tools,
-                ['replay-provenance', '--i-in-fp', in_fp, '--o-out-fp', out_fp,
-                 '--p-no-parse-metadata', '--p-use-recorded-metadata']
-            )
+        in_fp = os.path.join(self.tempdir, 'outer_dir')
+        out_fp = os.path.join(self.tempdir, 'rendered.txt')
+        result = self.runner.invoke(
+            tools,
+            ['replay-provenance', '--i-in-fp', in_fp, '--o-out-fp', out_fp,
+             '--p-no-parse-metadata', '--p-use-recorded-metadata']
+        )
 
-            self.assertEqual(result.exit_code, 1)
-            self.assertIsInstance(result.exception, ValueError)
-            self.assertRegex(str(result.exception),
-                             "Metadata not parsed for replay")
+        self.assertEqual(result.exit_code, 1)
+        self.assertIsInstance(result.exception, ValueError)
+        self.assertRegex(str(result.exception),
+                         'Metadata not parsed for replay')
+
+    def test_replay_citations(self):
+        in_fp = os.path.join(self.tempdir, 'concated_ints.qza')
+        out_fp = os.path.join(self.tempdir, 'citations.bib')
+        result = self.runner.invoke(
+            tools,
+            ['replay-citations', '--i-in-fp', in_fp, '--o-out-fp', out_fp]
+        )
+        self.assertEqual(result.exit_code, 0)
+
+        with open(out_fp) as fh:
+            bib_database = bp.load(fh)
+
+        # use *? to non-greedily match version strings
+        expected = [
+            r'action\|dummy-plugin:.*?\|method:concatenate_ints\|0',
+            r'framework\|qiime2:.*?\|0',
+            r'plugin\|dummy-plugin:.*?\|0',
+            r'plugin\|dummy-plugin:.*?\|1',
+            r'transformer\|dummy-plugin:.*?\|builtins:list->'
+            r'IntSequenceDirectoryFormat\|0',
+            r'transformer\|dummy-plugin:.*?\|builtins:list->'
+            r'IntSequenceV2DirectoryFormat\|4',
+            r'transformer\|dummy-plugin:.*?\|builtins:list->'
+            r'IntSequenceV2DirectoryFormat\|5',
+            r'transformer\|dummy-plugin:.*?\|builtins:list->'
+            r'IntSequenceV2DirectoryFormat|6',
+            r'transformer\|dummy-plugin:.*?\|builtins:list->'
+            r'IntSequenceV2DirectoryFormat\|8',
+            r'view\|dummy-plugin:.*?\|IntSequenceDirectoryFormat\|0'
+        ]
+
+        self.assertEqual(len(expected), len(bib_database.entries))
+
+        all_records_str = ''
+        for record in bib_database.entries_dict.keys():
+            all_records_str += f' {record}'
+        for record in expected:
+            self.assertRegex(all_records_str, record)
+
+    def test_replay_citations_no_deduplicate(self):
+        in_fp = os.path.join(self.tempdir, 'concated_ints.qza')
+        out_fp = os.path.join(self.tempdir, 'citations.bib')
+        result = self.runner.invoke(
+            tools,
+            ['replay-citations', '--i-in-fp', in_fp, '--o-out-fp', out_fp,
+             '--p-no-deduplicate']
+        )
+        self.assertEqual(result.exit_code, 0)
+
+        with open(out_fp) as fh:
+            bib_database = bp.load(fh)
+        self.assertEqual(28, len(bib_database.entries))
+
+        with open(out_fp) as fh:
+            file_contents = fh.read()
+        framework_citations = \
+            re.compile(r'framework\|qiime2:.+?\|0.*' * 4, re.DOTALL)
+        self.assertRegex(file_contents, framework_citations)
 
 
 if __name__ == "__main__":
