@@ -144,8 +144,8 @@ qiime dummy-plugin variadic-input-method \\
         ('list_of_ints',
          """\
 qiime dummy-plugin list-of-ints \\
-  --i-ints int-collection \\
-  --o-output out"""),
+  --i-ints int-collection/ \\
+  --o-output out/"""),
         ]
 
 

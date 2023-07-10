@@ -50,7 +50,7 @@ class CLIUsageVariable(usage.UsageVariable):
         # it would be nice to have a / as the 'ext' for collections so that
         # it's clear that it's a directory, but that's proving to be a pain
         # so putting on hold for now
-        'result_collection': '',
+        'result_collection': '/',
         'visualization': '.qzv',
         'metadata': '.tsv',
         'column': '',
