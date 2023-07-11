@@ -16,7 +16,7 @@ import zipfile
 import bibtexparser as bp
 
 from click.testing import CliRunner
-from qiime2 import Artifact
+from qiime2 import Artifact, Metadata
 from qiime2.core.testing.util import get_dummy_plugin
 from qiime2.metadata.base import SUPPORTED_COLUMN_TYPES
 from qiime2.core.cache import Cache
@@ -883,6 +883,7 @@ class TestReplay(unittest.TestCase):
         self.dp = self.pm.plugins['dummy-plugin']
         self.tempdir = tempfile.mkdtemp(prefix='q2cli-test-replay-temp-')
 
+        # contrive artifacts with different sorts of provenance
         int_seq1 = Artifact.import_data('IntSequence1', [1, 2, 3])
         int_seq2 = Artifact.import_data('IntSequence1', [4, 5, 6])
         int_seq3 = Artifact.import_data('IntSequence2', [7, 8])
@@ -898,6 +899,12 @@ class TestReplay(unittest.TestCase):
         int_seq = Artifact.import_data('IntSequence1', [1, 2, 3, 4])
         left_ints, _ = self.dp.actions['split_ints'](int_seq)
         left_ints.save(os.path.join(inner_dir, 'left_ints.qza'))
+
+        mapping = Artifact.import_data('Mapping', {'qiime': 2, 'triangle': 3})
+        int_seq_with_md, = self.dp.actions['identity_with_metadata'](
+            int_seq1,
+            mapping.view(Metadata))
+        int_seq_with_md.save(os.path.join(self.tempdir, 'int_seq_with_md.qza'))
 
     def tearDown(self):
         shutil.rmtree(self.tempdir)
@@ -1053,6 +1060,44 @@ class TestReplay(unittest.TestCase):
         exp = {'python3_replay.py', 'cli_replay.sh', 'citations.bib'}
         with zipfile.ZipFile(out_fp, 'r') as zfh:
             self.assertEqual(exp, set(zfh.namelist()))
+
+    def test_replay_supplement_with_metadata(self):
+        in_fp = os.path.join(self.tempdir, 'int_seq_with_md.qza')
+        out_fp = os.path.join(self.tempdir, 'supplement.zip')
+        result = self.runner.invoke(
+            tools,
+            ['replay-supplement', '--i-in-fp', in_fp, '--o-out-fp', out_fp]
+        )
+        self.assertEqual(result.exit_code, 0)
+        self.assertTrue(zipfile.is_zipfile(out_fp))
+
+        exp = {
+            'python3_replay.py',
+            'cli_replay.sh',
+            'citations.bib',
+            'recorded_metadata/',
+            'recorded_metadata/dummy_plugin_identity_with_metadata_0/',
+            'recorded_metadata/dummy_plugin_identity_with_metadata_0/'
+            'metadata_0.tsv',
+        }
+        with zipfile.ZipFile(out_fp, 'r') as zfh:
+            self.assertEqual(exp, set(zfh.namelist()))
+
+    def test_replay_supplement_no_metadata_dump(self):
+        in_fp = os.path.join(self.tempdir, 'int_seq_with_md.qza')
+        out_fp = os.path.join(self.tempdir, 'supplement.zip')
+        result = self.runner.invoke(
+            tools,
+            ['replay-supplement', '--i-in-fp', in_fp, '--o-out-fp', out_fp,
+             '--p-no-dump-recorded-metadata']
+        )
+        print(result.exception)
+        self.assertEqual(result.exit_code, 0)
+        self.assertTrue(zipfile.is_zipfile(out_fp))
+
+        not_exp = 'recorded_metadata/'
+        with zipfile.ZipFile(out_fp, 'r') as zfh:
+            self.assertNotIn(not_exp, set(zfh.namelist()))
 
 
 if __name__ == "__main__":
