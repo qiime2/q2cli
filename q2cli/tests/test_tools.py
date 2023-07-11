@@ -12,6 +12,7 @@ import re
 import shutil
 import unittest
 import tempfile
+import zipfile
 import bibtexparser as bp
 
 from click.testing import CliRunner
@@ -885,10 +886,18 @@ class TestReplay(unittest.TestCase):
         int_seq1 = Artifact.import_data('IntSequence1', [1, 2, 3])
         int_seq2 = Artifact.import_data('IntSequence1', [4, 5, 6])
         int_seq3 = Artifact.import_data('IntSequence2', [7, 8])
-        concated_ints,  = self.dp.actions['concatenate_ints'](
-            int_seq1, int_seq2, int_seq3, 9, 0)
-
+        concat_ints = self.dp.actions['concatenate_ints']
+        concated_ints, = concat_ints(int_seq1, int_seq2, int_seq3, 9, 0)
         concated_ints.save(os.path.join(self.tempdir, 'concated_ints.qza'))
+
+        outer_dir = os.path.join(self.tempdir, 'outer_dir')
+        inner_dir = os.path.join(self.tempdir, 'outer_dir', 'inner_dir')
+        os.mkdir(outer_dir)
+        os.mkdir(inner_dir)
+        shutil.copy(os.path.join(self.tempdir, 'concated_ints.qza'), outer_dir)
+        int_seq = Artifact.import_data('IntSequence1', [1, 2, 3, 4])
+        left_ints, _ = self.dp.actions['split_ints'](int_seq)
+        left_ints.save(os.path.join(inner_dir, 'left_ints.qza'))
 
     def tearDown(self):
         shutil.rmtree(self.tempdir)
@@ -944,17 +953,7 @@ class TestReplay(unittest.TestCase):
         If the directory is parsed recursively, both the concated_ints.qza and
         left_ints.qza will be captured.
         """
-        outer_dir = os.path.join(self.tempdir, 'outer_dir')
-        inner_dir = os.path.join(self.tempdir, 'outer_dir', 'inner_dir')
-        os.mkdir(outer_dir)
-        os.mkdir(inner_dir)
-
-        shutil.copy(os.path.join(self.tempdir, 'concated_ints.qza'), outer_dir)
-        int_seq = Artifact.import_data('IntSequence1', [1, 2, 3, 4])
-        left_ints, right_ints = self.dp.actions['split_ints'](int_seq)
-        left_ints.save(os.path.join(inner_dir, 'left_ints.qza'))
-
-        in_fp = outer_dir
+        in_fp = os.path.join(self.tempdir, 'outer_dir')
         out_fp = os.path.join(self.tempdir, 'rendered.txt')
         result = self.runner.invoke(
             tools,
@@ -977,7 +976,6 @@ class TestReplay(unittest.TestCase):
             ['replay-provenance', '--i-in-fp', in_fp, '--o-out-fp', out_fp,
              '--p-no-parse-metadata', '--p-use-recorded-metadata']
         )
-
         self.assertEqual(result.exit_code, 1)
         self.assertIsInstance(result.exception, ValueError)
         self.assertRegex(str(result.exception),
@@ -995,8 +993,8 @@ class TestReplay(unittest.TestCase):
         with open(out_fp) as fh:
             bib_database = bp.load(fh)
 
-        # use *? to non-greedily match version strings
-        expected = [
+        # use .*? to non-greedily match version strings
+        exp = [
             r'action\|dummy-plugin:.*?\|method:concatenate_ints\|0',
             r'framework\|qiime2:.*?\|0',
             r'plugin\|dummy-plugin:.*?\|0',
@@ -1014,12 +1012,12 @@ class TestReplay(unittest.TestCase):
             r'view\|dummy-plugin:.*?\|IntSequenceDirectoryFormat\|0'
         ]
 
-        self.assertEqual(len(expected), len(bib_database.entries))
+        self.assertEqual(len(exp), len(bib_database.entries))
 
         all_records_str = ''
         for record in bib_database.entries_dict.keys():
             all_records_str += f' {record}'
-        for record in expected:
+        for record in exp:
             self.assertRegex(all_records_str, record)
 
     def test_replay_citations_no_deduplicate(self):
@@ -1039,8 +1037,22 @@ class TestReplay(unittest.TestCase):
         with open(out_fp) as fh:
             file_contents = fh.read()
         framework_citations = \
-            re.compile(r'framework\|qiime2:.+?\|0.*' * 4, re.DOTALL)
+            re.compile(r'framework\|qiime2:.*?\|0.*' * 4, re.DOTALL)
         self.assertRegex(file_contents, framework_citations)
+
+    def test_replay_supplement(self):
+        in_fp = os.path.join(self.tempdir, 'concated_ints.qza')
+        out_fp = os.path.join(self.tempdir, 'supplement.zip')
+        result = self.runner.invoke(
+            tools,
+            ['replay-supplement', '--i-in-fp', in_fp, '--o-out-fp', out_fp]
+        )
+        self.assertEqual(result.exit_code, 0)
+        self.assertTrue(zipfile.is_zipfile(out_fp))
+
+        exp = {'python3_replay.py', 'cli_replay.sh', 'citations.bib'}
+        with zipfile.ZipFile(out_fp, 'r') as zfh:
+            self.assertEqual(exp, set(zfh.namelist()))
 
 
 if __name__ == "__main__":
