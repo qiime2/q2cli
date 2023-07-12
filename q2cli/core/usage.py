@@ -47,9 +47,6 @@ def write_plugin_example_data(plugin, output_dir):
 class CLIUsageVariable(usage.UsageVariable):
     EXT = {
         'artifact': '.qza',
-        # it would be nice to have a / as the 'ext' for collections so that
-        # it's clear that it's a directory, but that's proving to be a pain
-        # so putting on hold for now
         'result_collection': '/',
         'visualization': '.qzv',
         'metadata': '.tsv',
@@ -94,12 +91,15 @@ class CLIUsageVariable(usage.UsageVariable):
 
         self.use.recorder.extend(lines)
 
-    def assert_output_type(self, semantic_type):
+    def assert_output_type(self, semantic_type, key=None):
         if not self.use.enable_assertions:
             return
 
         INDENT = self.use.INDENT
         input_path = self.to_interface_name()
+
+        if key:
+            input_path = "%s[%r]" % (input_path, key)
 
         lines = [
             'qiime dev assert-result-type %s \\' % (input_path,),
