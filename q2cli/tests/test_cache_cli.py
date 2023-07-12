@@ -851,8 +851,8 @@ class TestCacheCli(unittest.TestCase):
             dict_return)
 
         list_expected = [{
-            'type': 'parsl', 'parsl_type': 'HighThroughputExecutor'}, {
-            'type': 'parsl', 'parsl_type': 'HighThroughputExecutor'
+            'type': 'parsl', 'parsl_type': '_TEST_EXECUTOR_'}, {
+            'type': 'parsl', 'parsl_type': '_TEST_EXECUTOR_'
         }]
         dict_expected = [{
             'type': 'parsl', 'parsl_type': 'ThreadPoolExecutor'}, {
@@ -891,8 +891,8 @@ class TestCacheCli(unittest.TestCase):
 
         # The explicit config should override the default
         list_expected = [{
-            'type': 'parsl', 'parsl_type': 'HighThroughputExecutor'}, {
-            'type': 'parsl', 'parsl_type': 'HighThroughputExecutor'
+            'type': 'parsl', 'parsl_type': '_TEST_EXECUTOR_'}, {
+            'type': 'parsl', 'parsl_type': '_TEST_EXECUTOR_'
         }]
         dict_expected = [{
             'type': 'parsl', 'parsl_type': 'ThreadPoolExecutor'}, {

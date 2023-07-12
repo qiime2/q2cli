@@ -366,9 +366,7 @@ class ActionCommand(BaseCommandMixin, click.Command):
         parallel_config_fp = kwargs.pop('parallel_config', None)
 
         if parallel_config_fp is not None:
-            from qiime2.sdk.parallel_config import setup_parallel
             parallel = True
-            setup_parallel(parallel_config_fp)
 
         verbose = kwargs.pop('verbose')
         if verbose is None:
@@ -462,21 +460,23 @@ class ActionCommand(BaseCommandMixin, click.Command):
         try:
             with qiime2.util.redirected_stdio(stdout=log, stderr=log):
                 if parallel:
+                    from qiime2.sdk.parallel_config import \
+                        (get_config_from_file, ParallelConfig)
+
                     action = action.parallel
+                    if parallel_config_fp is None:
+                        parallel_config = ParallelConfig()
+                    else:
+                        config, mapping =\
+                              get_config_from_file(parallel_config_fp)
+                        parallel_config = ParallelConfig(config, mapping)
 
-                if recycle_pool is None:
-                    results = action(**arguments)
-                    results = results._result()
+                    with parallel_config:
+                        results = self._execute_action(
+                            action, arguments, recycle_pool, cache)
                 else:
-                    pool = cache.create_pool(key=recycle_pool, reuse=True)
-                    with pool:
-                        results = action(**arguments)
-
-                        # If we executed in a pool using parsl we need to get
-                        # our results inside of the context manager to ensure
-                        # that the pool is set for the entirety of the
-                        # execution
-                        results = results._result()
+                    results = self._execute_action(
+                        action, arguments, recycle_pool, cache)
         except Exception as e:
             header = ('Plugin error from %s:'
                       % q2cli.util.to_cli_name(self.plugin['name']))
@@ -532,6 +532,24 @@ class ActionCommand(BaseCommandMixin, click.Command):
         # have them
         if recycle_pool == default_pool:
             cache.remove(recycle_pool)
+
+    def _execute_action(self, action, arguments, recycle_pool=None,
+                        cache=None):
+        if recycle_pool is None:
+            results = action(**arguments)
+            results = results._result()
+        else:
+            pool = cache.create_pool(key=recycle_pool, reuse=True)
+            with pool:
+                results = action(**arguments)
+
+                # If we executed in a pool using parsl we need to get
+                # our results inside of the context manager to ensure
+                # that the pool is set for the entirety of the
+                # execution
+                results = results._result()
+
+        return results
 
     def _order_outputs(self, outputs):
         ordered = []
