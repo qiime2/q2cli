@@ -75,13 +75,18 @@ class CLIUsageVariable(usage.UsageVariable):
 
         return cli_name
 
-    def assert_has_line_matching(self, path, expression):
+    def assert_has_line_matching(self, path, expression, key=None):
         if not self.use.enable_assertions:
             return
 
         INDENT = self.use.INDENT
         input_path = self.to_interface_name()
         expr = shlex.quote(expression)
+
+        if key:
+            input_path = \
+                "%s%s%s" % (input_path, key,
+                            list(self.execute().values())[0].extension)
 
         lines = [
             'qiime dev assert-result-data %s \\' % (input_path,),
