@@ -99,7 +99,9 @@ class CLIUsageVariable(usage.UsageVariable):
         input_path = self.to_interface_name()
 
         if key:
-            input_path = "%s[%r]" % (input_path, key)
+            input_path = \
+                "%s%s%s" % (input_path, key,
+                            list(self.execute().values())[0].extension)
 
         lines = [
             'qiime dev assert-result-type %s \\' % (input_path,),
