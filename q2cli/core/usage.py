@@ -85,8 +85,7 @@ class CLIUsageVariable(usage.UsageVariable):
 
         if key:
             input_path = \
-                "%s%s%s" % (input_path, key,
-                            list(self.execute().values())[0].extension)
+                "%s%s%s" % (input_path, key, self.execute()[key].extension)
 
         lines = [
             'qiime dev assert-result-data %s \\' % (input_path,),
@@ -105,8 +104,7 @@ class CLIUsageVariable(usage.UsageVariable):
 
         if key:
             input_path = \
-                "%s%s%s" % (input_path, key,
-                            list(self.execute().values())[0].extension)
+                "%s%s%s" % (input_path, key, self.execute()[key].extension)
 
         lines = [
             'qiime dev assert-result-type %s \\' % (input_path,),
