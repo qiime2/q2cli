@@ -222,7 +222,7 @@ class GeneratedOption(click.Option):
                         ctx=ctx, param=self)
 
                 if self.q2_multiple is dict:
-                    value = {k: v for k, v in zip(keys, value)}
+                    value = {str(k): v for k, v in zip(keys, value)}
                 return value
             elif self.q2_metadata == 'file':
                 value = super().type_cast_value(ctx, value)
