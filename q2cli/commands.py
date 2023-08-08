@@ -467,7 +467,7 @@ class ActionCommand(BaseCommandMixin, click.Command):
                     if parallel_config_fp is None:
                         parallel_config = ParallelConfig()
                     else:
-                        config, mapping =\
+                        config, mapping = \
                               get_config_from_file(parallel_config_fp)
                         parallel_config = ParallelConfig(config, mapping)
 
