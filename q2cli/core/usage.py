@@ -47,11 +47,17 @@ def write_plugin_example_data(plugin, output_dir):
 class CLIUsageVariable(usage.UsageVariable):
     EXT = {
         'artifact': '.qza',
-        'result_collection': '/',
+        'artifact_collection': '/',
+        'visualization_collection': '/',
         'visualization': '.qzv',
         'metadata': '.tsv',
         'column': '',
         'format': '',
+    }
+
+    ELEMENT_EXT = {
+        'artifact_collection': '.qza',
+        'visualization_collection': '.qzv'
     }
 
     @property
@@ -61,6 +67,13 @@ class CLIUsageVariable(usage.UsageVariable):
     @staticmethod
     def to_cli_name(val):
         return util.to_cli_name(val)
+
+    def _key_helper(self, input_path, key):
+        if self.var_type not in self.ELEMENT_EXT:
+            raise KeyboardInterrupt(
+                f'Cannot key non-collection type {self.var_type}')
+
+        return "%s%s%s" % (input_path, key, self.ELEMENT_EXT[self.var_type])
 
     def to_interface_name(self):
         if hasattr(self, '_q2cli_ref'):
@@ -84,8 +97,7 @@ class CLIUsageVariable(usage.UsageVariable):
         expr = shlex.quote(expression)
 
         if key:
-            input_path = \
-                "%s%s%s" % (input_path, key, self.execute()[key].extension)
+            input_path = self._key_helper(input_path, key)
 
         lines = [
             'qiime dev assert-result-data %s \\' % (input_path,),
@@ -103,8 +115,7 @@ class CLIUsageVariable(usage.UsageVariable):
         input_path = self.to_interface_name()
 
         if key:
-            input_path = \
-                "%s%s%s" % (input_path, key, self.execute()[key].extension)
+            input_path = self._key_helper(input_path, key)
 
         lines = [
             'qiime dev assert-result-type %s \\' % (input_path,),
