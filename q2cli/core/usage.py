@@ -56,8 +56,8 @@ class CLIUsageVariable(usage.UsageVariable):
     }
 
     ELEMENT_EXT = {
-        'artifact_collection': '.qza',
-        'visualization_collection': '.qzv'
+        'artifact_collection': EXT['artifact'],
+        'visualization_collection': EXT['visualization']
     }
 
     @property
@@ -69,7 +69,7 @@ class CLIUsageVariable(usage.UsageVariable):
         return util.to_cli_name(val)
 
     def _key_helper(self, input_path, key):
-        if self.var_type not in self.ELEMENT_EXT:
+        if self.var_type not in self.COLLECTION_VAR_TYPES:
             raise KeyboardInterrupt(
                 f'Cannot key non-collection type {self.var_type}')
 
