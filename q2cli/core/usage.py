@@ -11,6 +11,7 @@ import os
 import shlex
 import textwrap
 
+from qiime2 import ResultCollection
 import qiime2.sdk.usage as usage
 import q2cli.util as util
 from q2cli.core.state import get_action_state
@@ -328,6 +329,10 @@ class CLIUsage(usage.Usage):
 
             if isinstance(value, list):
                 return [(option, ' '.join(shlex.quote(str(v)) for v in value))]
+
+            if isinstance(value, (dict, ResultCollection)):
+                return [(option, ' '.join(f'{k}:{shlex.quote(str(v))}'
+                                          for k, v in value.items()))]
 
             if type(value) is bool:
                 if state['ast']['type'] == 'expression':

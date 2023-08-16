@@ -245,7 +245,7 @@ class GeneratedOption(click.Option):
                         self._check_length(value, ctx)
 
                     keys = []
-                    if self.q2_multiple is dict:
+                    if self.q2_multiple is dict and type(value) is not dict:
                         _values = {}
 
                         keyed = False
