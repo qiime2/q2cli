@@ -8,6 +8,8 @@
 
 import click
 
+from qiime2.core.type.util import is_collection_type
+
 
 def is_writable_dir(path):
     import os
@@ -93,7 +95,9 @@ class QIIME2Type(click.ParamType):
                 self.fail('%r is already a directory.' % (value,), param, ctx)
 
         directory = os.path.dirname(value)
-        if directory and not os.path.exists(directory):
+
+        if (directory and not os.path.exists(directory)
+                and not is_collection_type(param.type.type_expr)):
             self.fail('Directory %r does not exist, cannot save %r into it.'
                       % (directory, os.path.basename(value)), param, ctx)
 

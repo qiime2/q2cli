@@ -141,6 +141,11 @@ qiime dummy-plugin variadic-input-method \\
   --i-int-set single-int1.qza single-int2.qza \\
   --p-nums 7 8 9 \\
   --o-output out.qza"""),
+        ('list_of_ints',
+         """\
+qiime dummy-plugin list-of-ints \\
+  --i-ints ints/ \\
+  --o-output out/"""),
         ]
 
 
