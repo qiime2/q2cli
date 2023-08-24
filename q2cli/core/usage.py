@@ -154,8 +154,8 @@ class CLIUsage(usage.Usage):
 
         return variable
 
-    def init_result_collection(self, name, factory):
-        variable = super().init_result_collection(name, factory)
+    def init_artifact_collection(self, name, factory):
+        variable = super().init_artifact_collection(name, factory)
 
         self.init_data.append(variable)
 
