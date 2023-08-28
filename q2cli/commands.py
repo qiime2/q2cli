@@ -126,8 +126,10 @@ class PluginCommand(BaseCommandMixin, click.MultiCommand):
         # the cli currently doesn't differentiate between methods
         # and visualizers, it treats them generically as Actions
         self._plugin = plugin
+        # Hide actions that start with _ by default
         self._action_lookup = {q2cli.util.to_cli_name(id): a for id, a in
-                               plugin['actions'].items()}
+                               plugin['actions'].items()
+                               if not id.startswith('_')}
 
         support = 'Getting user support: %s' % plugin['user_support_text']
         website = 'Plugin website: %s' % plugin['website']
@@ -139,7 +141,10 @@ class PluginCommand(BaseCommandMixin, click.MultiCommand):
                          is_eager=True, callback=self._get_version,
                          help='Show the version and exit.'),
             q2cli.util.example_data_option(self._get_plugin),
-            q2cli.util.citations_option(self._get_citation_records)
+            q2cli.util.citations_option(self._get_citation_records),
+            click.Option(('--show-hidden-actions',), is_flag=True,
+                         expose_value=False, callback=self._get_hidden_actions,
+                         help='Show hidden actions in the actions list.')
         ]
 
         super().__init__(name, *args, short_help=plugin['short_description'],
@@ -170,6 +175,14 @@ class PluginCommand(BaseCommandMixin, click.MultiCommand):
         import q2cli.util
         pm = q2cli.util.get_plugin_manager()
         return pm.plugins[self._plugin['name']].citations
+
+    def _get_hidden_actions(self, ctx, param, value):
+        # Add actions that start with _ back to the lookup. Do not replace the
+        # starting _ with -
+        self._action_lookup.update(
+            {q2cli.util.to_cli_name(id).replace('-', '_', 1): a
+             for id, a in self._plugin['actions'].items()
+             if id.startswith('_')})
 
     def _get_plugin(self):
         import q2cli.util
