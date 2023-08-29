@@ -36,6 +36,12 @@ def get_completion_path():
     return os.path.join(get_cache_dir(), 'completion.sh')
 
 
+def hidden_to_cli_name(name):
+    name = to_cli_name(name)
+    # Retain the leading _
+    return name.replace('-', '_', 1)
+
+
 def to_cli_name(name):
     return name.replace('_', '-')
 

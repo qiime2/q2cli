@@ -179,10 +179,18 @@ class PluginCommand(BaseCommandMixin, click.MultiCommand):
     def _get_hidden_actions(self, ctx, param, value):
         # Add actions that start with _ back to the lookup. Do not replace the
         # starting _ with -
+        from click.utils import echo
+
         self._action_lookup.update(
             {q2cli.util.to_cli_name(id).replace('-', '_', 1): a
              for id, a in self._plugin['actions'].items()
              if id.startswith('_')})
+
+        # Handle the printing and exiting here. This feels like a pretty
+        # serious misuse of click, but it probably isn't the most egregious in
+        # the cli
+        echo(ctx.get_help(), color=ctx.color)
+        ctx.exit()
 
     def _get_plugin(self):
         import q2cli.util
