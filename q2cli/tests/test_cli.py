@@ -69,8 +69,8 @@ class CliTests(unittest.TestCase):
         self.assertIn('split-ints', commands)
         self.assertIn('mapping-viz', commands)
 
-        self.assertFalse('split_ints' in commands)
-        self.assertFalse('mapping_viz' in commands)
+        self.assertNotIn('split_ints', commands)
+        self.assertNotIn('mapping_viz', commands)
         self.assertNotIn('-underscore-method', commands)
         self.assertNotIn('_underscore-method', commands)
 
