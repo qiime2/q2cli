@@ -79,14 +79,15 @@ class CliTests(unittest.TestCase):
         # hidden method
         qiime_cli = RootCommand('--show-hidden-actions')
         command = qiime_cli.get_command(ctx=None, name='dummy-plugin')
-        results = self.runner.invoke(command, ['--show-hidden-actions']).output
-        self.assertIn('split-ints', results)
-        self.assertIn('mapping-viz', results)
-        self.assertIn('_underscore-method', results)
+        commands = self.runner.invoke(command,
+                                      ['--show-hidden-actions']).output
+        self.assertIn('split-ints', commands)
+        self.assertIn('mapping-viz', commands)
+        self.assertIn('_underscore-method', commands)
 
-        self.assertNotIn('split_ints', results)
-        self.assertNotIn('mapping_viz', results)
-        self.assertNotIn('-underscore-method', results)
+        self.assertNotIn('split_ints', commands)
+        self.assertNotIn('mapping_viz', commands)
+        self.assertNotIn('-underscore-method', commands)
 
     def test_action_parameter_types(self):
         qiime_cli = RootCommand()
