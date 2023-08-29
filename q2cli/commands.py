@@ -126,7 +126,16 @@ class PluginCommand(BaseCommandMixin, click.MultiCommand):
         # the cli currently doesn't differentiate between methods
         # and visualizers, it treats them generically as Actions
         self._plugin = plugin
+        self._action_lookup = {}
+        self._hidden_actions = {}
+
         # Hide actions that start with _ by default
+        for id, a in plugin['actions'].items():
+            if id.startswith('_'):
+                self._hidden_actions[q2cli.util.hidden_to_cli_name(id)] = a
+            else:
+                self._action_lookup[q2cli.util.to_cli_name(id)] = a
+
         self._action_lookup = {q2cli.util.to_cli_name(id): a for id, a in
                                plugin['actions'].items()
                                if not id.startswith('_')}
@@ -143,7 +152,8 @@ class PluginCommand(BaseCommandMixin, click.MultiCommand):
             q2cli.util.example_data_option(self._get_plugin),
             q2cli.util.citations_option(self._get_citation_records),
             click.Option(('--show-hidden-actions',), is_flag=True,
-                         expose_value=False, callback=self._get_hidden_actions,
+                         expose_value=False, is_eager=True,
+                         callback=self._get_hidden_actions,
                          help='Show hidden actions in the actions list.')
         ]
 
@@ -177,14 +187,20 @@ class PluginCommand(BaseCommandMixin, click.MultiCommand):
         return pm.plugins[self._plugin['name']].citations
 
     def _get_hidden_actions(self, ctx, param, value):
-        # Add actions that start with _ back to the lookup. Do not replace the
-        # starting _ with -
+        """Add actions that start with _ back to the lookup"""
+        # Click calls this whether the flag was provided or not. If the flag
+        # was not provided value is, unsurprisingly, False. We do not want to
+        # execute this if the flag was not provided.
+        #
+        # Resilient parsing has something to do with ignoring default values
+        # which for this is False. Honestly not 100% sure why we need that
+        # here, but it is in the check in _get_version, and I a mimicking that
+        if not value or ctx.resilient_parsing:
+            return
+
         from click.utils import echo
 
-        self._action_lookup.update(
-            {q2cli.util.to_cli_name(id).replace('-', '_', 1): a
-             for id, a in self._plugin['actions'].items()
-             if id.startswith('_')})
+        self._action_lookup.update(self._hidden_actions)
 
         # Handle the printing and exiting here. This feels like a pretty
         # serious misuse of click, but it probably isn't the most egregious in
