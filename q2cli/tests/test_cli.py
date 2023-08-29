@@ -71,6 +71,20 @@ class CliTests(unittest.TestCase):
 
         self.assertFalse('split_ints' in commands)
         self.assertFalse('mapping_viz' in commands)
+        self.assertNotIn('-underscore-method', commands)
+        self.assertNotIn('_underscore-method', commands)
+
+    def test_plugin_list_hidden_commands(self):
+        # plugin commands are present including a method and visualizer and
+        # hidden method
+        qiime_cli = RootCommand('--show-hidden-actions')
+        command = qiime_cli.get_command(ctx=None, name='dummy-plugin')
+        results = self.runner.invoke(command, ['--show-hidden-actions']).output
+        self.assertIn('split-ints', results)
+        self.assertIn('mapping-viz', results)
+        self.assertIn('_underscore-method', results)
+
+        self.assertNotIn('-underscore-method', results)
 
     def test_action_parameter_types(self):
         qiime_cli = RootCommand()
