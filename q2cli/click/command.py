@@ -41,6 +41,7 @@ class BaseCommandMixin:
         from q2cli.core.config import CONFIG
         if isinstance(self, click.MultiCommand):
             return super().parse_args(ctx, args)
+
         errors = []
         parser = self.make_parser(ctx)
         skip_rest = False
