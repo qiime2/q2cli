@@ -37,7 +37,10 @@ def get_completion_path():
 
 
 def hidden_to_cli_name(name):
+    # Safety first
+    assert name.startswith('_')
     name = to_cli_name(name)
+
     # Retain the leading _
     return name.replace('-', '_', 1)
 
