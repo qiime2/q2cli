@@ -149,7 +149,7 @@ class PluginCommand(BaseCommandMixin, click.MultiCommand):
             q2cli.util.citations_option(self._get_citation_records)
         ]
 
-        if self._hidden_actions is not {}:
+        if self._hidden_actions != {}:
             params.append(
                 click.Option(
                     ('--show-hidden-actions',), is_flag=True,
