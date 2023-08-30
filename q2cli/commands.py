@@ -158,7 +158,7 @@ class PluginCommand(BaseCommandMixin, click.MultiCommand):
                     help="This plugin has hidden actions with names starting "
                          "with '_'. These are generally called internally by "
                          "pipelines. Passing this flag will display those "
-                         "methods."))
+                         "actions."))
 
         super().__init__(name, *args, short_help=plugin['short_description'],
                          help=help_, params=params, **kwargs)
