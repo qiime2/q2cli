@@ -77,7 +77,7 @@ class CliTests(unittest.TestCase):
     def test_plugin_list_hidden_commands(self):
         # plugin commands are present including a method and visualizer and
         # hidden method
-        qiime_cli = RootCommand('--show-hidden-actions')
+        qiime_cli = RootCommand()
         command = qiime_cli.get_command(ctx=None, name='dummy-plugin')
         commands = self.runner.invoke(command,
                                       ['--show-hidden-actions']).output
