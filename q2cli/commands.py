@@ -136,10 +136,6 @@ class PluginCommand(BaseCommandMixin, click.MultiCommand):
             else:
                 self._action_lookup[q2cli.util.to_cli_name(id)] = a
 
-        self._action_lookup = {q2cli.util.to_cli_name(id): a for id, a in
-                               plugin['actions'].items()
-                               if not id.startswith('_')}
-
         support = 'Getting user support: %s' % plugin['user_support_text']
         website = 'Plugin website: %s' % plugin['website']
         description = 'Description: %s' % plugin['description']
