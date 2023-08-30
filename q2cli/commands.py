@@ -146,12 +146,19 @@ class PluginCommand(BaseCommandMixin, click.MultiCommand):
                          is_eager=True, callback=self._get_version,
                          help='Show the version and exit.'),
             q2cli.util.example_data_option(self._get_plugin),
-            q2cli.util.citations_option(self._get_citation_records),
-            click.Option(('--show-hidden-actions',), is_flag=True,
-                         expose_value=False, is_eager=True,
-                         callback=self._get_hidden_actions,
-                         help='Show hidden actions in the actions list.')
+            q2cli.util.citations_option(self._get_citation_records)
         ]
+
+        if self._hidden_actions is not {}:
+            params.append(
+                click.Option(
+                    ('--show-hidden-actions',), is_flag=True,
+                    expose_value=False, is_eager=True,
+                    callback=self._get_hidden_actions,
+                    help="This plugin has hidden actions with names starting "
+                         "with '_'. These are generally called internally by "
+                         "pipelines. Passing this flag will display those "
+                         "methods."))
 
         super().__init__(name, *args, short_help=plugin['short_description'],
                          help=help_, params=params, **kwargs)
