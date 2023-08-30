@@ -87,6 +87,7 @@ class CliTests(unittest.TestCase):
 
         self.assertNotIn('split_ints', commands)
         self.assertNotIn('mapping_viz', commands)
+        self.assertNotIn('_underscore_method', commands)
         self.assertNotIn('-underscore-method', commands)
 
     def test_action_parameter_types(self):
