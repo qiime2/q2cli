@@ -111,6 +111,16 @@ class CliTests(unittest.TestCase):
             '10', '--output-dir', output_dir, '--verbose'])
         self.assertEqual(result.exit_code, 0)
 
+    def test_execute_hidden_action(self):
+        int_path = os.path.join(self.tempdir, 'int.qza')
+        qiime_cli = RootCommand()
+        command = qiime_cli.get_command(ctx=None, name='dummy-plugin')
+        result = self.runner.invoke(
+                command, ['_underscore-method', '--o-int', int_path,
+                          '--verbose'])
+
+        self.assertEqual(result.exit_code, 0)
+
     def test_extract(self):
         result = self.runner.invoke(
             tools, ['extract', '--input-path', self.artifact1_path,

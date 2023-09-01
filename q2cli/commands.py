@@ -221,6 +221,8 @@ class PluginCommand(BaseCommandMixin, click.MultiCommand):
 
     def get_command(self, ctx, name):
         try:
+            # Hidden actions are still valid commands
+            self._action_lookup.update(self._hidden_actions)
             action = self._action_lookup[name]
         except KeyError:
             from q2cli.util import get_close_matches
