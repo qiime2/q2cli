@@ -473,10 +473,10 @@ class ActionCommand(BaseCommandMixin, click.Command):
 
                     with parallel_config:
                         results = self._execute_action(
-                            action, arguments, recycle_pool, cache)
+                            action, arguments, cache, recycle_pool)
                 else:
                     results = self._execute_action(
-                        action, arguments, recycle_pool, cache)
+                        action, arguments, cache, recycle_pool)
         except Exception as e:
             header = ('Plugin error from %s:'
                       % q2cli.util.to_cli_name(self.plugin['name']))
@@ -533,8 +533,7 @@ class ActionCommand(BaseCommandMixin, click.Command):
         if recycle_pool == default_pool:
             cache.remove(recycle_pool)
 
-    def _execute_action(self, action, arguments, recycle_pool=None,
-                        cache=None):
+    def _execute_action(self, action, arguments, cache, recycle_pool=None):
         with cache:
             if recycle_pool is None:
                 results = action(**arguments)
