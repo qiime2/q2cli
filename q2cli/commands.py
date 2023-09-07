@@ -535,19 +535,20 @@ class ActionCommand(BaseCommandMixin, click.Command):
 
     def _execute_action(self, action, arguments, recycle_pool=None,
                         cache=None):
-        if recycle_pool is None:
-            results = action(**arguments)
-            results = results._result()
-        else:
-            pool = cache.create_pool(key=recycle_pool, reuse=True)
-            with pool:
+        with cache:
+            if recycle_pool is None:
                 results = action(**arguments)
-
-                # If we executed in a pool using parsl we need to get
-                # our results inside of the context manager to ensure
-                # that the pool is set for the entirety of the
-                # execution
                 results = results._result()
+            else:
+                pool = cache.create_pool(key=recycle_pool, reuse=True)
+                with pool:
+                    results = action(**arguments)
+
+                    # If we executed in a pool using parsl we need to get
+                    # our results inside of the context manager to ensure
+                    # that the pool is set for the entirety of the
+                    # execution
+                    results = results._result()
 
         return results
 
