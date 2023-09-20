@@ -11,6 +11,7 @@ import os
 import shlex
 import textwrap
 
+from qiime2 import ResultCollection
 import qiime2.sdk.usage as usage
 import q2cli.util as util
 from q2cli.core.state import get_action_state
@@ -47,10 +48,17 @@ def write_plugin_example_data(plugin, output_dir):
 class CLIUsageVariable(usage.UsageVariable):
     EXT = {
         'artifact': '.qza',
+        'artifact_collection': '/',
+        'visualization_collection': '/',
         'visualization': '.qzv',
         'metadata': '.tsv',
         'column': '',
         'format': '',
+    }
+
+    ELEMENT_EXT = {
+        'artifact_collection': EXT['artifact'],
+        'visualization_collection': EXT['visualization']
     }
 
     @property
@@ -60,6 +68,13 @@ class CLIUsageVariable(usage.UsageVariable):
     @staticmethod
     def to_cli_name(val):
         return util.to_cli_name(val)
+
+    def _key_helper(self, input_path, key):
+        if self.var_type not in self.COLLECTION_VAR_TYPES:
+            raise KeyboardInterrupt(
+                f'Cannot key non-collection type {self.var_type}')
+
+        return "%s%s%s" % (input_path, key, self.ELEMENT_EXT[self.var_type])
 
     def to_interface_name(self):
         if hasattr(self, '_q2cli_ref'):
@@ -74,13 +89,16 @@ class CLIUsageVariable(usage.UsageVariable):
 
         return cli_name
 
-    def assert_has_line_matching(self, path, expression):
+    def assert_has_line_matching(self, path, expression, key=None):
         if not self.use.enable_assertions:
             return
 
         INDENT = self.use.INDENT
         input_path = self.to_interface_name()
         expr = shlex.quote(expression)
+
+        if key:
+            input_path = self._key_helper(input_path, key)
 
         lines = [
             'qiime dev assert-result-data %s \\' % (input_path,),
@@ -90,12 +108,15 @@ class CLIUsageVariable(usage.UsageVariable):
 
         self.use.recorder.extend(lines)
 
-    def assert_output_type(self, semantic_type):
+    def assert_output_type(self, semantic_type, key=None):
         if not self.use.enable_assertions:
             return
 
         INDENT = self.use.INDENT
         input_path = self.to_interface_name()
+
+        if key:
+            input_path = self._key_helper(input_path, key)
 
         lines = [
             'qiime dev assert-result-type %s \\' % (input_path,),
@@ -128,6 +149,13 @@ class CLIUsage(usage.Usage):
 
     def init_artifact(self, name, factory):
         variable = super().init_artifact(name, factory)
+
+        self.init_data.append(variable)
+
+        return variable
+
+    def init_result_collection(self, name, factory):
+        variable = super().init_result_collection(name, factory)
 
         self.init_data.append(variable)
 
@@ -301,6 +329,10 @@ class CLIUsage(usage.Usage):
 
             if isinstance(value, list):
                 return [(option, ' '.join(shlex.quote(str(v)) for v in value))]
+
+            if isinstance(value, (dict, ResultCollection)):
+                return [(option, ' '.join(f'{k}:{shlex.quote(str(v))}'
+                                          for k, v in value.items()))]
 
             if type(value) is bool:
                 if state['ast']['type'] == 'expression':

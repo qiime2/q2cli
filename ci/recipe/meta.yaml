@@ -36,6 +36,7 @@ test:
 
   commands:
     - QIIMETEST= qiime --help
+    - QIIMETEST= py.test --pyargs q2cli
 
 about:
   home: https://qiime2.org
