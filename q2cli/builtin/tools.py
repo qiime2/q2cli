@@ -7,14 +7,12 @@
 # ----------------------------------------------------------------------------
 
 import os
+from typing import Literal
 
 import click
 
 import q2cli.util
 from q2cli.click.command import ToolCommand, ToolGroupCommand
-from qiime2.core.archive.provenance_lib.usage_drivers import (
-    DRIVER_CHOICES, DRIVER_NAMES
-)
 
 _COMBO_METAVAR = 'ARTIFACT/VISUALIZATION'
 
@@ -924,7 +922,7 @@ def cache_status(cache):
               default='cli',
               show_default=True,
               help='the target interface for your replay script',
-              type=click.Choice(DRIVER_NAMES, case_sensitive=False))
+              type=click.Choice(['python3', 'cli'], case_sensitive=False))
 @click.option('--p-validate-checksums/--p-no-validate-checksums',
               default=True,
               show_default=True,
@@ -964,7 +962,7 @@ def cache_status(cache):
               required=True,
               help='the filepath where your replay script should be written.')
 def provenance_replay(i_in_fp: str, o_out_fp: str,
-                      p_usage_driver: DRIVER_CHOICES,
+                      p_usage_driver: Literal['python3', 'cli'],
                       p_recurse: bool = False,
                       p_validate_checksums: bool = True,
                       p_parse_metadata: bool = True,
