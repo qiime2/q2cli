@@ -7,15 +7,27 @@
 # ----------------------------------------------------------------------------
 
 import os.path
+import pathlib
 import shutil
 import tempfile
 import unittest
 import configparser
 
+import pandas as pd
+
 from click.testing import CliRunner
 from qiime2 import Artifact
 from qiime2.core.testing.type import IntSequence1
 from qiime2.core.testing.util import get_dummy_plugin
+from qiime2.sdk.util import camel_to_snake
+from qiime2.sdk.usage import UsageVariable
+from qiime2.sdk import PluginManager
+from qiime2.core.archive.provenance_lib.replay import (
+    ReplayConfig, param_is_metadata_column, dump_recorded_md_file,
+    NamespaceCollections, build_import_usage, build_action_usage,
+    ActionCollections
+)
+from qiime2.core.archive.provenance_lib import TestArtifacts
 
 import q2cli
 import q2cli.util
@@ -23,6 +35,7 @@ import q2cli.builtin.info
 import q2cli.builtin.tools
 from q2cli.commands import RootCommand
 from q2cli.core.config import CLIConfig
+from q2cli.core.usage import ReplayCLIUsage, CLIUsageVariable
 
 
 class TestOption(unittest.TestCase):
@@ -177,6 +190,159 @@ class TestOption(unittest.TestCase):
         with self.assertRaisesRegex(
                 configparser.Error, "'Path' is not a valid filepath."):
             config.parse_file('Path')
+
+
+class ReplayCLIUsageTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.tas = TestArtifacts()
+        cls.tempdir = cls.tas.tempdir
+        cls.pm = PluginManager()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.tas.free()
+
+    def test_init_metadata(self):
+        use = ReplayCLIUsage()
+        var = use.init_metadata(name='testing', factory=lambda: None)
+        self.assertEqual(var.name, '<your metadata filepath>')
+        self.assertEqual(var.var_type, 'metadata')
+
+    def test_init_metadata_with_dumped_md_fn(self):
+        use = ReplayCLIUsage()
+        var = use.init_metadata(
+            name='testing', factory=lambda: None, dumped_md_fn='some_md')
+        self.assertEqual(var.var_type, 'metadata')
+        self.assertEqual(var.name, '"some_md.tsv"')
+
+    def test_param_is_metadata_col(self):
+        cfg = ReplayConfig(use=ReplayCLIUsage(),
+                           use_recorded_metadata=False, pm=self.pm)
+
+        actual = param_is_metadata_column(
+            cfg, 'metadata', 'dummy_plugin', 'identity_with_metadata_column'
+        )
+        self.assertTrue(actual)
+
+        actual = param_is_metadata_column(
+            cfg, 'int1', 'dummy_plugin', 'concatenate_ints'
+        )
+        self.assertFalse(actual)
+
+        with self.assertRaisesRegex(KeyError, "No action.*registered.*"):
+            param_is_metadata_column(
+                cfg, 'ints', 'dummy_plugin', 'young'
+            )
+
+        with self.assertRaisesRegex(KeyError, "No param.*registered.*"):
+            param_is_metadata_column(
+                cfg, 'thugger', 'dummy_plugin', 'split_ints'
+            )
+
+        with self.assertRaisesRegex(KeyError, "No plugin.*registered.*"):
+            param_is_metadata_column(
+                cfg, 'fake_param', 'dummy_hard', 'split_ints'
+            )
+
+    def test_dump_recorded_md_file_to_custom_dir(self):
+        dag = self.tas.int_seq_with_md.dag
+        uuid = self.tas.int_seq_with_md.uuid
+
+        out_dir = 'custom_dir'
+        provnode = dag.get_node_data(uuid)
+        og_md = provnode.metadata['metadata']
+        action_name = 'concatenate_ints_0'
+        md_id = 'metadata'
+        fn = 'metadata.tsv'
+
+        with tempfile.TemporaryDirectory() as tempdir:
+            cfg = ReplayConfig(use=ReplayCLIUsage(),
+                               pm=self.pm, md_out_fp=(tempdir + '/' + out_dir))
+            dump_recorded_md_file(cfg, provnode, action_name, md_id, fn)
+            out_path = pathlib.Path(tempdir) / out_dir / action_name / fn
+
+            self.assertTrue(out_path.is_file())
+
+            dumped_df = pd.read_csv(out_path, sep='\t')
+            pd.testing.assert_frame_equal(dumped_df, og_md)
+
+            # If we run it again, it shouldn't overwrite 'recorded_metadata',
+            # so we should have two files
+            action_name_2 = 'concatenate_ints_1'
+            md_id2 = 'metadata'
+            fn2 = 'metadata_1.tsv'
+            dump_recorded_md_file(cfg, provnode, action_name_2, md_id2, fn2)
+            out_path2 = pathlib.Path(tempdir) / out_dir / action_name_2 / fn2
+
+            # are both files where expected?
+            self.assertTrue(out_path.is_file())
+            self.assertTrue(out_path2.is_file())
+
+    def test_build_import_usage_cli(self):
+        ns = NamespaceCollections()
+        cfg = ReplayConfig(use=ReplayCLIUsage(),
+                           use_recorded_metadata=False, pm=self.pm)
+        dag = self.tas.concated_ints_v6.dag
+        import_uuid = '8dea2f1a-2164-4a85-9f7d-e0641b1db22b'
+        import_node = dag.get_node_data(import_uuid)
+        c_to_s_type = camel_to_snake(import_node.type)
+        unq_var_nm = c_to_s_type + '_0'
+        build_import_usage(import_node, ns, cfg)
+        rendered = cfg.use.render()
+        vars = ns.usg_vars
+        out_name = vars[import_uuid].to_interface_name()
+
+        self.assertIsInstance(vars[import_uuid], UsageVariable)
+        self.assertEqual(vars[import_uuid].var_type, 'artifact')
+        self.assertEqual(vars[import_uuid].name, unq_var_nm)
+        self.assertRegex(rendered, r'qiime tools import \\')
+        self.assertRegex(rendered, f"  --type '{import_node.type}'")
+        self.assertRegex(rendered, "  --input-path <your data here>")
+        self.assertRegex(rendered, f"  --output-path {out_name}")
+
+    def test_build_action_usage_cli(self):
+        plugin = 'dummy-plugin'
+        action = 'concatenate-ints'
+        cfg = ReplayConfig(use=ReplayCLIUsage(),
+                           use_recorded_metadata=False, pm=self.pm)
+
+        ns = NamespaceCollections()
+        import_var_1 = CLIUsageVariable(
+            'imported_ints_0', lambda: None, 'artifact', cfg.use
+        )
+        import_var_2 = CLIUsageVariable(
+            'imported_ints_1', lambda: None, 'artifact', cfg.use
+        )
+        import_uuid_1 = '8dea2f1a-2164-4a85-9f7d-e0641b1db22b'
+        import_uuid_2 = '7727c060-5384-445d-b007-b64b41a090ee'
+        ns.usg_vars = {
+            import_uuid_1: import_var_1,
+            import_uuid_2: import_var_2
+        }
+
+        dag = self.tas.concated_ints_v6.dag
+        action_uuid = '5035a60e-6f9a-40d4-b412-48ae52255bb5'
+        node_uuid = '6facaf61-1676-45eb-ada0-d530be678b27'
+        node = dag.get_node_data(node_uuid)
+        actions = ActionCollections(
+            std_actions={action_uuid: {node_uuid: 'concatenated_ints'}}
+        )
+        unique_var_name = node.action.output_name + '_0'
+        build_action_usage(node, ns, actions.std_actions, action_uuid, cfg)
+        rendered = cfg.use.render()
+        out_name = ns.usg_vars[node_uuid].to_interface_name()
+
+        vars = ns.usg_vars
+        self.assertIsInstance(vars[node_uuid], UsageVariable)
+        self.assertEqual(vars[node_uuid].var_type, 'artifact')
+        self.assertEqual(vars[node_uuid].name, unique_var_name)
+
+        self.assertIn(f'qiime {plugin} {action}', rendered)
+        self.assertIn('--i-ints1 imported-ints-0.qza', rendered)
+        self.assertIn('--i-ints3 imported-ints-1.qza', rendered)
+        self.assertIn('--p-int1 7', rendered)
+        self.assertIn(f'--o-concatenated-ints {out_name}', rendered)
 
 
 if __name__ == "__main__":
