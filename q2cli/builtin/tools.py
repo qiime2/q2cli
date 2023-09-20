@@ -12,7 +12,7 @@ import click
 
 import q2cli.util
 from q2cli.click.command import ToolCommand, ToolGroupCommand
-from qiime2.core.archive.provenance_lib._usage_drivers import (
+from qiime2.core.archive.provenance_lib.usage_drivers import (
     DRIVER_CHOICES, DRIVER_NAMES
 )
 
