@@ -22,12 +22,12 @@ from qiime2.core.testing.util import get_dummy_plugin
 from qiime2.sdk.util import camel_to_snake
 from qiime2.sdk.usage import UsageVariable
 from qiime2.sdk import PluginManager
+from qiime2.core.archive.provenance_lib import TestArtifacts, ProvDAG
 from qiime2.core.archive.provenance_lib.replay import (
     ReplayConfig, param_is_metadata_column, dump_recorded_md_file,
     NamespaceCollections, build_import_usage, build_action_usage,
-    ActionCollections
+    ActionCollections, replay_provenance
 )
-from qiime2.core.archive.provenance_lib import TestArtifacts
 
 import q2cli
 import q2cli.util
@@ -343,6 +343,42 @@ class ReplayCLIUsageTests(unittest.TestCase):
         self.assertIn('--i-ints3 imported-ints-1.qza', rendered)
         self.assertIn('--p-int1 7', rendered)
         self.assertIn(f'--o-concatenated-ints {out_name}', rendered)
+
+    def test_replay_optional_param_is_none(self):
+        dag = self.tas.int_seq_optional_input.dag
+        with tempfile.TemporaryDirectory() as tempdir:
+            out_path = pathlib.Path(tempdir) / 'ns_coll.txt'
+            replay_provenance(dag, out_path, 'cli', md_out_fp=tempdir)
+
+            with open(out_path, 'r') as fp:
+                rendered = fp.read()
+            self.assertIn('--i-ints int-sequence1-0.qza', rendered)
+            self.assertIn('--p-num1', rendered)
+            self.assertNotIn('--i-optional1', rendered)
+            self.assertNotIn('--p-num2', rendered)
+
+    def test_replay_from_provdag_ns_collision(self):
+        """
+        This artifact's dag contains a few results with the output-name
+        filtered-table, so is a good check for namespace collisions if
+        we're not uniquifying variable names properly.
+        """
+        with tempfile.TemporaryDirectory() as tempdir:
+            self.tas.concated_ints.artifact.save(
+                os.path.join(tempdir, 'c1.qza'))
+            self.tas.other_concated_ints.artifact.save(
+                os.path.join(tempdir, 'c2.qza'))
+            dag = ProvDAG(tempdir)
+
+        exp = ['concatenated-ints-0', 'concatenated-ints-1']
+        with tempfile.TemporaryDirectory() as tempdir:
+            out_path = pathlib.Path(tempdir) / 'ns_coll.txt'
+            replay_provenance(dag, out_path, 'cli', md_out_fp=tempdir)
+
+            with open(out_path, 'r') as fp:
+                rendered = fp.read()
+                for name in exp:
+                    self.assertIn(name, rendered)
 
 
 if __name__ == "__main__":
