@@ -12,6 +12,7 @@ import shutil
 import tempfile
 import unittest
 import configparser
+import zipfile
 
 import pandas as pd
 
@@ -26,7 +27,7 @@ from qiime2.core.archive.provenance_lib import TestArtifacts, ProvDAG
 from qiime2.core.archive.provenance_lib.replay import (
     ReplayConfig, param_is_metadata_column, dump_recorded_md_file,
     NamespaceCollections, build_import_usage, build_action_usage,
-    ActionCollections, replay_provenance
+    ActionCollections, replay_provenance, replay_supplement
 )
 
 import q2cli
@@ -379,6 +380,61 @@ class ReplayCLIUsageTests(unittest.TestCase):
                 rendered = fp.read()
                 for name in exp:
                     self.assertIn(name, rendered)
+
+
+class WriteReproducibilitySupplementTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.tas = TestArtifacts()
+        cls.tempdir = cls.tas.tempdir
+        cls.pm = PluginManager()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.tas.free()
+
+    def test_replay_supplement_from_fp(self):
+        fp = self.tas.concated_ints_with_md.filepath
+        with tempfile.TemporaryDirectory() as tempdir:
+            out_fp = os.path.join(tempdir, 'supplement.zip')
+            replay_supplement(payload=fp, out_fp=out_fp)
+
+            self.assertTrue(zipfile.is_zipfile(out_fp))
+
+            exp = {
+                'python3_replay.py',
+                'cli_replay.sh',
+                'citations.bib',
+                'recorded_metadata/',
+                'recorded_metadata/dummy_plugin_identity_with_metadata_0/'
+                'metadata_0.tsv',
+            }
+            with zipfile.ZipFile(out_fp, 'r') as myzip:
+                namelist_set = set(myzip.namelist())
+                for item in exp:
+                    self.assertIn(item, namelist_set)
+
+    def test_replay_supplement_from_provdag(self):
+        dag = self.tas.concated_ints_with_md.dag
+
+        with tempfile.TemporaryDirectory() as tempdir:
+            out_fp = os.path.join(tempdir, 'supplement.zip')
+            replay_supplement(payload=dag, out_fp=out_fp)
+
+            self.assertTrue(zipfile.is_zipfile(out_fp))
+
+            exp = {
+                'python3_replay.py',
+                'cli_replay.sh',
+                'citations.bib',
+                'recorded_metadata/',
+                'recorded_metadata/dummy_plugin_identity_with_metadata_0/'
+                'metadata_0.tsv',
+            }
+            with zipfile.ZipFile(out_fp, 'r') as myzip:
+                namelist_set = set(myzip.namelist())
+                for item in exp:
+                    self.assertIn(item, namelist_set)
 
 
 if __name__ == "__main__":
