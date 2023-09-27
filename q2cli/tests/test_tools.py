@@ -914,7 +914,7 @@ class TestReplay(unittest.TestCase):
         out_fp = os.path.join(self.tempdir, 'rendered.txt')
         result = self.runner.invoke(
             tools,
-            ['replay-provenance', '--i-in-fp', in_fp, '--o-out-fp', out_fp]
+            ['replay-provenance', '--in-fp', in_fp, '--out-fp', out_fp]
         )
         self.assertEqual(result.exit_code, 0)
 
@@ -943,8 +943,8 @@ class TestReplay(unittest.TestCase):
         out_fp = os.path.join(self.tempdir, 'rendered.txt')
         result = self.runner.invoke(
             tools,
-            ['replay-provenance', '--i-in-fp', in_fp, '--o-out-fp', out_fp,
-                '--p-usage-driver', 'python3']
+            ['replay-provenance', '--in-fp', in_fp, '--out-fp', out_fp,
+                '--usage-driver', 'python3']
         )
         self.assertEqual(result.exit_code, 0)
 
@@ -964,8 +964,8 @@ class TestReplay(unittest.TestCase):
         out_fp = os.path.join(self.tempdir, 'rendered.txt')
         result = self.runner.invoke(
             tools,
-            ['replay-provenance', '--i-in-fp', in_fp, '--o-out-fp', out_fp,
-                '--p-usage-driver', 'python3', '--p-recurse']
+            ['replay-provenance', '--in-fp', in_fp, '--out-fp', out_fp,
+                '--usage-driver', 'python3', '--recurse']
         )
         self.assertEqual(result.exit_code, 0)
 
@@ -980,8 +980,8 @@ class TestReplay(unittest.TestCase):
         out_fp = os.path.join(self.tempdir, 'rendered.txt')
         result = self.runner.invoke(
             tools,
-            ['replay-provenance', '--i-in-fp', in_fp, '--o-out-fp', out_fp,
-             '--p-no-parse-metadata', '--p-use-recorded-metadata']
+            ['replay-provenance', '--in-fp', in_fp, '--out-fp', out_fp,
+             '--no-parse-metadata', '--use-recorded-metadata']
         )
         self.assertEqual(result.exit_code, 1)
         self.assertIsInstance(result.exception, ValueError)
@@ -993,7 +993,7 @@ class TestReplay(unittest.TestCase):
         out_fp = os.path.join(self.tempdir, 'citations.bib')
         result = self.runner.invoke(
             tools,
-            ['replay-citations', '--i-in-fp', in_fp, '--o-out-fp', out_fp]
+            ['replay-citations', '--in-fp', in_fp, '--out-fp', out_fp]
         )
         self.assertEqual(result.exit_code, 0)
 
@@ -1032,8 +1032,8 @@ class TestReplay(unittest.TestCase):
         out_fp = os.path.join(self.tempdir, 'citations.bib')
         result = self.runner.invoke(
             tools,
-            ['replay-citations', '--i-in-fp', in_fp, '--o-out-fp', out_fp,
-             '--p-no-deduplicate']
+            ['replay-citations', '--in-fp', in_fp, '--out-fp', out_fp,
+             '--no-deduplicate']
         )
         self.assertEqual(result.exit_code, 0)
 
@@ -1052,7 +1052,7 @@ class TestReplay(unittest.TestCase):
         out_fp = os.path.join(self.tempdir, 'supplement.zip')
         result = self.runner.invoke(
             tools,
-            ['replay-supplement', '--i-in-fp', in_fp, '--o-out-fp', out_fp]
+            ['replay-supplement', '--in-fp', in_fp, '--out-fp', out_fp]
         )
         self.assertEqual(result.exit_code, 0)
         self.assertTrue(zipfile.is_zipfile(out_fp))
@@ -1066,7 +1066,7 @@ class TestReplay(unittest.TestCase):
         out_fp = os.path.join(self.tempdir, 'supplement.zip')
         result = self.runner.invoke(
             tools,
-            ['replay-supplement', '--i-in-fp', in_fp, '--o-out-fp', out_fp]
+            ['replay-supplement', '--in-fp', in_fp, '--out-fp', out_fp]
         )
         self.assertEqual(result.exit_code, 0)
         self.assertTrue(zipfile.is_zipfile(out_fp))
@@ -1088,8 +1088,8 @@ class TestReplay(unittest.TestCase):
         out_fp = os.path.join(self.tempdir, 'supplement.zip')
         result = self.runner.invoke(
             tools,
-            ['replay-supplement', '--i-in-fp', in_fp, '--o-out-fp', out_fp,
-             '--p-no-dump-recorded-metadata']
+            ['replay-supplement', '--in-fp', in_fp, '--out-fp', out_fp,
+             '--no-dump-recorded-metadata']
         )
         print(result.exception)
         self.assertEqual(result.exit_code, 0)

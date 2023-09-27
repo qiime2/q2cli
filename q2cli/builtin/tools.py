@@ -911,117 +911,124 @@ def cache_status(cache):
 
 
 @tools.command(name='replay-provenance', cls=ToolCommand)
-@click.option('--i-in-fp', required=True,
+@click.option('--in-fp', required=True,
               help='filepath to a QIIME 2 Archive or directory of Archives')
-@click.option('--p-recurse/--p-no-recurse',
+@click.option('--recurse/--no-recurse',
               default=False,
               show_default=True,
               help=('if in-fp is a directory, will also search sub-directories'
                     ' when finding .qza/.qzv files to parse'))
-@click.option('--p-usage-driver',
+@click.option('--usage-driver',
               default='cli',
               show_default=True,
               help='the target interface for your replay script',
               type=click.Choice(['python3', 'cli'], case_sensitive=False))
-@click.option('--p-validate-checksums/--p-no-validate-checksums',
+@click.option('--validate-checksums/--no-validate-checksums',
               default=True,
               show_default=True,
               help='check that replayed archives are intact and uncorrupted')
-@click.option('--p-parse-metadata/--p-no-parse-metadata',
+@click.option('--parse-metadata/--no-parse-metadata',
               default=True,
               show_default=True,
               help=('parse the original metadata captured in provenance '
                     'for review or replay'))
-@click.option('--p-use-recorded-metadata/--p-no-use-recorded-metadata',
+@click.option('--use-recorded-metadata/--no-use-recorded-metadata',
               default=False,
               show_default=True,
               help='re-use the original metadata captured in provenance')
-@click.option('--p-suppress-header/--p-no-suppress-header',
+@click.option('--suppress-header/--no-suppress-header',
               default=False,
               show_default=True,
               help='do not write header/footer blocks in the output script')
-@click.option('--p-verbose/--p-no-verbose',
+@click.option('--verbose/--no-verbose',
               default=True,
               show_default=True,
               help='print status messages to stdout while processing')
-@click.option('--p-dump-recorded-metadata/--p-no-dump-recorded-metadata',
+@click.option('--dump-recorded-metadata/--no-dump-recorded-metadata',
               default=True,
               show_default=True,
               help='write the original metadata captured in provenance to '
-                   'disk in the --o-metadata-out-fp directory')
-@click.option('--o-metadata-out-fp',
+                   'disk in the --metadata-out-fp directory')
+@click.option('--metadata-out-fp',
               default='',
               show_default=True,
               help=('the directory where captured study metadata '
-                    'should be written if --p-dump-recorded-metadata. This '
+                    'should be written if --dump-recorded-metadata. This '
                     'often produces many outputs, so a dedicated directory '
                     'should generally be used. Creates the directory if it '
                     'does not already exist. By default, metadata is written '
                     'to `${PWD}/recorded_metadata/`'))
-@click.option('--o-out-fp',
+@click.option('--out-fp',
               required=True,
               help='the filepath where your replay script should be written.')
-def provenance_replay(i_in_fp: str, o_out_fp: str,
-                      p_usage_driver: Literal['python3', 'cli'],
-                      p_recurse: bool = False,
-                      p_validate_checksums: bool = True,
-                      p_parse_metadata: bool = True,
-                      p_use_recorded_metadata: bool = False,
-                      p_suppress_header: bool = False,
-                      p_verbose: bool = True,
-                      p_dump_recorded_metadata: bool = True,
-                      o_metadata_out_fp: str = ''):
+def provenance_replay(
+    in_fp: str,
+    out_fp: str,
+    usage_driver: Literal['python3', 'cli'],
+    recurse: bool = False,
+    validate_checksums: bool = True,
+    parse_metadata: bool = True,
+    use_recorded_metadata: bool = False,
+    suppress_header: bool = False,
+    verbose: bool = True,
+    dump_recorded_metadata: bool = True,
+    metadata_out_fp: str = ''
+):
     """
     Replay provenance from a QIIME 2 Artifact filepath to a written executable
     """
     from qiime2.core.archive.provenance_lib.replay import replay_provenance
-    replay_provenance(payload=i_in_fp,
-                      out_fp=o_out_fp,
-                      usage_driver=p_usage_driver,
-                      validate_checksums=p_validate_checksums,
-                      parse_metadata=p_parse_metadata,
-                      recurse=p_recurse,
-                      use_recorded_metadata=p_use_recorded_metadata,
-                      suppress_header=p_suppress_header,
-                      verbose=p_verbose,
-                      dump_recorded_metadata=p_dump_recorded_metadata,
-                      md_out_fp=o_metadata_out_fp)
-    filename = os.path.realpath(o_out_fp)
-    click.echo(f'{p_usage_driver} replay script written to {filename}')
+    replay_provenance(
+        payload=in_fp,
+        out_fp=out_fp,
+        usage_driver=usage_driver,
+        validate_checksums=validate_checksums,
+        parse_metadata=parse_metadata,
+        recurse=recurse,
+        use_recorded_metadata=use_recorded_metadata,
+        suppress_header=suppress_header,
+        verbose=verbose,
+        dump_recorded_metadata=dump_recorded_metadata,
+        md_out_fp=metadata_out_fp
+    )
+    filename = os.path.realpath(out_fp)
+    click.echo(f'{usage_driver} replay script written to {filename}')
 
 
 @tools.command(name='replay-citations', cls=ToolCommand)
-@click.option('--i-in-fp', required=True,
+@click.option('--in-fp', required=True,
               help='filepath to a QIIME 2 Archive or directory of Archives')
-@click.option('--p-recurse/--p-no-recurse',
+@click.option('--recurse/--no-recurse',
               default=False,
               show_default=True,
               help=('if in-fp is a directory, will also search sub-directories'
                     ' when finding .qza/.qzv files to parse'))
-@click.option('--p-deduplicate/--p-no-deduplicate',
+@click.option('--deduplicate/--no-deduplicate',
               default=True,
               show_default=True,
               help=('If deduplicate, duplicate citations will be removed '
                     'heuristically, e.g. by comparing DOI fields. '
                     'This greatly reduces manual curation of reference lists, '
                     'but introduces a small risk of reference loss.'))
-@click.option('--p-suppress-header/--p-no-suppress-header',
+@click.option('--suppress-header/--no-suppress-header',
               default=False,
               show_default=True,
               help='do not write header/footer blocks in the output file')
-@click.option('--p-verbose/--p-no-verbose',
+@click.option('--verbose/--no-verbose',
               default=True,
               show_default=True,
               help='print status messages to stdout while processing')
-@click.option('--o-out-fp',
+@click.option('--out-fp',
               required=True,
               help='the filepath where your bibtex file should be written.')
-def citations_replay(i_in_fp: str,
-                     o_out_fp: str,
-                     p_recurse: bool = False,
-                     p_deduplicate: bool = True,
-                     p_suppress_header: bool = False,
-                     p_verbose: bool = True):
+def citations_replay(
+    in_fp: str,
+    out_fp: str,
+    recurse: bool = False,
+    deduplicate: bool = True,
+    suppress_header: bool = False,
+    verbose: bool = True
+):
     """
     Reports all citations from a QIIME 2 Artifact or directory of Artifacts,
     with the goal of improving and simplifying attribution of/in published
@@ -1033,68 +1040,74 @@ def citations_replay(i_in_fp: str,
     from qiime2.core.archive.provenance_lib.parse import ProvDAG
     from qiime2.core.archive.provenance_lib.replay import replay_citations
 
-    dag = ProvDAG(i_in_fp, verbose=p_verbose, recurse=p_recurse)
-    replay_citations(dag, out_fp=o_out_fp, deduplicate=p_deduplicate,
-                     suppress_header=p_suppress_header)
-    filename = os.path.realpath(o_out_fp)
+    dag = ProvDAG(in_fp, verbose=verbose, recurse=recurse)
+    replay_citations(
+        dag,
+        out_fp=out_fp,
+        deduplicate=deduplicate,
+        suppress_header=suppress_header
+    )
+    filename = os.path.realpath(out_fp)
     click.echo(f'citations bibtex file written to {filename}')
 
 
 @tools.command(name='replay-supplement', cls=ToolCommand)
-@click.option('--i-in-fp', required=True,
+@click.option('--in-fp', required=True,
               help='filepath to a QIIME 2 Archive or directory of Archives')
-@click.option('--p-recurse/--p-no-recurse',
+@click.option('--recurse/--no-recurse',
               default=False,
               show_default=True,
               help=('if in-fp is a directory, will also search sub-directories'
                     ' when finding .qza/.qzv files to parse'))
-@click.option('--p-deduplicate/--p-no-deduplicate',
+@click.option('--deduplicate/--no-deduplicate',
               default=True,
               show_default=True,
               help=('If deduplicate, duplicate citations will be removed '
                     'heuristically, e.g. by comparing DOI fields. '
                     'This greatly reduces manual curation of reference lists, '
                     'but introduces a small risk of reference loss.'))
-@click.option('--p-validate-checksums/--p-no-validate-checksums',
+@click.option('--validate-checksums/--no-validate-checksums',
               default=True,
               show_default=True,
               help='check that replayed archives are intact and uncorrupted')
-@click.option('--p-parse-metadata/--p-no-parse-metadata',
+@click.option('--parse-metadata/--no-parse-metadata',
               default=True,
               show_default=True,
               help=('parse the original metadata captured in provenance '
                     'for review or replay'))
-@click.option('--p-use-recorded-metadata/--p-no-use-recorded-metadata',
+@click.option('--use-recorded-metadata/--no-use-recorded-metadata',
               default=False,
               show_default=True,
               help='re-use the original metadata captured in provenance')
-@click.option('--p-suppress-header/--p-no-suppress-header',
+@click.option('--suppress-header/--no-suppress-header',
               default=False,
               show_default=True,
               help='do not write header/footer blocks in the output files')
-@click.option('--p-verbose/--p-no-verbose',
+@click.option('--verbose/--no-verbose',
               default=True,
               show_default=True,
               help='print status messages to stdout while processing')
-@click.option('--p-dump-recorded-metadata/--p-no-dump-recorded-metadata',
+@click.option('--dump-recorded-metadata/--no-dump-recorded-metadata',
               default=True,
               show_default=True,
               help='write the original metadata captured in provenance to '
-                   'disk in the --o-out-fp archive')
-@click.option('--o-out-fp',
+                   'disk in the --out-fp archive')
+@click.option('--out-fp',
               required=True,
               help='the filepath where your reproduciblity supplement zipfile '
                    'should be written.')
-def supplement_replay(i_in_fp: str,
-                      o_out_fp: str,
-                      p_validate_checksums: bool = True,
-                      p_parse_metadata: bool = True,
-                      p_use_recorded_metadata: bool = False,
-                      p_recurse: bool = False,
-                      p_deduplicate: bool = True,
-                      p_suppress_header: bool = False,
-                      p_verbose: bool = True,
-                      p_dump_recorded_metadata: bool = True):
+def supplement_replay(
+    in_fp: str,
+    out_fp: str,
+    validate_checksums: bool = True,
+    parse_metadata: bool = True,
+    use_recorded_metadata: bool = False,
+    recurse: bool = False,
+    deduplicate: bool = True,
+    suppress_header: bool = False,
+    verbose: bool = True,
+    dump_recorded_metadata: bool = True
+):
     """
     Produces a zipfile package of useful documentation supporting in silico
     reproducibility of some QIIME 2 Result(s) from a QIIME 2 Artifact or
@@ -1107,13 +1120,14 @@ def supplement_replay(i_in_fp: str,
     from qiime2.core.archive.provenance_lib.replay import replay_supplement
 
     replay_supplement(
-        payload=i_in_fp,
-        out_fp=o_out_fp,
-        validate_checksums=p_validate_checksums,
-        parse_metadata=p_parse_metadata,
-        use_recorded_metadata=p_use_recorded_metadata,
-        recurse=p_recurse,
-        deduplicate=p_deduplicate,
-        suppress_header=p_suppress_header,
-        verbose=p_verbose,
-        dump_recorded_metadata=p_dump_recorded_metadata)
+        payload=in_fp,
+        out_fp=out_fp,
+        validate_checksums=validate_checksums,
+        parse_metadata=parse_metadata,
+        use_recorded_metadata=use_recorded_metadata,
+        recurse=recurse,
+        deduplicate=deduplicate,
+        suppress_header=suppress_header,
+        verbose=verbose,
+        dump_recorded_metadata=dump_recorded_metadata
+    )
