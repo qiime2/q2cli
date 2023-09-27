@@ -29,6 +29,7 @@ from qiime2.core.archive.provenance_lib.replay import (
     NamespaceCollections, build_import_usage, build_action_usage,
     ActionCollections, replay_provenance, replay_supplement
 )
+from qiime2.core.archive.provenance_lib.usage_drivers import ReplayPythonUsage
 
 import q2cli
 import q2cli.util
@@ -349,7 +350,7 @@ class ReplayCLIUsageTests(unittest.TestCase):
         dag = self.das.int_seq_optional_input.dag
         with tempfile.TemporaryDirectory() as tempdir:
             out_path = pathlib.Path(tempdir) / 'ns_coll.txt'
-            replay_provenance(dag, out_path, 'cli', md_out_fp=tempdir)
+            replay_provenance(ReplayCLIUsage, dag, out_path, md_out_fp=tempdir)
 
             with open(out_path, 'r') as fp:
                 rendered = fp.read()
@@ -366,15 +367,17 @@ class ReplayCLIUsageTests(unittest.TestCase):
         """
         with tempfile.TemporaryDirectory() as tempdir:
             self.das.concated_ints.artifact.save(
-                os.path.join(tempdir, 'c1.qza'))
+                os.path.join(tempdir, 'c1.qza')
+            )
             self.das.other_concated_ints.artifact.save(
-                os.path.join(tempdir, 'c2.qza'))
+                os.path.join(tempdir, 'c2.qza')
+            )
             dag = ProvDAG(tempdir)
 
         exp = ['concatenated-ints-0', 'concatenated-ints-1']
         with tempfile.TemporaryDirectory() as tempdir:
             out_path = pathlib.Path(tempdir) / 'ns_coll.txt'
-            replay_provenance(dag, out_path, 'cli', md_out_fp=tempdir)
+            replay_provenance(ReplayCLIUsage, dag, out_path, md_out_fp=tempdir)
 
             with open(out_path, 'r') as fp:
                 rendered = fp.read()
@@ -397,7 +400,11 @@ class WriteReproducibilitySupplementTests(unittest.TestCase):
         fp = self.das.concated_ints_with_md.filepath
         with tempfile.TemporaryDirectory() as tempdir:
             out_fp = os.path.join(tempdir, 'supplement.zip')
-            replay_supplement(payload=fp, out_fp=out_fp)
+            replay_supplement(
+                usage_drivers=[ReplayPythonUsage, ReplayCLIUsage],
+                payload=fp,
+                out_fp=out_fp
+            )
 
             self.assertTrue(zipfile.is_zipfile(out_fp))
 
@@ -419,7 +426,11 @@ class WriteReproducibilitySupplementTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tempdir:
             out_fp = os.path.join(tempdir, 'supplement.zip')
-            replay_supplement(payload=dag, out_fp=out_fp)
+            replay_supplement(
+                usage_drivers=[ReplayPythonUsage, ReplayCLIUsage],
+                payload=dag,
+                out_fp=out_fp
+            )
 
             self.assertTrue(zipfile.is_zipfile(out_fp))
 

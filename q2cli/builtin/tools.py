@@ -978,10 +978,14 @@ def provenance_replay(
     Replay provenance from a QIIME 2 Artifact filepath to a written executable
     """
     from qiime2.core.archive.provenance_lib.replay import replay_provenance
+    from qiime2.sdk.util import get_available_usage_drivers
+
+    usage_drivers = get_available_usage_drivers()
+    usage_driver_type = usage_drivers[usage_driver]
     replay_provenance(
+        usage_driver=usage_driver_type,
         payload=in_fp,
         out_fp=out_fp,
-        usage_driver=usage_driver,
         validate_checksums=validate_checksums,
         parse_metadata=parse_metadata,
         recurse=recurse,
@@ -1118,8 +1122,13 @@ def supplement_replay(
     - a bibtex-formatted collection of all citations
     """
     from qiime2.core.archive.provenance_lib.replay import replay_supplement
+    from qiime2.sdk.util import get_available_usage_drivers
+
+    usage_drivers = get_available_usage_drivers()
+    usage_driver_types = list(usage_drivers.values())
 
     replay_supplement(
+        usage_drivers=usage_driver_types,
         payload=in_fp,
         out_fp=out_fp,
         validate_checksums=validate_checksums,
