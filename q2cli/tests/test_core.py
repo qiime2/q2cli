@@ -23,7 +23,7 @@ from qiime2.core.testing.util import get_dummy_plugin
 from qiime2.sdk.util import camel_to_snake
 from qiime2.sdk.usage import UsageVariable
 from qiime2.sdk import PluginManager
-from qiime2.core.archive.provenance_lib import TestArtifacts, ProvDAG
+from qiime2.core.archive.provenance_lib import DummyArtifacts, ProvDAG
 from qiime2.core.archive.provenance_lib.replay import (
     ReplayConfig, param_is_metadata_column, dump_recorded_md_file,
     NamespaceCollections, build_import_usage, build_action_usage,
@@ -196,13 +196,13 @@ class TestOption(unittest.TestCase):
 class ReplayCLIUsageTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.tas = TestArtifacts()
-        cls.tempdir = cls.tas.tempdir
+        cls.das = DummyArtifacts()
+        cls.tempdir = cls.das.tempdir
         cls.pm = PluginManager()
 
     @classmethod
     def tearDownClass(cls):
-        cls.tas.free()
+        cls.das.free()
 
     def test_init_metadata(self):
         use = ReplayCLIUsage()
@@ -247,8 +247,8 @@ class ReplayCLIUsageTests(unittest.TestCase):
             )
 
     def test_dump_recorded_md_file_to_custom_dir(self):
-        dag = self.tas.int_seq_with_md.dag
-        uuid = self.tas.int_seq_with_md.uuid
+        dag = self.das.int_seq_with_md.dag
+        uuid = self.das.int_seq_with_md.uuid
 
         out_dir = 'custom_dir'
         provnode = dag.get_node_data(uuid)
@@ -284,7 +284,7 @@ class ReplayCLIUsageTests(unittest.TestCase):
         ns = NamespaceCollections()
         cfg = ReplayConfig(use=ReplayCLIUsage(),
                            use_recorded_metadata=False, pm=self.pm)
-        dag = self.tas.concated_ints_v6.dag
+        dag = self.das.concated_ints_v6.dag
         import_uuid = '8dea2f1a-2164-4a85-9f7d-e0641b1db22b'
         import_node = dag.get_node_data(import_uuid)
         c_to_s_type = camel_to_snake(import_node.type)
@@ -322,7 +322,7 @@ class ReplayCLIUsageTests(unittest.TestCase):
             import_uuid_2: import_var_2
         }
 
-        dag = self.tas.concated_ints_v6.dag
+        dag = self.das.concated_ints_v6.dag
         action_uuid = '5035a60e-6f9a-40d4-b412-48ae52255bb5'
         node_uuid = '6facaf61-1676-45eb-ada0-d530be678b27'
         node = dag.get_node_data(node_uuid)
@@ -346,7 +346,7 @@ class ReplayCLIUsageTests(unittest.TestCase):
         self.assertIn(f'--o-concatenated-ints {out_name}', rendered)
 
     def test_replay_optional_param_is_none(self):
-        dag = self.tas.int_seq_optional_input.dag
+        dag = self.das.int_seq_optional_input.dag
         with tempfile.TemporaryDirectory() as tempdir:
             out_path = pathlib.Path(tempdir) / 'ns_coll.txt'
             replay_provenance(dag, out_path, 'cli', md_out_fp=tempdir)
@@ -365,9 +365,9 @@ class ReplayCLIUsageTests(unittest.TestCase):
         we're not uniquifying variable names properly.
         """
         with tempfile.TemporaryDirectory() as tempdir:
-            self.tas.concated_ints.artifact.save(
+            self.das.concated_ints.artifact.save(
                 os.path.join(tempdir, 'c1.qza'))
-            self.tas.other_concated_ints.artifact.save(
+            self.das.other_concated_ints.artifact.save(
                 os.path.join(tempdir, 'c2.qza'))
             dag = ProvDAG(tempdir)
 
@@ -385,16 +385,16 @@ class ReplayCLIUsageTests(unittest.TestCase):
 class WriteReproducibilitySupplementTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.tas = TestArtifacts()
-        cls.tempdir = cls.tas.tempdir
+        cls.das = DummyArtifacts()
+        cls.tempdir = cls.das.tempdir
         cls.pm = PluginManager()
 
     @classmethod
     def tearDownClass(cls):
-        cls.tas.free()
+        cls.das.free()
 
     def test_replay_supplement_from_fp(self):
-        fp = self.tas.concated_ints_with_md.filepath
+        fp = self.das.concated_ints_with_md.filepath
         with tempfile.TemporaryDirectory() as tempdir:
             out_fp = os.path.join(tempdir, 'supplement.zip')
             replay_supplement(payload=fp, out_fp=out_fp)
@@ -415,7 +415,7 @@ class WriteReproducibilitySupplementTests(unittest.TestCase):
                     self.assertIn(item, namelist_set)
 
     def test_replay_supplement_from_provdag(self):
-        dag = self.tas.concated_ints_with_md.dag
+        dag = self.das.concated_ints_with_md.dag
 
         with tempfile.TemporaryDirectory() as tempdir:
             out_fp = os.path.join(tempdir, 'supplement.zip')
