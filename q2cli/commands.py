@@ -126,8 +126,15 @@ class PluginCommand(BaseCommandMixin, click.MultiCommand):
         # the cli currently doesn't differentiate between methods
         # and visualizers, it treats them generically as Actions
         self._plugin = plugin
-        self._action_lookup = {q2cli.util.to_cli_name(id): a for id, a in
-                               plugin['actions'].items()}
+        self._action_lookup = {}
+        self._hidden_actions = {}
+
+        # Hide actions that start with _ by default
+        for id, a in plugin['actions'].items():
+            if id.startswith('_'):
+                self._hidden_actions[q2cli.util.hidden_to_cli_name(id)] = a
+            else:
+                self._action_lookup[q2cli.util.to_cli_name(id)] = a
 
         support = 'Getting user support: %s' % plugin['user_support_text']
         website = 'Plugin website: %s' % plugin['website']
@@ -141,6 +148,17 @@ class PluginCommand(BaseCommandMixin, click.MultiCommand):
             q2cli.util.example_data_option(self._get_plugin),
             q2cli.util.citations_option(self._get_citation_records)
         ]
+
+        if self._hidden_actions != {}:
+            params.append(
+                click.Option(
+                    ('--show-hidden-actions',), is_flag=True,
+                    expose_value=False, is_eager=True,
+                    callback=self._get_hidden_actions,
+                    help="This plugin has hidden actions with names starting "
+                         "with '_'. These are generally called internally by "
+                         "pipelines. Passing this flag will display those "
+                         "actions."))
 
         super().__init__(name, *args, short_help=plugin['short_description'],
                          help=help_, params=params, **kwargs)
@@ -171,6 +189,28 @@ class PluginCommand(BaseCommandMixin, click.MultiCommand):
         pm = q2cli.util.get_plugin_manager()
         return pm.plugins[self._plugin['name']].citations
 
+    def _get_hidden_actions(self, ctx, param, value):
+        """Add actions that start with _ back to the lookup"""
+        # Click calls this whether the flag was provided or not. If the flag
+        # was not provided value is, unsurprisingly, False. We do not want to
+        # execute this if the flag was not provided.
+        #
+        # Resilient parsing has something to do with ignoring default values
+        # which for this is False. Honestly not 100% sure why we need that
+        # here, but it is in the check in _get_version, and I a mimicking that
+        if not value or ctx.resilient_parsing:
+            return
+
+        from click.utils import echo
+
+        self._action_lookup.update(self._hidden_actions)
+
+        # Handle the printing and exiting here. This feels like a pretty
+        # serious misuse of click, but it probably isn't the most egregious in
+        # the cli
+        echo(ctx.get_help(), color=ctx.color)
+        ctx.exit()
+
     def _get_plugin(self):
         import q2cli.util
         pm = q2cli.util.get_plugin_manager()
@@ -181,6 +221,8 @@ class PluginCommand(BaseCommandMixin, click.MultiCommand):
 
     def get_command(self, ctx, name):
         try:
+            # Hidden actions are still valid commands
+            self._action_lookup.update(self._hidden_actions)
             action = self._action_lookup[name]
         except KeyError:
             from q2cli.util import get_close_matches

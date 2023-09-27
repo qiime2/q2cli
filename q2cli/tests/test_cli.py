@@ -69,8 +69,26 @@ class CliTests(unittest.TestCase):
         self.assertIn('split-ints', commands)
         self.assertIn('mapping-viz', commands)
 
-        self.assertFalse('split_ints' in commands)
-        self.assertFalse('mapping_viz' in commands)
+        self.assertNotIn('split_ints', commands)
+        self.assertNotIn('mapping_viz', commands)
+        self.assertNotIn('-underscore-method', commands)
+        self.assertNotIn('_underscore-method', commands)
+
+    def test_plugin_list_hidden_commands(self):
+        # plugin commands are present including a method and visualizer and
+        # hidden method
+        qiime_cli = RootCommand()
+        command = qiime_cli.get_command(ctx=None, name='dummy-plugin')
+        commands = self.runner.invoke(command,
+                                      ['--show-hidden-actions']).output
+        self.assertIn('split-ints', commands)
+        self.assertIn('mapping-viz', commands)
+        self.assertIn('_underscore-method', commands)
+
+        self.assertNotIn('split_ints', commands)
+        self.assertNotIn('mapping_viz', commands)
+        self.assertNotIn('_underscore_method', commands)
+        self.assertNotIn('-underscore-method', commands)
 
     def test_action_parameter_types(self):
         qiime_cli = RootCommand()
@@ -91,6 +109,16 @@ class CliTests(unittest.TestCase):
             'typical-pipeline', '--i-int-sequence', self.artifact1_path,
             '--i-mapping', self.mapping_path, '--p-do-extra-thing', '--p-add',
             '10', '--output-dir', output_dir, '--verbose'])
+        self.assertEqual(result.exit_code, 0)
+
+    def test_execute_hidden_action(self):
+        int_path = os.path.join(self.tempdir, 'int.qza')
+        qiime_cli = RootCommand()
+        command = qiime_cli.get_command(ctx=None, name='dummy-plugin')
+        result = self.runner.invoke(
+                command, ['_underscore-method', '--o-int', int_path,
+                          '--verbose'])
+
         self.assertEqual(result.exit_code, 0)
 
     def test_extract(self):

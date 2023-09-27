@@ -36,6 +36,19 @@ def get_completion_path():
     return os.path.join(get_cache_dir(), 'completion.sh')
 
 
+def hidden_to_cli_name(name):
+    # Safety first
+    if not name.startswith('_'):
+        raise ValueError(f"The name '{name}' does not start with '_' meaning"
+                         " it is not a hidden action and this method should"
+                         " not have been called on it.")
+
+    name = to_cli_name(name)
+
+    # Retain the leading _
+    return name.replace('-', '_', 1)
+
+
 def to_cli_name(name):
     return name.replace('_', '-')
 
