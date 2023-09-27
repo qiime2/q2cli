@@ -38,7 +38,11 @@ def get_completion_path():
 
 def hidden_to_cli_name(name):
     # Safety first
-    assert name.startswith('_')
+    if not name.startswith('_'):
+        raise ValueError(f"The name '{name}' does not start with '_' meaning"
+                         " it is not a hidden action and this method should"
+                         " not have been called on it.")
+
     name = to_cli_name(name)
 
     # Retain the leading _
