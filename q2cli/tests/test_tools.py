@@ -11,6 +11,7 @@ import gc
 import re
 import shutil
 import unittest
+from unittest.mock import patch
 import tempfile
 import zipfile
 import bibtexparser as bp
@@ -26,6 +27,7 @@ from qiime2.sdk.plugin_manager import PluginManager
 from q2cli.util import load_metadata
 from q2cli.builtin.tools import tools
 from q2cli.commands import RootCommand
+from q2cli.core.usage import ReplayCLIUsage
 
 
 class TestCastMetadata(unittest.TestCase):
@@ -988,6 +990,22 @@ class TestReplay(unittest.TestCase):
         self.assertRegex(str(result.exception),
                          'Metadata not parsed for replay')
 
+    @patch('qiime2.sdk.util.get_available_usage_drivers',
+           return_value={'cli': ReplayCLIUsage})
+    def test_replay_provenance_usage_driver_not_available(self, patch):
+        in_fp = os.path.join(self.tempdir, 'concated_ints.qza')
+        out_fp = os.path.join(self.tempdir, 'rendered.txt')
+        result = self.runner.invoke(
+            tools,
+            ['replay-provenance', '--in-fp', in_fp, '--out-fp', out_fp,
+                '--usage-driver', 'python3']
+        )
+        self.assertEqual(result.exit_code, 1)
+        self.assertIsInstance(result.exception, ValueError)
+        self.assertIn(
+            'python3 usage driver is not available', str(result.exception)
+        )
+
     def test_replay_citations(self):
         in_fp = os.path.join(self.tempdir, 'concated_ints.qza')
         out_fp = os.path.join(self.tempdir, 'citations.bib')
@@ -1098,6 +1116,20 @@ class TestReplay(unittest.TestCase):
         not_exp = 'recorded_metadata/'
         with zipfile.ZipFile(out_fp, 'r') as zfh:
             self.assertNotIn(not_exp, set(zfh.namelist()))
+
+    @patch('qiime2.sdk.util.get_available_usage_drivers', return_value={})
+    def test_replay_supplement_usage_driver_not_available(self, patch):
+        in_fp = os.path.join(self.tempdir, 'concated_ints.qza')
+        out_fp = os.path.join(self.tempdir, 'rendered.txt')
+        result = self.runner.invoke(
+            tools,
+            ['replay-supplement', '--in-fp', in_fp, '--out-fp', out_fp]
+        )
+        self.assertEqual(result.exit_code, 1)
+        self.assertIsInstance(result.exception, ValueError)
+        self.assertIn(
+            'no available usage drivers', str(result.exception)
+        )
 
 
 if __name__ == "__main__":

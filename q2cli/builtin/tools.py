@@ -981,7 +981,15 @@ def provenance_replay(
     from qiime2.sdk.util import get_available_usage_drivers
 
     usage_drivers = get_available_usage_drivers()
-    usage_driver_type = usage_drivers[usage_driver]
+    try:
+        usage_driver_type = usage_drivers[usage_driver]
+    except KeyError:
+        msg = (
+            f'The {usage_driver} usage driver is not available in the '
+            'current evnironment.'
+        )
+        raise ValueError(msg)
+
     replay_provenance(
         usage_driver=usage_driver_type,
         payload=in_fp,
@@ -1126,6 +1134,12 @@ def supplement_replay(
 
     usage_drivers = get_available_usage_drivers()
     usage_driver_types = list(usage_drivers.values())
+    if not usage_driver_types:
+        msg = (
+            'There are no available usage drivers registered in the current '
+            'environment.'
+        )
+        raise ValueError(msg)
 
     replay_supplement(
         usage_drivers=usage_driver_types,
