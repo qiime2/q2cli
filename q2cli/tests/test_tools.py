@@ -838,8 +838,6 @@ class TestListFormats(unittest.TestCase):
         result = self.runner.invoke(tools, ['list-formats', '--exportable',
                                             '--strict', *formats])
         self.assertEqual(result.exit_code, 0)
-        print(formats)
-        print(result.output)
         self.assertEqual(len(result.output.split('\n\n')) - 1, len(formats))
 
         result = self.runner.invoke(tools, ['list-formats', '--exportable',
@@ -859,8 +857,6 @@ class TestListFormats(unittest.TestCase):
         self.assertEqual(result.exit_code, 0)
 
         # len - 1 because \n split produces a final ''
-        print(result.output)
-        print(self.pm.importable_formats.keys())
         self.assertEqual(len(result.output.split('\n')) - 1,
                          len(self.pm.importable_formats))
 
@@ -1109,7 +1105,6 @@ class TestReplay(unittest.TestCase):
             ['replay-supplement', '--in-fp', in_fp, '--out-fp', out_fp,
              '--no-dump-recorded-metadata']
         )
-        print(result.exception)
         self.assertEqual(result.exit_code, 0)
         self.assertTrue(zipfile.is_zipfile(out_fp))
 
