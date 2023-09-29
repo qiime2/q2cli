@@ -987,6 +987,7 @@ replay_out_fp_help = (
                     'to `${PWD}/recorded_metadata/`'))
 @click.option('--out-fp',
               required=True,
+              type=click.Path(exists=False, writable=True),
               help=replay_out_fp_help)
 def provenance_replay(
     in_fp: str,
@@ -1057,6 +1058,7 @@ def provenance_replay(
               help=replay_verbose_help)
 @click.option('--out-fp',
               required=True,
+              type=click.Path(exists=False, writable=True),
               help=replay_out_fp_help)
 def citations_replay(
     in_fp: str,
@@ -1129,6 +1131,7 @@ def citations_replay(
               help=replay_dump_recorded_metadata_help)
 @click.option('--out-fp',
               required=True,
+              type=click.Path(exists=False, writable=True),
               help=replay_out_fp_help)
 def supplement_replay(
     in_fp: str,
