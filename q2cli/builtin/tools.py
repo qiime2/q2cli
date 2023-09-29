@@ -910,14 +910,43 @@ def cache_status(cache):
     click.echo(CONFIG.cfg_style('success', success))
 
 
+replay_in_fp_help = (
+    'filepath to a QIIME 2 Archive (.qza or .qzv) or directory of Archives'
+)
+replay_recurse_help = (
+    'if in-fp is a directory, will also search sub-directories when finding '
+    'Archives to parse'
+)
+replay_validate_checksums_help = (
+    'check that replayed archives are intact and uncorrupted'
+)
+replay_parse_metadata_help = (
+    'parse the original metadata captured in provenance for review or replay'
+)
+replay_use_recorded_metadata_help = (
+    're-use the original metadata captured in provenance'
+)
+replay_suppress_header_help = (
+   'do not write header/footer blocks in the output script'
+)
+replay_verbose_help = (
+    'print status messages to stdout while processing'
+)
+replay_dump_recorded_metadata_help = (
+    'write the original metadata captured in provenance to disk in the '
+    '--metadata-out-fp directory'
+)
+replay_out_fp_help = (
+    'the filepath where your replay script should be written'
+)
+
+
 @tools.command(name='replay-provenance', cls=ToolCommand)
-@click.option('--in-fp', required=True,
-              help='filepath to a QIIME 2 Archive or directory of Archives')
+@click.option('--in-fp', required=True, help=replay_in_fp_help)
 @click.option('--recurse/--no-recurse',
               default=False,
               show_default=True,
-              help=('if in-fp is a directory, will also search sub-directories'
-                    ' when finding .qza/.qzv files to parse'))
+              help=replay_recurse_help)
 @click.option('--usage-driver',
               default='cli',
               show_default=True,
@@ -926,29 +955,27 @@ def cache_status(cache):
 @click.option('--validate-checksums/--no-validate-checksums',
               default=True,
               show_default=True,
-              help='check that replayed archives are intact and uncorrupted')
+              help=replay_validate_checksums_help)
 @click.option('--parse-metadata/--no-parse-metadata',
               default=True,
               show_default=True,
-              help=('parse the original metadata captured in provenance '
-                    'for review or replay'))
+              help=replay_parse_metadata_help)
 @click.option('--use-recorded-metadata/--no-use-recorded-metadata',
               default=False,
               show_default=True,
-              help='re-use the original metadata captured in provenance')
+              help=replay_use_recorded_metadata_help)
 @click.option('--suppress-header/--no-suppress-header',
               default=False,
               show_default=True,
-              help='do not write header/footer blocks in the output script')
+              help=replay_suppress_header_help)
 @click.option('--verbose/--no-verbose',
               default=True,
               show_default=True,
-              help='print status messages to stdout while processing')
+              help=replay_verbose_help)
 @click.option('--dump-recorded-metadata/--no-dump-recorded-metadata',
               default=True,
               show_default=True,
-              help='write the original metadata captured in provenance to '
-                   'disk in the --metadata-out-fp directory')
+              help=replay_dump_recorded_metadata_help)
 @click.option('--metadata-out-fp',
               default='',
               show_default=True,
@@ -960,7 +987,7 @@ def cache_status(cache):
                     'to `${PWD}/recorded_metadata/`'))
 @click.option('--out-fp',
               required=True,
-              help='the filepath where your replay script should be written.')
+              help=replay_out_fp_help)
 def provenance_replay(
     in_fp: str,
     out_fp: str,
@@ -1008,13 +1035,11 @@ def provenance_replay(
 
 
 @tools.command(name='replay-citations', cls=ToolCommand)
-@click.option('--in-fp', required=True,
-              help='filepath to a QIIME 2 Archive or directory of Archives')
+@click.option('--in-fp', required=True, help=replay_in_fp_help)
 @click.option('--recurse/--no-recurse',
               default=False,
               show_default=True,
-              help=('if in-fp is a directory, will also search sub-directories'
-                    ' when finding .qza/.qzv files to parse'))
+              help=replay_recurse_help)
 @click.option('--deduplicate/--no-deduplicate',
               default=True,
               show_default=True,
@@ -1025,14 +1050,14 @@ def provenance_replay(
 @click.option('--suppress-header/--no-suppress-header',
               default=False,
               show_default=True,
-              help='do not write header/footer blocks in the output file')
+              help=replay_suppress_header_help)
 @click.option('--verbose/--no-verbose',
               default=True,
               show_default=True,
-              help='print status messages to stdout while processing')
+              help=replay_verbose_help)
 @click.option('--out-fp',
               required=True,
-              help='the filepath where your bibtex file should be written.')
+              help=replay_out_fp_help)
 def citations_replay(
     in_fp: str,
     out_fp: str,
@@ -1081,33 +1106,30 @@ def citations_replay(
 @click.option('--validate-checksums/--no-validate-checksums',
               default=True,
               show_default=True,
-              help='check that replayed archives are intact and uncorrupted')
+              help=replay_validate_checksums_help)
 @click.option('--parse-metadata/--no-parse-metadata',
               default=True,
               show_default=True,
-              help=('parse the original metadata captured in provenance '
-                    'for review or replay'))
+              help=replay_parse_metadata_help)
 @click.option('--use-recorded-metadata/--no-use-recorded-metadata',
               default=False,
               show_default=True,
-              help='re-use the original metadata captured in provenance')
+              help=replay_use_recorded_metadata_help)
 @click.option('--suppress-header/--no-suppress-header',
               default=False,
               show_default=True,
-              help='do not write header/footer blocks in the output files')
+              help=replay_suppress_header_help)
 @click.option('--verbose/--no-verbose',
               default=True,
               show_default=True,
-              help='print status messages to stdout while processing')
+              help=replay_verbose_help)
 @click.option('--dump-recorded-metadata/--no-dump-recorded-metadata',
               default=True,
               show_default=True,
-              help='write the original metadata captured in provenance to '
-                   'disk in the --out-fp archive')
+              help=replay_dump_recorded_metadata_help)
 @click.option('--out-fp',
               required=True,
-              help='the filepath where your reproduciblity supplement zipfile '
-                   'should be written.')
+              help=replay_out_fp_help)
 def supplement_replay(
     in_fp: str,
     out_fp: str,
