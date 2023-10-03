@@ -1,6 +1,6 @@
 # q2cli
 
-![](https://github.com/qiime2/q2cli/workflows/ci/badge.svg)
+![](https://github.com/qiime2/q2cli/workflows/ci-dev/badge.svg)
 
 A [click-based](http://click.pocoo.org/) command line interface for [QIIME
 2](https://github.com/qiime2/qiime2).
