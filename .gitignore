@@ -69,3 +69,6 @@ target/
 
 #Parsl log
 runinfo
+
+# vscode
+.vscode/
