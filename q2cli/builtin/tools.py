@@ -934,10 +934,7 @@ replay_verbose_help = (
 )
 replay_dump_recorded_metadata_help = (
     'write the original metadata captured in provenance to disk in the '
-    '--metadata-out-fp directory'
-)
-replay_out_fp_help = (
-    'the filepath where your replay script should be written'
+    '--metadata-out-dir directory'
 )
 
 
@@ -976,7 +973,7 @@ replay_out_fp_help = (
               default=True,
               show_default=True,
               help=replay_dump_recorded_metadata_help)
-@click.option('--metadata-out-fp',
+@click.option('--metadata-out-dir',
               default='',
               show_default=True,
               help=('the directory where captured study metadata '
@@ -988,7 +985,7 @@ replay_out_fp_help = (
 @click.option('--out-fp',
               required=True,
               type=click.Path(exists=False, writable=True),
-              help=replay_out_fp_help)
+              help='the filepath where your replay script should be written')
 def provenance_replay(
     in_fp: str,
     out_fp: str,
@@ -1014,7 +1011,7 @@ def provenance_replay(
     except KeyError:
         msg = (
             f'The {usage_driver} usage driver is not available in the '
-            'current evnironment.'
+            'current environment.'
         )
         raise ValueError(msg)
 
@@ -1059,7 +1056,7 @@ def provenance_replay(
 @click.option('--out-fp',
               required=True,
               type=click.Path(exists=False, writable=True),
-              help=replay_out_fp_help)
+              help='the filepath where your bibtex file should be written')
 def citations_replay(
     in_fp: str,
     out_fp: str,
@@ -1128,11 +1125,13 @@ def citations_replay(
 @click.option('--dump-recorded-metadata/--no-dump-recorded-metadata',
               default=True,
               show_default=True,
-              help=replay_dump_recorded_metadata_help)
+              help='write the original metadata captured in provenance to '
+                   'recorded_metadata/ inside the archive')
 @click.option('--out-fp',
               required=True,
               type=click.Path(exists=False, writable=True),
-              help=replay_out_fp_help)
+              help='the filepath where your reproduciblity supplement zipfile '
+                   'should be written')
 def supplement_replay(
     in_fp: str,
     out_fp: str,
