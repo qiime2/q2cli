@@ -260,7 +260,8 @@ class ReplayCLIUsageTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tempdir:
             cfg = ReplayConfig(use=ReplayCLIUsage(),
-                               pm=self.pm, md_out_fp=(tempdir + '/' + out_dir))
+                               pm=self.pm,
+                               md_out_dir=(tempdir + '/' + out_dir))
             dump_recorded_md_file(cfg, provnode, action_name, md_id, fn)
             out_path = pathlib.Path(tempdir) / out_dir / action_name / fn
 
@@ -350,7 +351,8 @@ class ReplayCLIUsageTests(unittest.TestCase):
         dag = self.das.int_seq_optional_input.dag
         with tempfile.TemporaryDirectory() as tempdir:
             out_path = pathlib.Path(tempdir) / 'ns_coll.txt'
-            replay_provenance(ReplayCLIUsage, dag, out_path, md_out_fp=tempdir)
+            replay_provenance(ReplayCLIUsage, dag, out_path,
+                              md_out_dir=tempdir)
 
             with open(out_path, 'r') as fp:
                 rendered = fp.read()
@@ -377,7 +379,8 @@ class ReplayCLIUsageTests(unittest.TestCase):
         exp = ['concatenated-ints-0', 'concatenated-ints-1']
         with tempfile.TemporaryDirectory() as tempdir:
             out_path = pathlib.Path(tempdir) / 'ns_coll.txt'
-            replay_provenance(ReplayCLIUsage, dag, out_path, md_out_fp=tempdir)
+            replay_provenance(ReplayCLIUsage, dag, out_path,
+                              md_out_dir=tempdir)
 
             with open(out_path, 'r') as fp:
                 rendered = fp.read()
