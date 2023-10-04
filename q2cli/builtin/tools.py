@@ -997,7 +997,7 @@ def provenance_replay(
     suppress_header: bool = False,
     verbose: bool = True,
     dump_recorded_metadata: bool = True,
-    metadata_out_dir: str = ''
+    metadata_out_fp: str = ''
 ):
     """
     Replay provenance from a QIIME 2 Artifact filepath to a written executable
@@ -1026,7 +1026,7 @@ def provenance_replay(
         suppress_header=suppress_header,
         verbose=verbose,
         dump_recorded_metadata=dump_recorded_metadata,
-        md_out_dir=metadata_out_dir
+        md_out_fp=metadata_out_fp
     )
     filename = os.path.realpath(out_fp)
     click.echo(f'{usage_driver} replay script written to {filename}')
