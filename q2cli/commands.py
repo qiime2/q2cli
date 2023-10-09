@@ -111,7 +111,7 @@ class RootCommand(BaseCommandMixin, click.MultiCommand):
             click.echo(
                 CONFIG.cfg_style('error', "Error: QIIME 2 has no "
                                  "plugin/command named %r." % name + hint +
-                                 list(self._plugin_lookup.keys())),
+                                 str(list(self._plugin_lookup.keys()))),
                 err=True)
             ctx.exit(2)  # Match exit code of `return None`
 
