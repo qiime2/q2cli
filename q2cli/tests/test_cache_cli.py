@@ -44,7 +44,7 @@ class TestCacheCli(unittest.TestCase):
 
         self.runner = CliRunner()
         self.plugin_command = RootCommand().get_command(
-            ctx=None, name='bad-plugin')
+            ctx=None, name='dummy-plugin')
         self.tempdir = tempfile.mkdtemp(prefix='qiime2-q2cli-test-temp-')
         self.cache = Cache(os.path.join(self.tempdir, 'new_cache'))
 
