@@ -77,11 +77,8 @@ class RootCommand(BaseCommandMixin, click.MultiCommand):
             self._plugins = q2cli.core.cache.CACHE.plugins
 
         name_map = {}
-        print(list(self._plugins.keys()))
         for name, plugin in self._plugins.items():
-            print(name)
             if plugin['actions']:
-                print("We have actions")
                 name_map[q2cli.util.to_cli_name(name)] = plugin
         return name_map
 
@@ -113,8 +110,7 @@ class RootCommand(BaseCommandMixin, click.MultiCommand):
                 hint = ''
             click.echo(
                 CONFIG.cfg_style('error', "Error: QIIME 2 has no "
-                                 "plugin/command named %r." % name + hint +
-                                 str(list(self._plugin_lookup.keys()))),
+                                 "plugin/command named %r." % name + hint),
                 err=True)
             ctx.exit(2)  # Match exit code of `return None`
 
