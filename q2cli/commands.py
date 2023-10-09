@@ -108,6 +108,7 @@ class RootCommand(BaseCommandMixin, click.MultiCommand):
                 hint = '  (Possible commands: %s)' % ', '.join(possibilities)
             else:
                 hint = ''
+
             click.echo(
                 CONFIG.cfg_style('error', "Error: QIIME 2 has no "
                                  "plugin/command named %r." % name + hint),
