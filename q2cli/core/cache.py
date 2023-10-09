@@ -165,6 +165,7 @@ class DeploymentCache:
                     reqs.add(entry_point.dist.as_requirement())
             else:
                 if entry_point.name not in ('dummy-plugin', 'other-plugin'):
+                    reqs.add(entry_point.dist.as_requirement())
 
         return reqs
 
