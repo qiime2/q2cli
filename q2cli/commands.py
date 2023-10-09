@@ -77,8 +77,11 @@ class RootCommand(BaseCommandMixin, click.MultiCommand):
             self._plugins = q2cli.core.cache.CACHE.plugins
 
         name_map = {}
+        print(list(self._plugins.keys()))
         for name, plugin in self._plugins.items():
+            print(name)
             if plugin['actions']:
+                print("We have actions")
                 name_map[q2cli.util.to_cli_name(name)] = plugin
         return name_map
 
