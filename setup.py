@@ -18,12 +18,17 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     scripts=['bin/tab-qiime'],
-    entry_points='''
-        [console_scripts]
-        qiime=q2cli.__main__:qiime
-    ''',
+    entry_points={
+        'console_scripts': [
+            'qiime=q2cli.__main__:qiime'
+        ],
+        'qiime2.usage_drivers': [
+            'cli=q2cli.core.usage:ReplayCLIUsage'
+        ]
+    },
     package_data={
         'q2cli.tests': ['data/*'],
+        'q2cli.core': ['assets/*']
     },
     zip_safe=False,
 )

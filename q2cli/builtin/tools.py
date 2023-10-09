@@ -7,6 +7,7 @@
 # ----------------------------------------------------------------------------
 
 import os
+from typing import Literal
 
 import click
 
@@ -967,3 +968,273 @@ def cache_status(cache):
     success = "Status of the cache at the path '%s':\n\n%s" % \
         (cache, output)
     click.echo(CONFIG.cfg_style('success', success))
+
+
+replay_in_fp_help = (
+    'filepath to a QIIME 2 Archive (.qza or .qzv) or directory of Archives'
+)
+replay_recurse_help = (
+    'if in-fp is a directory, will also search sub-directories when finding '
+    'Archives to parse'
+)
+replay_validate_checksums_help = (
+    'check that replayed archives are intact and uncorrupted'
+)
+replay_parse_metadata_help = (
+    'parse the original metadata captured in provenance for review or replay'
+)
+replay_use_recorded_metadata_help = (
+    're-use the original metadata captured in provenance'
+)
+replay_suppress_header_help = (
+   'do not write header/footer blocks in the output script'
+)
+replay_verbose_help = (
+    'print status messages to stdout while processing'
+)
+replay_dump_recorded_metadata_help = (
+    'write the original metadata captured in provenance to disk in the '
+    '--metadata-out-dir directory'
+)
+
+
+@tools.command(name='replay-provenance', cls=ToolCommand)
+@click.option('--in-fp', required=True, help=replay_in_fp_help)
+@click.option('--recurse/--no-recurse',
+              default=False,
+              show_default=True,
+              help=replay_recurse_help)
+@click.option('--usage-driver',
+              default='cli',
+              show_default=True,
+              help='the target interface for your replay script',
+              type=click.Choice(['python3', 'cli'], case_sensitive=False))
+@click.option('--validate-checksums/--no-validate-checksums',
+              default=True,
+              show_default=True,
+              help=replay_validate_checksums_help)
+@click.option('--parse-metadata/--no-parse-metadata',
+              default=True,
+              show_default=True,
+              help=replay_parse_metadata_help)
+@click.option('--use-recorded-metadata/--no-use-recorded-metadata',
+              default=False,
+              show_default=True,
+              help=replay_use_recorded_metadata_help)
+@click.option('--suppress-header/--no-suppress-header',
+              default=False,
+              show_default=True,
+              help=replay_suppress_header_help)
+@click.option('--verbose/--no-verbose',
+              default=True,
+              show_default=True,
+              help=replay_verbose_help)
+@click.option('--dump-recorded-metadata/--no-dump-recorded-metadata',
+              default=True,
+              show_default=True,
+              help=replay_dump_recorded_metadata_help)
+@click.option('--metadata-out-dir',
+              default='',
+              show_default=True,
+              help=('the directory where captured study metadata '
+                    'should be written if --dump-recorded-metadata. This '
+                    'often produces many outputs, so a dedicated directory '
+                    'should generally be used. Creates the directory if it '
+                    'does not already exist. By default, metadata is written '
+                    'to `${PWD}/recorded_metadata/`'))
+@click.option('--out-fp',
+              required=True,
+              type=click.Path(exists=False, writable=True),
+              help='the filepath where your replay script should be written')
+def provenance_replay(
+    in_fp: str,
+    out_fp: str,
+    usage_driver: Literal['python3', 'cli'],
+    recurse: bool = False,
+    validate_checksums: bool = True,
+    parse_metadata: bool = True,
+    use_recorded_metadata: bool = False,
+    suppress_header: bool = False,
+    verbose: bool = True,
+    dump_recorded_metadata: bool = True,
+    metadata_out_dir: str = ''
+):
+    """
+    Replay provenance from a QIIME 2 Artifact filepath to a written executable
+    """
+    from qiime2.core.archive.provenance_lib.replay import replay_provenance
+    from qiime2.sdk.util import get_available_usage_drivers
+
+    usage_drivers = get_available_usage_drivers()
+    try:
+        usage_driver_type = usage_drivers[usage_driver]
+    except KeyError:
+        msg = (
+            f'The {usage_driver} usage driver is not available in the '
+            'current environment.'
+        )
+        raise ValueError(msg)
+
+    replay_provenance(
+        usage_driver=usage_driver_type,
+        payload=in_fp,
+        out_fp=out_fp,
+        validate_checksums=validate_checksums,
+        parse_metadata=parse_metadata,
+        recurse=recurse,
+        use_recorded_metadata=use_recorded_metadata,
+        suppress_header=suppress_header,
+        verbose=verbose,
+        dump_recorded_metadata=dump_recorded_metadata,
+        md_out_dir=metadata_out_dir
+    )
+    filename = os.path.realpath(out_fp)
+    click.echo(f'{usage_driver} replay script written to {filename}')
+
+
+@tools.command(name='replay-citations', cls=ToolCommand)
+@click.option('--in-fp', required=True, help=replay_in_fp_help)
+@click.option('--recurse/--no-recurse',
+              default=False,
+              show_default=True,
+              help=replay_recurse_help)
+@click.option('--deduplicate/--no-deduplicate',
+              default=True,
+              show_default=True,
+              help=('If deduplicate, duplicate citations will be removed '
+                    'heuristically, e.g. by comparing DOI fields. '
+                    'This greatly reduces manual curation of reference lists, '
+                    'but introduces a small risk of reference loss.'))
+@click.option('--suppress-header/--no-suppress-header',
+              default=False,
+              show_default=True,
+              help=replay_suppress_header_help)
+@click.option('--verbose/--no-verbose',
+              default=True,
+              show_default=True,
+              help=replay_verbose_help)
+@click.option('--out-fp',
+              required=True,
+              type=click.Path(exists=False, writable=True),
+              help='the filepath where your bibtex file should be written')
+def citations_replay(
+    in_fp: str,
+    out_fp: str,
+    recurse: bool = False,
+    deduplicate: bool = True,
+    suppress_header: bool = False,
+    verbose: bool = True
+):
+    """
+    Reports all citations from a QIIME 2 Artifact or directory of Artifacts,
+    with the goal of improving and simplifying attribution of/in published
+    work.
+
+    Not for use in reporting e.g. software versions used in an analysis, as
+    deduplication removes duplicate references with different plugin versions.
+    """
+    from qiime2.core.archive.provenance_lib.parse import ProvDAG
+    from qiime2.core.archive.provenance_lib.replay import replay_citations
+
+    dag = ProvDAG(in_fp, verbose=verbose, recurse=recurse)
+    replay_citations(
+        dag,
+        out_fp=out_fp,
+        deduplicate=deduplicate,
+        suppress_header=suppress_header
+    )
+    filename = os.path.realpath(out_fp)
+    click.echo(f'citations bibtex file written to {filename}')
+
+
+@tools.command(name='replay-supplement', cls=ToolCommand)
+@click.option('--in-fp', required=True,
+              help='filepath to a QIIME 2 Archive or directory of Archives')
+@click.option('--recurse/--no-recurse',
+              default=False,
+              show_default=True,
+              help=('if in-fp is a directory, will also search sub-directories'
+                    ' when finding .qza/.qzv files to parse'))
+@click.option('--deduplicate/--no-deduplicate',
+              default=True,
+              show_default=True,
+              help=('If deduplicate, duplicate citations will be removed '
+                    'heuristically, e.g. by comparing DOI fields. '
+                    'This greatly reduces manual curation of reference lists, '
+                    'but introduces a small risk of reference loss.'))
+@click.option('--validate-checksums/--no-validate-checksums',
+              default=True,
+              show_default=True,
+              help=replay_validate_checksums_help)
+@click.option('--parse-metadata/--no-parse-metadata',
+              default=True,
+              show_default=True,
+              help=replay_parse_metadata_help)
+@click.option('--use-recorded-metadata/--no-use-recorded-metadata',
+              default=False,
+              show_default=True,
+              help=replay_use_recorded_metadata_help)
+@click.option('--suppress-header/--no-suppress-header',
+              default=False,
+              show_default=True,
+              help=replay_suppress_header_help)
+@click.option('--verbose/--no-verbose',
+              default=True,
+              show_default=True,
+              help=replay_verbose_help)
+@click.option('--dump-recorded-metadata/--no-dump-recorded-metadata',
+              default=True,
+              show_default=True,
+              help='write the original metadata captured in provenance to '
+                   'recorded_metadata/ inside the archive')
+@click.option('--out-fp',
+              required=True,
+              type=click.Path(exists=False, writable=True),
+              help='the filepath where your reproduciblity supplement zipfile '
+                   'should be written')
+def supplement_replay(
+    in_fp: str,
+    out_fp: str,
+    validate_checksums: bool = True,
+    parse_metadata: bool = True,
+    use_recorded_metadata: bool = False,
+    recurse: bool = False,
+    deduplicate: bool = True,
+    suppress_header: bool = False,
+    verbose: bool = True,
+    dump_recorded_metadata: bool = True
+):
+    """
+    Produces a zipfile package of useful documentation supporting in silico
+    reproducibility of some QIIME 2 Result(s) from a QIIME 2 Artifact or
+    directory of Artifacts.
+
+    Package includes:
+    - replay scripts for all supported interfaces
+    - a bibtex-formatted collection of all citations
+    """
+    from qiime2.core.archive.provenance_lib.replay import replay_supplement
+    from qiime2.sdk.util import get_available_usage_drivers
+
+    usage_drivers = get_available_usage_drivers()
+    usage_driver_types = list(usage_drivers.values())
+    if not usage_driver_types:
+        msg = (
+            'There are no available usage drivers registered in the current '
+            'environment.'
+        )
+        raise ValueError(msg)
+
+    replay_supplement(
+        usage_drivers=usage_driver_types,
+        payload=in_fp,
+        out_fp=out_fp,
+        validate_checksums=validate_checksums,
+        parse_metadata=parse_metadata,
+        use_recorded_metadata=use_recorded_metadata,
+        recurse=recurse,
+        deduplicate=deduplicate,
+        suppress_header=suppress_header,
+        verbose=verbose,
+        dump_recorded_metadata=dump_recorded_metadata
+    )
