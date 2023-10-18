@@ -374,7 +374,6 @@ def _load_input(fp, view=False):
         # Then we check if it is a key:path
         if artifact is None:
             key, new_fp = _get_path_and_collection_key(fp)
-            new_fp = os.path.expanduser(new_fp)
             artifact, _ = _load_input_file(new_fp)
 
         # If we still have nothing
@@ -472,6 +471,10 @@ def _load_input_cache(fp):
 
 def _load_input_file(fp):
     import qiime2.sdk
+    from os.path import expanduser
+
+    # If there is a leading ~ we expand it to be the path to home
+    fp = expanduser(fp)
 
     # test if valid
     peek = None
