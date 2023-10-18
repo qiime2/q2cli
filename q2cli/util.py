@@ -374,6 +374,7 @@ def _load_input(fp, view=False):
         # Then we check if it is a key:path
         if artifact is None:
             key, new_fp = _get_path_and_collection_key(fp)
+            new_fp = os.path.expanduser(new_fp)
             artifact, _ = _load_input_file(new_fp)
 
         # If we still have nothing
