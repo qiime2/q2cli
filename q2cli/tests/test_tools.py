@@ -469,6 +469,8 @@ class TestCacheTools(unittest.TestCase):
         self.art2 = Artifact.import_data('IntSequence1', [3, 4, 5])
         self.art3 = Artifact.import_data('IntSequence1', [6, 7, 8])
         self.art4 = Artifact.import_data('IntSequence2', [9, 10, 11])
+        self.to_import = os.path.join(self.tempdir.name, 'to_import')
+        self.art1.export_data(self.to_import)
         self.cache = Cache(os.path.join(self.tempdir.name, 'new_cache'))
 
     def tearDown(self):
@@ -630,6 +632,16 @@ class TestCacheTools(unittest.TestCase):
         success = \
             success_template % (str(self.cache.path), data_output,
                                 pool_output)
+        self.assertEqual(success, result.output)
+
+    def test_cache_import(self):
+        self.max_diff = None
+        result = self.runner.invoke(
+            tools, ['cache-import', '--type', 'IntSequence1', '--input-path',
+                    self.to_import, '--cache', f'{self.cache.path}', '--key',
+                    'foo'])
+        success = 'Imported %s as IntSequenceDirectoryFormat to %s:foo\n' % \
+            (self.to_import, self.cache.path)
         self.assertEqual(success, result.output)
 
 

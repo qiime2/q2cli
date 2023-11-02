@@ -260,19 +260,11 @@ def show_importable_formats(ctx, param, value):
               help='Show formats that can be supplied to --input-format to '
                    'import data into an artifact.')
 def import_data(type, input_path, output_path, input_format):
-    import qiime2.sdk
-    import qiime2.plugin
     from q2cli.core.config import CONFIG
-    try:
-        artifact = qiime2.sdk.Artifact.import_data(type, input_path,
-                                                   view_type=input_format)
-    except qiime2.plugin.ValidationError as e:
-        header = 'There was a problem importing %s:' % input_path
-        q2cli.util.exit_with_error(e, header=header, traceback=None)
-    except Exception as e:
-        header = 'An unexpected error has occurred:'
-        q2cli.util.exit_with_error(e, header=header)
+
+    artifact = _import(type, input_path, input_format)
     artifact.save(output_path)
+
     if input_format is None:
         input_format = artifact.format.__name__
 
@@ -818,6 +810,74 @@ def cache_store(cache, artifact_path, key):
     success = "Saved the artifact '%s' to the cache '%s' under the key " \
         "'%s'" % (artifact_path, cache, key)
     click.echo(CONFIG.cfg_style('success', success))
+
+
+@tools.command(name='cache-import',
+               short_help='Imports data into an Artifact in the cache under a '
+                          'key.',
+               help='Imports data into an Artifact in the cache under a key.',
+               cls=ToolCommand)
+@click.option('--type', required=True,
+              help='The semantic type of the artifact that will be created '
+                   'upon importing. Use --show-importable-types to see what '
+                   'importable semantic types are available in the current '
+                   'deployment.')
+@click.option('--input-path', required=True,
+              type=click.Path(exists=True, file_okay=True, dir_okay=True,
+                              readable=True),
+              help='Path to file or directory that should be imported.')
+@click.option('--cache', required=True,
+              type=click.Path(exists=True, file_okay=False, dir_okay=True,
+                              readable=True),
+              help='Path to an existing cache to save into.')
+@click.option('--key', required=True,
+              help='The key to save the artifact under (must be a valid '
+                   'Python identifier).')
+@click.option('--input-format', required=False,
+              help='The format of the data to be imported. If not provided, '
+                   'data must be in the format expected by the semantic type '
+                   'provided via --type.')
+@click.option('--show-importable-types', is_flag=True, is_eager=True,
+              callback=show_importable_types, expose_value=False,
+              help='Show the semantic types that can be supplied to --type '
+                   'to import data into an artifact.')
+@click.option('--show-importable-formats', is_flag=True, is_eager=True,
+              callback=show_importable_formats, expose_value=False,
+              help='Show formats that can be supplied to --input-format to '
+                   'import data into an artifact.')
+def cache_import(type, input_path, cache, key, input_format):
+    from qiime2 import Cache
+    from q2cli.core.config import CONFIG
+
+    artifact = _import(type, input_path, input_format)
+    _cache = Cache(cache)
+    _cache.save(artifact, key)
+
+    if input_format is None:
+        input_format = artifact.format.__name__
+
+    success = 'Imported %s as %s to %s:%s' % (input_path,
+                                              input_format,
+                                              cache,
+                                              key)
+    click.echo(CONFIG.cfg_style('success', success))
+
+
+def _import(type, input_path, input_format):
+    import qiime2.sdk
+    import qiime2.plugin
+
+    try:
+        artifact = qiime2.sdk.Artifact.import_data(type, input_path,
+                                                   view_type=input_format)
+    except qiime2.plugin.ValidationError as e:
+        header = 'There was a problem importing %s:' % input_path
+        q2cli.util.exit_with_error(e, header=header, traceback=None)
+    except Exception as e:
+        header = 'An unexpected error has occurred:'
+        q2cli.util.exit_with_error(e, header=header)
+
+    return artifact
 
 
 @tools.command(name='cache-fetch',
