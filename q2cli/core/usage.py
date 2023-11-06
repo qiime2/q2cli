@@ -173,6 +173,82 @@ class CLIUsage(usage.Usage):
 
         return variable
 
+    def construct_collection(self, name, member_type, members):
+        # make sure members is dict to avoid repeated type checking
+        if type(members) is list:
+            members = {str(i): member for i, member in enumerate(members)}
+
+        variable = super().construct_collection(name, member_type, members)
+
+        str_namespace = {str(name) for name in self.namespace}
+        diff = set(
+            member.to_interface_name() for member in members.values()
+        ) - str_namespace
+        if diff:
+            msg = (
+                f'{diff} not found in driver\'s namespace. Make sure '
+                'that all ResultCollection members have been properly '
+                'created.'
+            )
+            raise ValueError(msg)
+
+        # make rc dir
+        rc_dir = variable.to_interface_name()
+        if os.path.exists(rc_dir):
+            msg = (
+                f'Attempted to create result collection at {rc_dir} but the '
+                'path already exists.'
+            )
+            raise ValueError(msg)
+
+        lines = [f'mkdir {rc_dir}']
+
+        # write the order and members files
+        order_fp = os.path.join(rc_dir, '.order')
+        lines.append(f'touch {order_fp}')
+        members_fp = os.path.join(rc_dir, '.members')
+        lines.append(f'touch {members_fp}')
+
+        for key, usg_var in members.items():
+            lines.append(f'echo {key} >> {order_fp}')
+            lines.append(
+                f'echo {usg_var.to_interface_name()},{key} >> {members_fp}'
+            )
+
+        # loop over order file making symlinks
+        lines.append('while IFS= read -r line; do')
+        if member_type == 'artifact':
+            lines.append(
+                f'\tln -s ../$(echo $line | cut -d "," -f1) '
+                f'{rc_dir}$(echo $line | cut -d "," -f2).qza'
+            )
+        else:
+            lines.append(
+                f'\tln -s ../$(echo $line | cut -d "," -f1) '
+                f'{rc_dir}$(echo $line | cut -d "," -f2).qzv'
+            )
+        lines.append(f'done < {members_fp}')
+
+        self.recorder.extend(lines)
+
+        return variable
+
+    def access_collection_member(self, name, collection, key):
+        variable = super().access_collection_member(
+            name, collection, key
+        )
+
+        rc_dir = collection.to_interface_name()
+        if collection.var_type == 'artifact_collection':
+            member_fp = os.path.join(rc_dir, f'{key}.qza')
+        else:
+            member_fp = os.path.join(rc_dir, f'{key}.qzv')
+
+        lines = [f'ln -s {member_fp} {variable.to_interface_name()}']
+        self.recorder.extend(lines)
+
+        return variable
+
     def import_from_format(self, name, semantic_type,
                            variable, view_type=None):
         imported_var = super().import_from_format(
