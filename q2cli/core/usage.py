@@ -201,34 +201,28 @@ class CLIUsage(usage.Usage):
             )
             raise ValueError(msg)
 
-        lines = [f'mkdir {rc_dir}']
+        ext = '.qza' if member_type == 'artifact' else '.qzv'
+        keys = members.keys()
+        names = [name.to_interface_name() for name in members.values()]
 
-        # write the order and members files
-        order_fp = os.path.join(rc_dir, '.order')
-        lines.append(f'touch {order_fp}')
-        members_fp = os.path.join(rc_dir, '.members')
-        lines.append(f'touch {members_fp}')
+        keys_arg = '( '
+        for key in keys:
+            keys_arg += f'{key} '
+        keys_arg += ')'
+        names_arg = '( '
+        for name in names:
+            names_arg += f'{name} '
+        names_arg += ')'
 
-        for key, usg_var in members.items():
-            lines.append(f'echo {key} >> {order_fp}')
-            lines.append(
-                f'echo {usg_var.to_interface_name()},{key} >> {members_fp}'
-            )
-
-        # loop over order file making symlinks
-        lines.append('while IFS= read -r line; do')
-        if member_type == 'artifact':
-            lines.append(
-                f'\tln -s ../$(echo $line | cut -d "," -f1) '
-                f'{rc_dir}$(echo $line | cut -d "," -f2).qza'
-            )
-        else:
-            lines.append(
-                f'\tln -s ../$(echo $line | cut -d "," -f1) '
-                f'{rc_dir}$(echo $line | cut -d "," -f2).qzv'
-            )
-        lines.append(f'done < {members_fp}')
-
+        lines = [
+            '## ignore: constructing result collection ##',
+            f'rc_name={rc_dir}',
+            f'ext={ext}',
+            f'keys={keys_arg}',
+            f'names={names_arg}',
+            'construct_result_collection',
+            '##',
+        ]
         self.recorder.extend(lines)
 
         return variable
@@ -244,7 +238,11 @@ class CLIUsage(usage.Usage):
         else:
             member_fp = os.path.join(rc_dir, f'{key}.qzv')
 
-        lines = [f'ln -s {member_fp} {variable.to_interface_name()}']
+        lines = [
+            '## ignore: accessing result collection member ##',
+            f'ln -s {member_fp} {variable.to_interface_name()}',
+            '##',
+        ]
         self.recorder.extend(lines)
 
         return variable
@@ -759,6 +757,25 @@ class ReplayCLIUsage(CLIUsage):
         self.header.extend(build_header(
             self.shebang, self.header_boundary, self.copyright, self.how_to
         ))
+
+        # for creating result collections in bash
+        bash_rc_function = [
+            'construct_result_collection () {',
+            '\tmkdir $rc_name',
+            '\ttouch $rc_name.order',
+            '\tfor key in "${keys[@]}"; do',
+            '\t\techo $key >> $rc_name.order',
+            '\tdone',
+            '\tfor i in "${!keys[@]}"; do',
+            '\t\tln -s ../"${names[i]}" $rc_name"${keys[i]}"$ext',
+            '\tdone',
+            '}'
+        ]
+        self.header.extend([
+            '## function to create result collections ##',
+            *bash_rc_function,
+            '##',
+        ])
 
     def build_footer(self, dag: ProvDAG):
         '''
