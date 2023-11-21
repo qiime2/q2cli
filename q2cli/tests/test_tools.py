@@ -455,6 +455,55 @@ class TestExportToFileFormat(TestInspectMetadata):
         self.assertEqual(success, result.output)
 
 
+class TestImport(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.runner = CliRunner()
+
+    def test_import_min_validate(self):
+        with tempfile.TemporaryDirectory() as tempdir:
+            fp = os.path.join(tempdir, 'ints.txt')
+            with open(fp, 'w') as fh:
+                for i in range(5):
+                    fh.write(f'{i}\n')
+                fh.write('a\n')
+
+            out_fp = os.path.join(tempdir, 'out.qza')
+
+            # import with min allows format error outside of min purview
+            # (validate level min checks only first 5 items)
+            result = self.runner.invoke(tools, [
+                'import', '--type', 'IntSequence1', '--input-path', tempdir,
+                '--output-path', out_fp, '--validate-level', 'min'
+            ])
+            self.assertEqual(result.exit_code, 0)
+
+            # import with max should catch all format errors, max is default
+            result = self.runner.invoke(tools, [
+                'import', '--type', 'IntSequence1', '--input-path',
+                tempdir, '--output-path', out_fp
+            ])
+            self.assertEqual(result.exit_code, 1)
+            self.assertIn('Line 6 is not an integer', result.output)
+
+        with tempfile.TemporaryDirectory() as tempdir:
+            fp = os.path.join(tempdir, 'ints.txt')
+            with open(fp, 'w') as fh:
+                fh.write('1\n')
+                fh.write('a\n')
+                fh.write('3\n')
+
+            out_fp = os.path.join(tempdir, 'out.qza')
+
+            # import with min catches format errors within its purview
+            result = self.runner.invoke(tools, [
+                'import', '--type', 'IntSequence1', '--input-path',
+                tempdir, '--output-path', out_fp, '--validate-level', 'min'
+            ])
+            self.assertEqual(result.exit_code, 1)
+            self.assertIn('Line 2 is not an integer', result.output)
+
+
 class TestCacheTools(unittest.TestCase):
     def setUp(self):
         get_dummy_plugin()
