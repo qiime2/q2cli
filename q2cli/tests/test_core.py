@@ -61,9 +61,9 @@ class TestOption(unittest.TestCase):
     def test_repeated_eager_option_with_callback(self):
         result = self.runner.invoke(
             q2cli.builtin.tools.tools,
-            ['import', '--show-importable-types', '--show-importable-types'])
+            ['list-types', '--tsv', '--tsv'])
 
-        self._assertRepeatedOptionError(result, '--show-importable-types')
+        self._assertRepeatedOptionError(result, '--tsv')
 
     def test_repeated_builtin_flag(self):
         result = self.runner.invoke(
