@@ -1083,7 +1083,12 @@ class TestReplay(unittest.TestCase):
         self.assertEqual(result.exit_code, 0)
         self.assertTrue(zipfile.is_zipfile(out_fp))
 
-        exp = {'python3_replay.py', 'cli_replay.sh', 'citations.bib'}
+        exp = {
+            'supplement/',
+            'supplement/python3_replay.py',
+            'supplement/cli_replay.sh',
+            'supplement/citations.bib'
+        }
         with zipfile.ZipFile(out_fp, 'r') as zfh:
             self.assertEqual(exp, set(zfh.namelist()))
 
@@ -1098,13 +1103,15 @@ class TestReplay(unittest.TestCase):
         self.assertTrue(zipfile.is_zipfile(out_fp))
 
         exp = {
-            'python3_replay.py',
-            'cli_replay.sh',
-            'citations.bib',
-            'recorded_metadata/',
-            'recorded_metadata/dummy_plugin_identity_with_metadata_0/',
-            'recorded_metadata/dummy_plugin_identity_with_metadata_0/'
-            'metadata_0.tsv',
+            'supplement/',
+            'supplement/python3_replay.py',
+            'supplement/cli_replay.sh',
+            'supplement/citations.bib',
+            'supplement/recorded_metadata/',
+            'supplement/recorded_metadata/'
+            'dummy_plugin_identity_with_metadata_0/',
+            'supplement/recorded_metadata/'
+            'dummy_plugin_identity_with_metadata_0/metadata_0.tsv',
         }
         with zipfile.ZipFile(out_fp, 'r') as zfh:
             self.assertEqual(exp, set(zfh.namelist()))
@@ -1137,6 +1144,25 @@ class TestReplay(unittest.TestCase):
         self.assertIn(
             'no available usage drivers', str(result.exception)
         )
+
+    def test_replay_supplement_zipfile(self):
+        with tempfile.TemporaryDirectory() as tempdir:
+            in_fp = os.path.join(self.tempdir, 'concated_ints.qza')
+            out_fp = os.path.join(tempdir, 'supplement.zip')
+
+            result = self.runner.invoke(
+                tools,
+                ['replay-supplement', '--in-fp', in_fp, '--out-fp', out_fp]
+            )
+            self.assertEqual(result.exit_code, 0)
+            self.assertTrue(zipfile.is_zipfile(out_fp))
+
+            unzipped_path = os.path.join(tempdir, 'extracted')
+            os.makedirs(unzipped_path)
+            with zipfile.ZipFile(out_fp, 'r') as zfh:
+                zfh.extractall(unzipped_path)
+
+            self.assertEqual(os.listdir(unzipped_path), ['supplement'])
 
 
 if __name__ == "__main__":
