@@ -792,7 +792,7 @@ def cache_store(cache, artifact_path, key):
                cls=ToolCommand)
 @click.option('--type', required=True,
               help='The semantic type of the artifact that will be created '
-                   'upon importing. Use --show-importable-types to see what '
+                   'upon importing. Use --list-types to see what '
                    'importable semantic types are available in the current '
                    'deployment.')
 @click.option('--input-path', required=True,
@@ -809,15 +809,8 @@ def cache_store(cache, artifact_path, key):
 @click.option('--input-format', required=False,
               help='The format of the data to be imported. If not provided, '
                    'data must be in the format expected by the semantic type '
-                   'provided via --type.')
-@click.option('--show-importable-types', is_flag=True, is_eager=True,
-              callback=show_importable_types, expose_value=False,
-              help='Show the semantic types that can be supplied to --type '
-                   'to import data into an artifact.')
-@click.option('--show-importable-formats', is_flag=True, is_eager=True,
-              callback=show_importable_formats, expose_value=False,
-              help='Show formats that can be supplied to --input-format to '
-                   'import data into an artifact.')
+                   'provided via --type. Use list-formats --importable to see '
+                   'which formats of input data are importable.')
 def cache_import(type, input_path, cache, key, input_format):
     from qiime2 import Cache
     from q2cli.core.config import CONFIG
