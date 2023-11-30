@@ -8,6 +8,7 @@
 
 import os.path
 import unittest
+import contextlib
 import unittest.mock
 import tempfile
 import shutil
@@ -896,6 +897,27 @@ class TestCollectionSupport(unittest.TestCase):
                       ' values. All values must be keyed or unkeyed',
                       str(result.exception))
 
+    def test_keyed_path_with_tilde(self):
+        self.art1.save(self.art1_path)
+        self.art2.save(self.art2_path)
+
+        tmp = tempfile.gettempdir()
+        tempdir = os.path.basename(self.tempdir)
+
+        with modified_environ(HOME=tmp):
+            result = self._run_command(
+                'dict-of-ints',
+                '--i-ints', f'foo:{os.path.join("~", tempdir, "art1.qza")}',
+                '--i-ints', f'bar:{os.path.join("~", tempdir, "art2.qza")}',
+                '--o-output', self.output, '--verbose')
+
+        self.assertEqual(result.exit_code, 0)
+        collection = ResultCollection.load(self.output)
+
+        self.assertEqual(collection['foo'].view(int), 0)
+        self.assertEqual(collection['bar'].view(int), 1)
+        self.assertEqual(list(collection.keys()), ['foo', 'bar'])
+
     def test_directory_with_non_artifacts(self):
         input_dir = os.path.join(self.tempdir, 'in')
         os.mkdir(input_dir)
@@ -924,6 +946,43 @@ class TestCollectionSupport(unittest.TestCase):
         self.assertEqual(result.exit_code, 1)
         self.assertIn(f"Provided directory '{self.tempdir}' is empty.",
                       result.output)
+
+
+@contextlib.contextmanager
+def modified_environ(*remove, **update):
+    """
+    Taken from: https://stackoverflow.com/a/34333710.
+
+    Updating the os.environ dict only modifies the environment variables from
+    the perspective of the current Python process, so this isn't dangerous at
+    all.
+
+    Temporarily updates the ``os.environ`` dictionary in-place.
+
+    The ``os.environ`` dictionary is updated in-place so that the modification
+    is sure to work in all situations.
+
+    :param remove: Environment variables to remove.
+    :param update: Dictionary of environment variables and values to add/update.
+    """
+    env = os.environ
+    update = update or {}
+    remove = remove or []
+
+    # List of environment variables being updated or removed.
+    stomped = (set(update.keys()) | set(remove)) & set(env.keys())
+    # Environment variables and values to restore on exit.
+    update_after = {k: env[k] for k in stomped}
+    # Environment variables and values to remove on exit.
+    remove_after = frozenset(k for k in update if k not in env)
+
+    try:
+        env.update(update)
+        [env.pop(k, None) for k in remove]
+        yield
+    finally:
+        env.update(update_after)
+        [env.pop(k) for k in remove_after]
 
 
 if __name__ == "__main__":
