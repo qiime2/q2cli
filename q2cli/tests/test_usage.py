@@ -205,10 +205,6 @@ class ReplayResultCollectionTests(unittest.TestCase):
     def setUpClass(cls):
         cls.plugin = get_dummy_plugin()
 
-    @classmethod
-    def tearDownClass(cls):
-        pass
-
     def test_construct_and_access_collection(self):
         action = self.plugin.actions['dict_of_ints']
         use = CLIUsage()
