@@ -52,6 +52,7 @@ class CliTests(unittest.TestCase):
         self.assertIn('System versions', result.output)
         self.assertIn('Installed plugins', result.output)
         self.assertIn('dummy-plugin', result.output)
+        self.assertIn('other-plugin', result.output)
 
     def test_list_commands(self):
         # top level commands, including a plugin, are present
@@ -60,6 +61,7 @@ class CliTests(unittest.TestCase):
         self.assertIn('info', commands)
         self.assertIn('tools', commands)
         self.assertIn('dummy-plugin', commands)
+        self.assertIn('other-plugin', commands)
 
     def test_plugin_list_commands(self):
         # plugin commands are present including a method and visualizer

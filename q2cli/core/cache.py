@@ -161,10 +161,10 @@ class DeploymentCache:
         for entry_point in pkg_resources.iter_entry_points(
                 group='qiime2.plugins'):
             if 'QIIMETEST' in os.environ:
-                if entry_point.name == 'dummy-plugin':
+                if entry_point.name in ('dummy-plugin', 'other-plugin'):
                     reqs.add(entry_point.dist.as_requirement())
             else:
-                if entry_point.name != 'dummy-plugin':
+                if entry_point.name not in ('dummy-plugin', 'other-plugin'):
                     reqs.add(entry_point.dist.as_requirement())
 
         return reqs

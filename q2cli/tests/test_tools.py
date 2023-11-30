@@ -8,12 +8,16 @@
 
 import os
 import gc
+import re
 import shutil
 import unittest
+from unittest.mock import patch
 import tempfile
+import zipfile
+import bibtexparser as bp
 
 from click.testing import CliRunner
-from qiime2 import Artifact
+from qiime2 import Artifact, Metadata
 from qiime2.core.testing.util import get_dummy_plugin
 from qiime2.metadata.base import SUPPORTED_COLUMN_TYPES
 from qiime2.core.cache import Cache
@@ -23,6 +27,7 @@ from qiime2.sdk.plugin_manager import PluginManager
 from q2cli.util import load_metadata
 from q2cli.builtin.tools import tools
 from q2cli.commands import RootCommand
+from q2cli.core.usage import ReplayCLIUsage
 
 
 class TestCastMetadata(unittest.TestCase):
@@ -464,6 +469,8 @@ class TestCacheTools(unittest.TestCase):
         self.art2 = Artifact.import_data('IntSequence1', [3, 4, 5])
         self.art3 = Artifact.import_data('IntSequence1', [6, 7, 8])
         self.art4 = Artifact.import_data('IntSequence2', [9, 10, 11])
+        self.to_import = os.path.join(self.tempdir.name, 'to_import')
+        self.art1.export_data(self.to_import)
         self.cache = Cache(os.path.join(self.tempdir.name, 'new_cache'))
 
     def tearDown(self):
@@ -625,6 +632,16 @@ class TestCacheTools(unittest.TestCase):
         success = \
             success_template % (str(self.cache.path), data_output,
                                 pool_output)
+        self.assertEqual(success, result.output)
+
+    def test_cache_import(self):
+        self.max_diff = None
+        result = self.runner.invoke(
+            tools, ['cache-import', '--type', 'IntSequence1', '--input-path',
+                    self.to_import, '--cache', f'{self.cache.path}', '--key',
+                    'foo'])
+        success = 'Imported %s as IntSequenceDirectoryFormat to %s:foo\n' % \
+            (self.to_import, self.cache.path)
         self.assertEqual(success, result.output)
 
 
@@ -833,8 +850,6 @@ class TestListFormats(unittest.TestCase):
         result = self.runner.invoke(tools, ['list-formats', '--exportable',
                                             '--strict', *formats])
         self.assertEqual(result.exit_code, 0)
-        print(formats)
-        print(result.output)
         self.assertEqual(len(result.output.split('\n\n')) - 1, len(formats))
 
         result = self.runner.invoke(tools, ['list-formats', '--exportable',
@@ -854,8 +869,6 @@ class TestListFormats(unittest.TestCase):
         self.assertEqual(result.exit_code, 0)
 
         # len - 1 because \n split produces a final ''
-        print(result.output)
-        print(self.pm.importable_formats.keys())
         self.assertEqual(len(result.output.split('\n')) - 1,
                          len(self.pm.importable_formats))
 
@@ -871,6 +884,259 @@ class TestListFormats(unittest.TestCase):
             if format_record.format.__doc__ is None:
                 no_description_count += 1
         self.assertEqual(no_description_count, result.output.count('\t\n'))
+
+
+class TestReplay(unittest.TestCase):
+    def setUp(self):
+        self.runner = CliRunner()
+        self.pm = PluginManager()
+        self.dp = self.pm.plugins['dummy-plugin']
+        self.tempdir = tempfile.mkdtemp(prefix='q2cli-test-replay-temp-')
+
+        # contrive artifacts with different sorts of provenance
+        int_seq1 = Artifact.import_data('IntSequence1', [1, 2, 3])
+        int_seq2 = Artifact.import_data('IntSequence1', [4, 5, 6])
+        int_seq3 = Artifact.import_data('IntSequence2', [7, 8])
+        concat_ints = self.dp.actions['concatenate_ints']
+        concated_ints, = concat_ints(int_seq1, int_seq2, int_seq3, 9, 0)
+        concated_ints.save(os.path.join(self.tempdir, 'concated_ints.qza'))
+
+        outer_dir = os.path.join(self.tempdir, 'outer_dir')
+        inner_dir = os.path.join(self.tempdir, 'outer_dir', 'inner_dir')
+        os.mkdir(outer_dir)
+        os.mkdir(inner_dir)
+        shutil.copy(os.path.join(self.tempdir, 'concated_ints.qza'), outer_dir)
+        int_seq = Artifact.import_data('IntSequence1', [1, 2, 3, 4])
+        left_ints, _ = self.dp.actions['split_ints'](int_seq)
+        left_ints.save(os.path.join(inner_dir, 'left_ints.qza'))
+
+        mapping = Artifact.import_data('Mapping', {'qiime': 2, 'triangle': 3})
+        int_seq_with_md, = self.dp.actions['identity_with_metadata'](
+            int_seq1,
+            mapping.view(Metadata))
+        int_seq_with_md.save(os.path.join(self.tempdir, 'int_seq_with_md.qza'))
+
+    def tearDown(self):
+        shutil.rmtree(self.tempdir)
+
+    def test_replay_provenance(self):
+        in_fp = os.path.join(self.tempdir, 'concated_ints.qza')
+        out_fp = os.path.join(self.tempdir, 'rendered.txt')
+        result = self.runner.invoke(
+            tools,
+            ['replay-provenance', '--in-fp', in_fp, '--out-fp', out_fp]
+        )
+        self.assertEqual(result.exit_code, 0)
+
+        with open(out_fp, 'r') as fh:
+            rendered = fh.read()
+
+        self.assertIn('qiime tools import', rendered)
+        self.assertIn('--type \'IntSequence1\'', rendered)
+        self.assertIn('--type \'IntSequence2\'', rendered)
+        self.assertIn('--input-path <your data here>', rendered)
+        self.assertIn('--output-path int-sequence1-0.qza', rendered)
+        self.assertIn('--output-path int-sequence1-1.qza', rendered)
+        self.assertIn('--output-path int-sequence2-0.qza', rendered)
+
+        self.assertIn('qiime dummy-plugin concatenate-ints', rendered)
+        self.assertRegex(rendered, '--i-ints[12] int-sequence1-0.qza')
+        self.assertRegex(rendered, '--i-ints[12] int-sequence1-1.qza')
+        self.assertIn('--i-ints3 int-sequence2-0.qza', rendered)
+        self.assertIn('--p-int1 9', rendered)
+        self.assertIn('--p-int2 0', rendered)
+        self.assertIn('--o-concatenated-ints concatenated-ints-0.qza',
+                      rendered)
+
+    def test_replay_provenance_python(self):
+        in_fp = os.path.join(self.tempdir, 'concated_ints.qza')
+        out_fp = os.path.join(self.tempdir, 'rendered.txt')
+        result = self.runner.invoke(
+            tools,
+            ['replay-provenance', '--in-fp', in_fp, '--out-fp', out_fp,
+                '--usage-driver', 'python3']
+        )
+        self.assertEqual(result.exit_code, 0)
+
+        with open(out_fp, 'r') as fh:
+            rendered = fh.read()
+
+        self.assertIn('from qiime2 import Artifact', rendered)
+        self.assertIn('Artifact.import_data', rendered)
+        self.assertIn('dummy_plugin_actions.concatenate_ints', rendered)
+
+    def test_replay_provenance_recurse(self):
+        """
+        If the directory is parsed recursively, both the concated_ints.qza and
+        left_ints.qza will be captured.
+        """
+        in_fp = os.path.join(self.tempdir, 'outer_dir')
+        out_fp = os.path.join(self.tempdir, 'rendered.txt')
+        result = self.runner.invoke(
+            tools,
+            ['replay-provenance', '--in-fp', in_fp, '--out-fp', out_fp,
+                '--usage-driver', 'python3', '--recurse']
+        )
+        self.assertEqual(result.exit_code, 0)
+
+        with open(out_fp, 'r') as fh:
+            rendered = fh.read()
+
+        self.assertIn('dummy_plugin_actions.concatenate_ints', rendered)
+        self.assertIn('dummy_plugin_actions.split_ints', rendered)
+
+    def test_replay_provenance_use_md_without_parse(self):
+        in_fp = os.path.join(self.tempdir, 'outer_dir')
+        out_fp = os.path.join(self.tempdir, 'rendered.txt')
+        result = self.runner.invoke(
+            tools,
+            ['replay-provenance', '--in-fp', in_fp, '--out-fp', out_fp,
+             '--no-parse-metadata', '--use-recorded-metadata']
+        )
+        self.assertEqual(result.exit_code, 1)
+        self.assertIsInstance(result.exception, ValueError)
+        self.assertRegex(str(result.exception),
+                         'Metadata not parsed for replay')
+
+    @patch('qiime2.sdk.util.get_available_usage_drivers',
+           return_value={'cli': ReplayCLIUsage})
+    def test_replay_provenance_usage_driver_not_available(self, patch):
+        in_fp = os.path.join(self.tempdir, 'concated_ints.qza')
+        out_fp = os.path.join(self.tempdir, 'rendered.txt')
+        result = self.runner.invoke(
+            tools,
+            ['replay-provenance', '--in-fp', in_fp, '--out-fp', out_fp,
+                '--usage-driver', 'python3']
+        )
+        self.assertEqual(result.exit_code, 1)
+        self.assertIsInstance(result.exception, ValueError)
+        self.assertIn(
+            'python3 usage driver is not available', str(result.exception)
+        )
+
+    def test_replay_citations(self):
+        in_fp = os.path.join(self.tempdir, 'concated_ints.qza')
+        out_fp = os.path.join(self.tempdir, 'citations.bib')
+        result = self.runner.invoke(
+            tools,
+            ['replay-citations', '--in-fp', in_fp, '--out-fp', out_fp]
+        )
+        self.assertEqual(result.exit_code, 0)
+
+        with open(out_fp) as fh:
+            bib_database = bp.load(fh)
+
+        # use .*? to non-greedily match version strings
+        exp = [
+            r'action\|dummy-plugin:.*?\|method:concatenate_ints\|0',
+            r'framework\|qiime2:.*?\|0',
+            r'plugin\|dummy-plugin:.*?\|0',
+            r'plugin\|dummy-plugin:.*?\|1',
+            r'transformer\|dummy-plugin:.*?\|builtins:list->'
+            r'IntSequenceDirectoryFormat\|0',
+            r'transformer\|dummy-plugin:.*?\|builtins:list->'
+            r'IntSequenceV2DirectoryFormat\|4',
+            r'transformer\|dummy-plugin:.*?\|builtins:list->'
+            r'IntSequenceV2DirectoryFormat\|5',
+            r'transformer\|dummy-plugin:.*?\|builtins:list->'
+            r'IntSequenceV2DirectoryFormat|6',
+            r'transformer\|dummy-plugin:.*?\|builtins:list->'
+            r'IntSequenceV2DirectoryFormat\|8',
+            r'view\|dummy-plugin:.*?\|IntSequenceDirectoryFormat\|0'
+        ]
+
+        self.assertEqual(len(exp), len(bib_database.entries))
+
+        all_records_str = ''
+        for record in bib_database.entries_dict.keys():
+            all_records_str += f' {record}'
+        for record in exp:
+            self.assertRegex(all_records_str, record)
+
+    def test_replay_citations_no_deduplicate(self):
+        in_fp = os.path.join(self.tempdir, 'concated_ints.qza')
+        out_fp = os.path.join(self.tempdir, 'citations.bib')
+        result = self.runner.invoke(
+            tools,
+            ['replay-citations', '--in-fp', in_fp, '--out-fp', out_fp,
+             '--no-deduplicate']
+        )
+        self.assertEqual(result.exit_code, 0)
+
+        with open(out_fp) as fh:
+            bib_database = bp.load(fh)
+        self.assertEqual(28, len(bib_database.entries))
+
+        with open(out_fp) as fh:
+            file_contents = fh.read()
+        framework_citations = \
+            re.compile(r'framework\|qiime2:.*?\|0.*' * 4, re.DOTALL)
+        self.assertRegex(file_contents, framework_citations)
+
+    def test_replay_supplement(self):
+        in_fp = os.path.join(self.tempdir, 'concated_ints.qza')
+        out_fp = os.path.join(self.tempdir, 'supplement.zip')
+        result = self.runner.invoke(
+            tools,
+            ['replay-supplement', '--in-fp', in_fp, '--out-fp', out_fp]
+        )
+        self.assertEqual(result.exit_code, 0)
+        self.assertTrue(zipfile.is_zipfile(out_fp))
+
+        exp = {'python3_replay.py', 'cli_replay.sh', 'citations.bib'}
+        with zipfile.ZipFile(out_fp, 'r') as zfh:
+            self.assertEqual(exp, set(zfh.namelist()))
+
+    def test_replay_supplement_with_metadata(self):
+        in_fp = os.path.join(self.tempdir, 'int_seq_with_md.qza')
+        out_fp = os.path.join(self.tempdir, 'supplement.zip')
+        result = self.runner.invoke(
+            tools,
+            ['replay-supplement', '--in-fp', in_fp, '--out-fp', out_fp]
+        )
+        self.assertEqual(result.exit_code, 0)
+        self.assertTrue(zipfile.is_zipfile(out_fp))
+
+        exp = {
+            'python3_replay.py',
+            'cli_replay.sh',
+            'citations.bib',
+            'recorded_metadata/',
+            'recorded_metadata/dummy_plugin_identity_with_metadata_0/',
+            'recorded_metadata/dummy_plugin_identity_with_metadata_0/'
+            'metadata_0.tsv',
+        }
+        with zipfile.ZipFile(out_fp, 'r') as zfh:
+            self.assertEqual(exp, set(zfh.namelist()))
+
+    def test_replay_supplement_no_metadata_dump(self):
+        in_fp = os.path.join(self.tempdir, 'int_seq_with_md.qza')
+        out_fp = os.path.join(self.tempdir, 'supplement.zip')
+        result = self.runner.invoke(
+            tools,
+            ['replay-supplement', '--in-fp', in_fp, '--out-fp', out_fp,
+             '--no-dump-recorded-metadata']
+        )
+        self.assertEqual(result.exit_code, 0)
+        self.assertTrue(zipfile.is_zipfile(out_fp))
+
+        not_exp = 'recorded_metadata/'
+        with zipfile.ZipFile(out_fp, 'r') as zfh:
+            self.assertNotIn(not_exp, set(zfh.namelist()))
+
+    @patch('qiime2.sdk.util.get_available_usage_drivers', return_value={})
+    def test_replay_supplement_usage_driver_not_available(self, patch):
+        in_fp = os.path.join(self.tempdir, 'concated_ints.qza')
+        out_fp = os.path.join(self.tempdir, 'rendered.txt')
+        result = self.runner.invoke(
+            tools,
+            ['replay-supplement', '--in-fp', in_fp, '--out-fp', out_fp]
+        )
+        self.assertEqual(result.exit_code, 1)
+        self.assertIsInstance(result.exception, ValueError)
+        self.assertIn(
+            'no available usage drivers', str(result.exception)
+        )
 
 
 if __name__ == "__main__":
