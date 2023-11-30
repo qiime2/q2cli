@@ -963,7 +963,8 @@ def modified_environ(*remove, **update):
     is sure to work in all situations.
 
     :param remove: Environment variables to remove.
-    :param update: Dictionary of environment variables and values to add/update.
+    :param update: Dictionary of environment variables and values to
+                   add/update.
     """
     env = os.environ
     update = update or {}
