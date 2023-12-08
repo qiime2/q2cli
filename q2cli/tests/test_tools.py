@@ -455,6 +455,90 @@ class TestExportToFileFormat(TestInspectMetadata):
         self.assertEqual(success, result.output)
 
 
+class TestImport(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.runner = CliRunner()
+
+        cls.tempdir = tempfile.mkdtemp(prefix='qiime2-q2cli-test-temp-')
+
+        cls.in_dir1 = os.path.join(cls.tempdir, 'input1')
+        os.mkdir(cls.in_dir1)
+        with open(os.path.join(cls.in_dir1, 'ints.txt'), 'w') as fh:
+            for i in range(5):
+                fh.write(f'{i}\n')
+            fh.write('a\n')
+
+        cls.in_dir2 = os.path.join(cls.tempdir, 'input2')
+        os.mkdir(cls.in_dir2)
+        with open(os.path.join(cls.in_dir2, 'ints.txt'), 'w') as fh:
+            fh.write('1\n')
+            fh.write('a\n')
+            fh.write('3\n')
+
+        cls.cache = Cache(os.path.join(cls.tempdir, 'new_cache'))
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.tempdir)
+
+    def test_import_min_validate(self):
+        out_fp = os.path.join(self.tempdir, 'out1.qza')
+
+        # import with min allows format error outside of min purview
+        # (validate level min checks only first 5 items)
+        result = self.runner.invoke(tools, [
+            'import', '--type', 'IntSequence1', '--input-path', self.in_dir1,
+            '--output-path', out_fp, '--validate-level', 'min'
+        ])
+        self.assertEqual(result.exit_code, 0)
+
+        # import with max should catch all format errors, max is default
+        result = self.runner.invoke(tools, [
+            'import', '--type', 'IntSequence1', '--input-path',
+            self.in_dir1, '--output-path', out_fp
+        ])
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn('Line 6 is not an integer', result.output)
+
+        out_fp = os.path.join(self.tempdir, 'out2.qza')
+
+        # import with min catches format errors within its purview
+        result = self.runner.invoke(tools, [
+            'import', '--type', 'IntSequence1', '--input-path',
+            self.in_dir2, '--output-path', out_fp, '--validate-level', 'min'
+        ])
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn('Line 2 is not an integer', result.output)
+
+    def test_cache_import_min_validate(self):
+        # import with min allows format error outside of min purview
+        # (validate level min checks only first 5 items)
+        result = self.runner.invoke(tools, [
+            'cache-import', '--type', 'IntSequence1', '--input-path',
+            self.in_dir1, '--cache', str(self.cache.path), '--key', 'foo',
+            '--validate-level', 'min'
+        ])
+        self.assertEqual(result.exit_code, 0)
+
+        # import with max should catch all format errors, max is default
+        result = self.runner.invoke(tools, [
+            'cache-import', '--type', 'IntSequence1', '--input-path',
+            self.in_dir1, '--cache', str(self.cache.path), '--key', 'foo'
+        ])
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn('Line 6 is not an integer', result.output)
+
+        # import with min catches format errors within its purview
+        result = self.runner.invoke(tools, [
+            'cache-import', '--type', 'IntSequence1', '--input-path',
+            self.in_dir2, '--cache', str(self.cache.path), '--key', 'foo',
+            '--validate-level', 'min'
+        ])
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn('Line 2 is not an integer', result.output)
+
+
 class TestCacheTools(unittest.TestCase):
     def setUp(self):
         get_dummy_plugin()

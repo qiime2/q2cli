@@ -233,10 +233,17 @@ def show_formats(queries, importable, exportable, strict, tsv):
                    'provided via --type. Use `qiime tools list-formats '
                    '--importable` to see which formats of input data are '
                    'importable.')
-def import_data(type, input_path, output_path, input_format):
+@click.option('--validate-level', default='max',
+              type=click.Choice(['min', 'max']),
+              help='How much to validate the imported data before creating the'
+                   ' artifact. A value of "max" will generally read the entire'
+                   ' file or directory, whereas "min" will not usually do so.'
+                   ' [default: "max"]')
+def import_data(type, input_path, output_path, input_format, validate_level):
+
     from q2cli.core.config import CONFIG
 
-    artifact = _import(type, input_path, input_format)
+    artifact = _import(type, input_path, input_format, validate_level)
     artifact.save(output_path)
 
     if input_format is None:
@@ -813,11 +820,17 @@ def cache_store(cache, artifact_path, key):
                    'provided via --type. Use `qiime tools list-formats '
                    '--importable` to see which formats of input data are '
                    'importable.')
-def cache_import(type, input_path, cache, key, input_format):
+@click.option('--validate-level', required=False, default='max',
+              type=click.Choice(['min', 'max']),
+              help='How much to validate the imported data before creating the'
+                   ' artifact. A value of "max" will generally read the entire'
+                   ' file or directory, whereas "min" will not usually do so.'
+                   ' [default: "max"]')
+def cache_import(type, input_path, cache, key, input_format, validate_level):
     from qiime2 import Cache
     from q2cli.core.config import CONFIG
 
-    artifact = _import(type, input_path, input_format)
+    artifact = _import(type, input_path, input_format, validate_level)
     _cache = Cache(cache)
     _cache.save(artifact, key)
 
@@ -831,13 +844,14 @@ def cache_import(type, input_path, cache, key, input_format):
     click.echo(CONFIG.cfg_style('success', success))
 
 
-def _import(type, input_path, input_format):
+def _import(type, input_path, input_format, validate_level):
     import qiime2.sdk
     import qiime2.plugin
 
     try:
-        artifact = qiime2.sdk.Artifact.import_data(type, input_path,
-                                                   view_type=input_format)
+        artifact = qiime2.sdk.Artifact.import_data(
+            type, input_path, view_type=input_format,
+            validate_level=validate_level)
     except qiime2.plugin.ValidationError as e:
         header = 'There was a problem importing %s:' % input_path
         q2cli.util.exit_with_error(e, header=header, traceback=None)
