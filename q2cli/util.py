@@ -471,6 +471,10 @@ def _load_input_cache(fp):
 
 def _load_input_file(fp):
     import qiime2.sdk
+    from os.path import expanduser
+
+    # If there is a leading ~ we expand it to be the path to home
+    fp = expanduser(fp)
 
     # test if valid
     peek = None

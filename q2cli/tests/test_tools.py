@@ -455,6 +455,90 @@ class TestExportToFileFormat(TestInspectMetadata):
         self.assertEqual(success, result.output)
 
 
+class TestImport(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.runner = CliRunner()
+
+        cls.tempdir = tempfile.mkdtemp(prefix='qiime2-q2cli-test-temp-')
+
+        cls.in_dir1 = os.path.join(cls.tempdir, 'input1')
+        os.mkdir(cls.in_dir1)
+        with open(os.path.join(cls.in_dir1, 'ints.txt'), 'w') as fh:
+            for i in range(5):
+                fh.write(f'{i}\n')
+            fh.write('a\n')
+
+        cls.in_dir2 = os.path.join(cls.tempdir, 'input2')
+        os.mkdir(cls.in_dir2)
+        with open(os.path.join(cls.in_dir2, 'ints.txt'), 'w') as fh:
+            fh.write('1\n')
+            fh.write('a\n')
+            fh.write('3\n')
+
+        cls.cache = Cache(os.path.join(cls.tempdir, 'new_cache'))
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.tempdir)
+
+    def test_import_min_validate(self):
+        out_fp = os.path.join(self.tempdir, 'out1.qza')
+
+        # import with min allows format error outside of min purview
+        # (validate level min checks only first 5 items)
+        result = self.runner.invoke(tools, [
+            'import', '--type', 'IntSequence1', '--input-path', self.in_dir1,
+            '--output-path', out_fp, '--validate-level', 'min'
+        ])
+        self.assertEqual(result.exit_code, 0)
+
+        # import with max should catch all format errors, max is default
+        result = self.runner.invoke(tools, [
+            'import', '--type', 'IntSequence1', '--input-path',
+            self.in_dir1, '--output-path', out_fp
+        ])
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn('Line 6 is not an integer', result.output)
+
+        out_fp = os.path.join(self.tempdir, 'out2.qza')
+
+        # import with min catches format errors within its purview
+        result = self.runner.invoke(tools, [
+            'import', '--type', 'IntSequence1', '--input-path',
+            self.in_dir2, '--output-path', out_fp, '--validate-level', 'min'
+        ])
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn('Line 2 is not an integer', result.output)
+
+    def test_cache_import_min_validate(self):
+        # import with min allows format error outside of min purview
+        # (validate level min checks only first 5 items)
+        result = self.runner.invoke(tools, [
+            'cache-import', '--type', 'IntSequence1', '--input-path',
+            self.in_dir1, '--cache', str(self.cache.path), '--key', 'foo',
+            '--validate-level', 'min'
+        ])
+        self.assertEqual(result.exit_code, 0)
+
+        # import with max should catch all format errors, max is default
+        result = self.runner.invoke(tools, [
+            'cache-import', '--type', 'IntSequence1', '--input-path',
+            self.in_dir1, '--cache', str(self.cache.path), '--key', 'foo'
+        ])
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn('Line 6 is not an integer', result.output)
+
+        # import with min catches format errors within its purview
+        result = self.runner.invoke(tools, [
+            'cache-import', '--type', 'IntSequence1', '--input-path',
+            self.in_dir2, '--cache', str(self.cache.path), '--key', 'foo',
+            '--validate-level', 'min'
+        ])
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn('Line 2 is not an integer', result.output)
+
+
 class TestCacheTools(unittest.TestCase):
     def setUp(self):
         get_dummy_plugin()
@@ -1083,7 +1167,12 @@ class TestReplay(unittest.TestCase):
         self.assertEqual(result.exit_code, 0)
         self.assertTrue(zipfile.is_zipfile(out_fp))
 
-        exp = {'python3_replay.py', 'cli_replay.sh', 'citations.bib'}
+        exp = {
+            'supplement/',
+            'supplement/python3_replay.py',
+            'supplement/cli_replay.sh',
+            'supplement/citations.bib'
+        }
         with zipfile.ZipFile(out_fp, 'r') as zfh:
             self.assertEqual(exp, set(zfh.namelist()))
 
@@ -1098,13 +1187,15 @@ class TestReplay(unittest.TestCase):
         self.assertTrue(zipfile.is_zipfile(out_fp))
 
         exp = {
-            'python3_replay.py',
-            'cli_replay.sh',
-            'citations.bib',
-            'recorded_metadata/',
-            'recorded_metadata/dummy_plugin_identity_with_metadata_0/',
-            'recorded_metadata/dummy_plugin_identity_with_metadata_0/'
-            'metadata_0.tsv',
+            'supplement/',
+            'supplement/python3_replay.py',
+            'supplement/cli_replay.sh',
+            'supplement/citations.bib',
+            'supplement/recorded_metadata/',
+            'supplement/recorded_metadata/'
+            'dummy_plugin_identity_with_metadata_0/',
+            'supplement/recorded_metadata/'
+            'dummy_plugin_identity_with_metadata_0/metadata_0.tsv',
         }
         with zipfile.ZipFile(out_fp, 'r') as zfh:
             self.assertEqual(exp, set(zfh.namelist()))
@@ -1137,6 +1228,25 @@ class TestReplay(unittest.TestCase):
         self.assertIn(
             'no available usage drivers', str(result.exception)
         )
+
+    def test_replay_supplement_zipfile(self):
+        with tempfile.TemporaryDirectory() as tempdir:
+            in_fp = os.path.join(self.tempdir, 'concated_ints.qza')
+            out_fp = os.path.join(tempdir, 'supplement.zip')
+
+            result = self.runner.invoke(
+                tools,
+                ['replay-supplement', '--in-fp', in_fp, '--out-fp', out_fp]
+            )
+            self.assertEqual(result.exit_code, 0)
+            self.assertTrue(zipfile.is_zipfile(out_fp))
+
+            unzipped_path = os.path.join(tempdir, 'extracted')
+            os.makedirs(unzipped_path)
+            with zipfile.ZipFile(out_fp, 'r') as zfh:
+                zfh.extractall(unzipped_path)
+
+            self.assertEqual(os.listdir(unzipped_path), ['supplement'])
 
 
 if __name__ == "__main__":

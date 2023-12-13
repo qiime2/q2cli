@@ -61,9 +61,9 @@ class TestOption(unittest.TestCase):
     def test_repeated_eager_option_with_callback(self):
         result = self.runner.invoke(
             q2cli.builtin.tools.tools,
-            ['import', '--show-importable-types', '--show-importable-types'])
+            ['list-types', '--tsv', '--tsv'])
 
-        self._assertRepeatedOptionError(result, '--show-importable-types')
+        self._assertRepeatedOptionError(result, '--tsv')
 
     def test_repeated_builtin_flag(self):
         result = self.runner.invoke(
@@ -412,12 +412,13 @@ class WriteReproducibilitySupplementTests(unittest.TestCase):
             self.assertTrue(zipfile.is_zipfile(out_fp))
 
             exp = {
-                'python3_replay.py',
-                'cli_replay.sh',
-                'citations.bib',
-                'recorded_metadata/',
-                'recorded_metadata/dummy_plugin_identity_with_metadata_0/'
-                'metadata_0.tsv',
+                'supplement/',
+                'supplement/python3_replay.py',
+                'supplement/cli_replay.sh',
+                'supplement/citations.bib',
+                'supplement/recorded_metadata/',
+                'supplement/recorded_metadata/'
+                'dummy_plugin_identity_with_metadata_0/metadata_0.tsv',
             }
             with zipfile.ZipFile(out_fp, 'r') as myzip:
                 namelist_set = set(myzip.namelist())
@@ -438,12 +439,13 @@ class WriteReproducibilitySupplementTests(unittest.TestCase):
             self.assertTrue(zipfile.is_zipfile(out_fp))
 
             exp = {
-                'python3_replay.py',
-                'cli_replay.sh',
-                'citations.bib',
-                'recorded_metadata/',
-                'recorded_metadata/dummy_plugin_identity_with_metadata_0/'
-                'metadata_0.tsv',
+                'supplement/',
+                'supplement/python3_replay.py',
+                'supplement/cli_replay.sh',
+                'supplement/citations.bib',
+                'supplement/recorded_metadata/',
+                'supplement/recorded_metadata/'
+                'dummy_plugin_identity_with_metadata_0/metadata_0.tsv',
             }
             with zipfile.ZipFile(out_fp, 'r') as myzip:
                 namelist_set = set(myzip.namelist())

@@ -207,26 +207,6 @@ def show_formats(queries, importable, exportable, strict, tsv):
     _print_descriptions(descriptions, tsv)
 
 
-def show_importable_types(ctx, param, value):
-    if not value or ctx.resilient_parsing:
-        return
-    click.secho('This functionality has been moved to the list-types command.',
-                fg='red', bold=True)
-    click.secho('Run `qiime tools list-types --help` for more information.',
-                fg='red', bold=True)
-    ctx.exit()
-
-
-def show_importable_formats(ctx, param, value):
-    if not value or ctx.resilient_parsing:
-        return
-    click.secho('This functionality has been moved to the list-formats '
-                'command.', fg='red', bold=True)
-    click.secho('Run `qiime tools list-formats --help` for more information.',
-                fg='red', bold=True)
-    ctx.exit()
-
-
 @tools.command(name='import',
                short_help='Import data into a new QIIME 2 Artifact.',
                help="Import data to create a new QIIME 2 Artifact. See "
@@ -236,7 +216,7 @@ def show_importable_formats(ctx, param, value):
                     cls=ToolCommand)
 @click.option('--type', required=True,
               help='The semantic type of the artifact that will be created '
-                   'upon importing. Use --show-importable-types to see what '
+                   'upon importing. Use `qiime tools list-types` to see what '
                    'importable semantic types are available in the current '
                    'deployment.')
 @click.option('--input-path', required=True,
@@ -250,19 +230,20 @@ def show_importable_formats(ctx, param, value):
 @click.option('--input-format', required=False,
               help='The format of the data to be imported. If not provided, '
                    'data must be in the format expected by the semantic type '
-                   'provided via --type.')
-@click.option('--show-importable-types', is_flag=True, is_eager=True,
-              callback=show_importable_types, expose_value=False,
-              help='Show the semantic types that can be supplied to --type '
-                   'to import data into an artifact.')
-@click.option('--show-importable-formats', is_flag=True, is_eager=True,
-              callback=show_importable_formats, expose_value=False,
-              help='Show formats that can be supplied to --input-format to '
-                   'import data into an artifact.')
-def import_data(type, input_path, output_path, input_format):
+                   'provided via --type. Use `qiime tools list-formats '
+                   '--importable` to see which formats of input data are '
+                   'importable.')
+@click.option('--validate-level', default='max',
+              type=click.Choice(['min', 'max']),
+              help='How much to validate the imported data before creating the'
+                   ' artifact. A value of "max" will generally read the entire'
+                   ' file or directory, whereas "min" will not usually do so.'
+                   ' [default: "max"]')
+def import_data(type, input_path, output_path, input_format, validate_level):
+
     from q2cli.core.config import CONFIG
 
-    artifact = _import(type, input_path, input_format)
+    artifact = _import(type, input_path, input_format, validate_level)
     artifact.save(output_path)
 
     if input_format is None:
@@ -819,7 +800,7 @@ def cache_store(cache, artifact_path, key):
                cls=ToolCommand)
 @click.option('--type', required=True,
               help='The semantic type of the artifact that will be created '
-                   'upon importing. Use --show-importable-types to see what '
+                   'upon importing. Use `qiime tools list-types` to see what '
                    'importable semantic types are available in the current '
                    'deployment.')
 @click.option('--input-path', required=True,
@@ -836,20 +817,20 @@ def cache_store(cache, artifact_path, key):
 @click.option('--input-format', required=False,
               help='The format of the data to be imported. If not provided, '
                    'data must be in the format expected by the semantic type '
-                   'provided via --type.')
-@click.option('--show-importable-types', is_flag=True, is_eager=True,
-              callback=show_importable_types, expose_value=False,
-              help='Show the semantic types that can be supplied to --type '
-                   'to import data into an artifact.')
-@click.option('--show-importable-formats', is_flag=True, is_eager=True,
-              callback=show_importable_formats, expose_value=False,
-              help='Show formats that can be supplied to --input-format to '
-                   'import data into an artifact.')
-def cache_import(type, input_path, cache, key, input_format):
+                   'provided via --type. Use `qiime tools list-formats '
+                   '--importable` to see which formats of input data are '
+                   'importable.')
+@click.option('--validate-level', required=False, default='max',
+              type=click.Choice(['min', 'max']),
+              help='How much to validate the imported data before creating the'
+                   ' artifact. A value of "max" will generally read the entire'
+                   ' file or directory, whereas "min" will not usually do so.'
+                   ' [default: "max"]')
+def cache_import(type, input_path, cache, key, input_format, validate_level):
     from qiime2 import Cache
     from q2cli.core.config import CONFIG
 
-    artifact = _import(type, input_path, input_format)
+    artifact = _import(type, input_path, input_format, validate_level)
     _cache = Cache(cache)
     _cache.save(artifact, key)
 
@@ -863,13 +844,14 @@ def cache_import(type, input_path, cache, key, input_format):
     click.echo(CONFIG.cfg_style('success', success))
 
 
-def _import(type, input_path, input_format):
+def _import(type, input_path, input_format, validate_level):
     import qiime2.sdk
     import qiime2.plugin
 
     try:
-        artifact = qiime2.sdk.Artifact.import_data(type, input_path,
-                                                   view_type=input_format)
+        artifact = qiime2.sdk.Artifact.import_data(
+            type, input_path, view_type=input_format,
+            validate_level=validate_level)
     except qiime2.plugin.ValidationError as e:
         header = 'There was a problem importing %s:' % input_path
         q2cli.util.exit_with_error(e, header=header, traceback=None)
