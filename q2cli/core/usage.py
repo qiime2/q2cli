@@ -173,12 +173,10 @@ class CLIUsage(usage.Usage):
 
         return variable
 
-    def construct_collection(self, name, member_type, members):
-        # make sure members is dict to avoid repeated type checking
-        if type(members) is list:
-            members = {str(i): member for i, member in enumerate(members)}
-
-        variable = super().construct_collection(name, member_type, members)
+    def construct_artifact_collection(self, name, members):
+        variable = super().construct_artifact_collection(
+            name, members
+        )
 
         str_namespace = {str(name) for name in self.namespace}
         diff = set(
@@ -192,16 +190,8 @@ class CLIUsage(usage.Usage):
             )
             raise ValueError(msg)
 
-        # make rc dir
         rc_dir = variable.to_interface_name()
-        if os.path.exists(rc_dir):
-            msg = (
-                f'Attempted to create result collection at {rc_dir} but the '
-                'path already exists.'
-            )
-            raise ValueError(msg)
 
-        ext = '.qza' if member_type == 'artifact' else '.qzv'
         keys = members.keys()
         names = [name.to_interface_name() for name in members.values()]
 
@@ -215,9 +205,9 @@ class CLIUsage(usage.Usage):
         names_arg += ')'
 
         lines = [
-            '## ignore: constructing result collection ##',
+            '## constructing result collection ##',
             f'rc_name={rc_dir}',
-            f'ext={ext}',
+            'ext=.qza',
             f'keys={keys_arg}',
             f'names={names_arg}',
             'construct_result_collection',
@@ -227,20 +217,17 @@ class CLIUsage(usage.Usage):
 
         return variable
 
-    def access_collection_member(self, name, collection, key):
-        variable = super().access_collection_member(
-            name, collection, key
+    def get_artifact_collection_member(self, name, variable, key):
+        accessed_variable = super().get_artifact_collection_member(
+            name, variable, key
         )
 
-        rc_dir = collection.to_interface_name()
-        if collection.var_type == 'artifact_collection':
-            member_fp = os.path.join(rc_dir, f'{key}.qza')
-        else:
-            member_fp = os.path.join(rc_dir, f'{key}.qzv')
+        rc_dir = variable.to_interface_name()
+        member_fp = os.path.join(rc_dir, f'{key}.qza')
 
         lines = [
-            '## ignore: accessing result collection member ##',
-            f'ln -s {member_fp} {variable.to_interface_name()}',
+            '## accessing result collection member ##',
+            f'ln -s {member_fp} {accessed_variable.to_interface_name()}',
             '##',
         ]
         self.recorder.extend(lines)

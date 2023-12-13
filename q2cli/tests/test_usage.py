@@ -210,7 +210,7 @@ class ReplayResultCollectionTests(unittest.TestCase):
         use = CLIUsage()
         action.examples['construct_and_access_collection'](use)
         exp = """\
-## ignore: constructing result collection ##
+## constructing result collection ##
 rc_name=rc-in/
 ext=.qza
 keys=( a b )
@@ -220,7 +220,7 @@ construct_result_collection
 qiime dummy-plugin dict-of-ints \\
   --i-ints rc-in/ \\
   --o-output rc-out/
-## ignore: accessing result collection member ##
+## accessing result collection member ##
 ln -s rc-out/b.qza ints-b-from-collection.qza
 ##"""
 
