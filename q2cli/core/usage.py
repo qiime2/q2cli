@@ -178,18 +178,6 @@ class CLIUsage(usage.Usage):
             name, members
         )
 
-        str_namespace = {str(name) for name in self.namespace}
-        diff = set(
-            member.to_interface_name() for member in members.values()
-        ) - str_namespace
-        if diff:
-            msg = (
-                f'{diff} not found in driver\'s namespace. Make sure '
-                'that all ResultCollection members have been properly '
-                'created.'
-            )
-            raise ValueError(msg)
-
         rc_dir = variable.to_interface_name()
 
         keys = members.keys()
