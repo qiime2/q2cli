@@ -7,6 +7,7 @@
 # ----------------------------------------------------------------------------
 
 import os
+import sys
 import subprocess
 import tempfile
 import unittest
@@ -190,6 +191,11 @@ def test_round_trip(action, example):
     use = CLIUsage(enable_assertions=True)
     example_f(use)
     rendered = use.render()
+    if sys.platform.startswith('linux'):
+        # TODO: remove me when arrays are not used in shell
+        extra = dict(executable='/bin/bash')
+    else:
+        extra = dict()
     with tempfile.TemporaryDirectory() as tmpdir:
         for ref, data in use.get_example_data():
             data.save(os.path.join(tmpdir, ref))
@@ -197,7 +203,8 @@ def test_round_trip(action, example):
                        shell=True,
                        check=True,
                        cwd=tmpdir,
-                       env={**os.environ})
+                       env={**os.environ},
+                       **extra)
 
 
 class ReplayResultCollectionTests(unittest.TestCase):
