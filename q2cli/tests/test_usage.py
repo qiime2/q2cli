@@ -9,6 +9,7 @@
 import os
 import subprocess
 import tempfile
+import unittest
 
 from q2cli.core.usage import CLIUsage
 
@@ -197,3 +198,30 @@ def test_round_trip(action, example):
                        check=True,
                        cwd=tmpdir,
                        env={**os.environ})
+
+
+class ReplayResultCollectionTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.plugin = get_dummy_plugin()
+
+    def test_construct_and_access_collection(self):
+        action = self.plugin.actions['dict_of_ints']
+        use = CLIUsage()
+        action.examples['construct_and_access_collection'](use)
+        exp = """\
+## constructing result collection ##
+rc_name=rc-in/
+ext=.qza
+keys=( a b )
+names=( ints-a.qza ints-b.qza )
+construct_result_collection
+##
+qiime dummy-plugin dict-of-ints \\
+  --i-ints rc-in/ \\
+  --o-output rc-out/
+## accessing result collection member ##
+ln -s rc-out/b.qza ints-b-from-collection.qza
+##"""
+
+        self.assertEqual(exp, use.render())

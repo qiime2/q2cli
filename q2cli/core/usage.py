@@ -173,6 +173,55 @@ class CLIUsage(usage.Usage):
 
         return variable
 
+    def construct_artifact_collection(self, name, members):
+        variable = super().construct_artifact_collection(
+            name, members
+        )
+
+        rc_dir = variable.to_interface_name()
+
+        keys = members.keys()
+        names = [name.to_interface_name() for name in members.values()]
+
+        keys_arg = '( '
+        for key in keys:
+            keys_arg += f'{key} '
+        keys_arg += ')'
+        names_arg = '( '
+        for name in names:
+            names_arg += f'{name} '
+        names_arg += ')'
+
+        lines = [
+            '## constructing result collection ##',
+            f'rc_name={rc_dir}',
+            'ext=.qza',
+            f'keys={keys_arg}',
+            f'names={names_arg}',
+            'construct_result_collection',
+            '##',
+        ]
+        self.recorder.extend(lines)
+
+        return variable
+
+    def get_artifact_collection_member(self, name, variable, key):
+        accessed_variable = super().get_artifact_collection_member(
+            name, variable, key
+        )
+
+        rc_dir = variable.to_interface_name()
+        member_fp = os.path.join(rc_dir, f'{key}.qza')
+
+        lines = [
+            '## accessing result collection member ##',
+            f'ln -s {member_fp} {accessed_variable.to_interface_name()}',
+            '##',
+        ]
+        self.recorder.extend(lines)
+
+        return variable
+
     def import_from_format(self, name, semantic_type,
                            variable, view_type=None):
         imported_var = super().import_from_format(
@@ -683,6 +732,25 @@ class ReplayCLIUsage(CLIUsage):
         self.header.extend(build_header(
             self.shebang, self.header_boundary, self.copyright, self.how_to
         ))
+
+        # for creating result collections in bash
+        bash_rc_function = [
+            'construct_result_collection () {',
+            '\tmkdir $rc_name',
+            '\ttouch $rc_name.order',
+            '\tfor key in "${keys[@]}"; do',
+            '\t\techo $key >> $rc_name.order',
+            '\tdone',
+            '\tfor i in "${!keys[@]}"; do',
+            '\t\tln -s ../"${names[i]}" $rc_name"${keys[i]}"$ext',
+            '\tdone',
+            '}'
+        ]
+        self.header.extend([
+            '## function to create result collections ##',
+            *bash_rc_function,
+            '##',
+        ])
 
     def build_footer(self, dag: ProvDAG):
         '''
