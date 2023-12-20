@@ -193,7 +193,7 @@ def test_round_trip(action, example):
     with tempfile.TemporaryDirectory() as tmpdir:
         for ref, data in use.get_example_data():
             data.save(os.path.join(tmpdir, ref))
-        subprocess.run([rendered],
+        subprocess.run(rendered,
                        shell=True,
                        check=True,
                        cwd=tmpdir,
