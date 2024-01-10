@@ -107,13 +107,22 @@ class GeneratedOption(click.Option):
 
     def _consume_metadata(self, ctx, opts):
         # double consume
+        # this consume deals with the metadata file
         md_file, source = super().consume_value(ctx, opts)
         # consume uses self.name, so mutate but backup for after
         backup, self.name = self.name, self.q2_extra_dest
-        md_col, _ = super().consume_value(ctx, opts)
+        try:
+            # this consume deals with the metadata column
+            md_col, _ = super().consume_value(ctx, opts)
+        # If `--m-metadata-column` isn't provided, need to set md_col to None
+        # in order for the click.MissingParameter errors below to be raised
+        except click.MissingParameter:
+            md_col = None
 
         self.name = backup
-
+        # These branches won't get hit unless there's a value associated with
+        # md_col - the try/except case above handled the situation where the
+        # metadata_column parameter itself wasn't provided (vs just a value)
         if (md_col is None) != (md_file is None):
             # missing one or the other
             if md_file is None:

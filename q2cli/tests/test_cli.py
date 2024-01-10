@@ -569,7 +569,7 @@ class TestMetadataSupport(MetadataTestsBase):
 
 
 class TestMetadataColumnSupport(MetadataTestsBase):
-    def test_required_missing(self):
+    def test_required_missing_file(self):
         result = self._run_command(
             'identity-with-metadata-column', '--i-ints', self.input_artifact,
             '--o-out', self.output_artifact)
@@ -577,6 +577,16 @@ class TestMetadataColumnSupport(MetadataTestsBase):
         self.assertEqual(result.exit_code, 1)
         self.assertTrue(result.output.startswith('Usage:'))
         self.assertIn("Missing option '--m-metadata-file'", result.output)
+
+    def test_required_missing_column(self):
+        result = self._run_command(
+            'identity-with-metadata-column', '--i-ints', self.input_artifact,
+            '--m-metadata-file', self.metadata_file1,
+            '--o-out', self.output_artifact)
+
+        self.assertEqual(result.exit_code, 1)
+        self.assertTrue(result.output.startswith('Usage:'))
+        self.assertIn("Missing option '--m-metadata-column'", result.output)
 
     def test_optional_metadata_missing(self):
         result = self._run_command(
