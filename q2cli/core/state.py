@@ -135,6 +135,8 @@ def _get_metavar(type):
         'Str': 'TEXT',
         'Float': 'NUMBER',
         'Bool': '',
+        'Jobs': 'NJOBS',
+        'Threads': 'NTHREADS',
     }
 
     style = qiime2.sdk.util.interrogate_collection_type(type)
