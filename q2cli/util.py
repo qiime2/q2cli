@@ -107,14 +107,8 @@ def output_in_cache(fp):
 
     try:
         if Cache.is_cache(cache_path):
-            if not key.isidentifier():
-                raise ValueError(
-                    f"Key '{key}' is not a valid Python identifier. Keys must "
-                    "be valid Python identifiers. Python identifier rules may "
-                    "be found here https://www.askpython.com/python/"
-                    "python-identifiers-rules-best-practices")
-            else:
-                return True
+            Cache.validate_key(key)
+            return True
     except FileNotFoundError as e:
         # If cache_path doesn't exist, don't treat this as a cache output
         if 'No such file or directory' in str(e):

@@ -730,8 +730,8 @@ class TestCacheCli(unittest.TestCase):
         art2_path = str(self.cache.path) + ':art2'
         art3_path = str(self.cache.path) + ':art3'
 
-        out_path = str(self.cache.path) + ':not_valid_identifier$&;'
-
+        invalid = 'not_valid_identifier$&;'
+        out_path = str(self.cache.path) + ':' + invalid
         result = self._run_command(
             'concatenate-ints', '--i-ints1', art1_path, '--i-ints2', art2_path,
             '--i-ints3', art3_path, '--p-int1', '9', '--p-int2', '10',
@@ -739,7 +739,7 @@ class TestCacheCli(unittest.TestCase):
         )
 
         self.assertEqual(result.exit_code, 1)
-        self.assertIn('Keys must be valid Python identifiers',
+        self.assertIn(f"Key '{invalid}' is not a valid Python identifier",
                       str(result.exception))
 
     def test_artifact_as_metadata_cache(self):
