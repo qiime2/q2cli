@@ -296,23 +296,23 @@ class ActionCommand(BaseCommandMixin, click.Command):
                 click.Option(['--parallel-config'], required=False,
                              type=click.Path(exists=True, dir_okay=False),
                              help='Execute your action in parallel using a '
-                                  'config at the indicated path.'),
-                click.Option(['--use-cache'], required=False,
-                             type=click.Path(exists=True, file_okay=False),
-                             help='Specify the cache to be used for the '
-                                  'intermediate work of this pipeline. If '
-                                  'not provided, the default cache under '
-                                  '$TMP/qiime2/<uname> will be used. '
-                                  'IMPORTANT FOR HPC USERS: If you are on an '
-                                  'HPC system and are using parallel '
-                                  'execution it is important to set this to '
-                                  'a location that is globally accessible to '
-                                  'all nodes in the cluster.')])
+                                  'config at the indicated path.')])
 
         self._misc.extend([
             q2cli.util.example_data_option(
                 self._get_plugin, self.action['id']),
-            q2cli.util.citations_option(self._get_citation_records)])
+            q2cli.util.citations_option(self._get_citation_records),
+            click.Option(['--use-cache'], required=False,
+                type=click.Path(exists=True, file_okay=False),
+                help='Specify the cache to be used for the '
+                    'intermediate work of this pipeline. If '
+                    'not provided, the default cache under '
+                    '$TMP/qiime2/<uname> will be used. '
+                    'IMPORTANT FOR HPC USERS: If you are on an '
+                    'HPC system and are using parallel '
+                    'execution it is important to set this to '
+                    'a location that is globally accessible to '
+                    'all nodes in the cluster.')])
 
         options = [*self._inputs, *self._params, *self._outputs, *self._misc]
         help_ = [action['description']]
