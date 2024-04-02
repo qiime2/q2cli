@@ -303,16 +303,16 @@ class ActionCommand(BaseCommandMixin, click.Command):
                 self._get_plugin, self.action['id']),
             q2cli.util.citations_option(self._get_citation_records),
             click.Option(['--use-cache'], required=False,
-                type=click.Path(exists=True, file_okay=False),
-                help='Specify the cache to be used for the '
-                    'intermediate work of this pipeline. If '
-                    'not provided, the default cache under '
-                    '$TMP/qiime2/<uname> will be used. '
-                    'IMPORTANT FOR HPC USERS: If you are on an '
-                    'HPC system and are using parallel '
-                    'execution it is important to set this to '
-                    'a location that is globally accessible to '
-                    'all nodes in the cluster.')])
+                         type=click.Path(exists=True, file_okay=False),
+                         help='Specify the cache to be used for the '
+                              'intermediate work of this action. If not '
+                              'provided, the default cache under '
+                              '$TMP/qiime2/<uname> will be used. '
+                              'IMPORTANT FOR HPC USERS: If you are on an HPC '
+                              'system and are using parallel execution it is '
+                              'important to set this to a location that is '
+                              'globally accessible to all nodes in the '
+                              'cluster.')])
 
         options = [*self._inputs, *self._params, *self._outputs, *self._misc]
         help_ = [action['description']]
