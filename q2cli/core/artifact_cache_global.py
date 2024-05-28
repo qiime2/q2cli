@@ -38,17 +38,17 @@ def set_used_artifact_cache(args):
 
     # They need to provide some kind of arg to use_cache
     if len(args) < use_cache_idx + 2:
-        exc = ValueError("--use-cache expected an argument but none was "
-                         "provided.")
+        exc = ValueError('--use-cache expected an argument but none was '
+                         'provided.')
         exit_with_error(exc)
 
     cache_path = args[use_cache_idx + 1]
 
     # The arg given should be a path that points to an existing cache
     if not Cache.is_cache(cache_path):
-        exc = ValueError("--use-cache expected a path to an existing cache as "
-                         f"an argument but received {cache_path} which is not "
-                         "a path to an existing cache.")
+        exc = ValueError('--use-cache expected a path to an existing cache as '
+                         f"an argument but received '{cache_path}' which is "
+                         'not a path to an existing cache.')
         exit_with_error(exc)
 
     USED_ARTIFACT_CACHE = Cache(cache_path)

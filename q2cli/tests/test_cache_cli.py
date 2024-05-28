@@ -790,7 +790,7 @@ class TestCacheCli(unittest.TestCase):
 
         self.assertEqual(result.exit_code, 1)
         self.assertIn(
-            'Cache keys cannot be used as output dirs.', str(result.exception))
+            'Cache keys cannot be used as output dirs.', result.output)
 
     def test_parallel(self):
         output = os.path.join(self.tempdir, 'output')
@@ -935,10 +935,39 @@ class TestCacheCli(unittest.TestCase):
         self.assertIn('No such option: --parallel-config', result.output)
 
     def test_no_cache_arg(self):
-        pass
+        art_path = os.path.join(self.tempdir, 'art:1.qza')
+        self.art1.save(art_path)
+
+        left_path = os.path.join(self.tempdir, 'left.qza')
+        right_path = os.path.join(self.tempdir, 'right.qza')
+
+        result = self._run_command(
+            'split-ints', '--i-ints', art_path, '--o-left', left_path,
+            '--o-right', right_path, '--verbose', '--use-cache'
+        )
+
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn(
+            '--use-cache expected an argument but none was provided.',
+            result.output)
 
     def test_cache_arg_invalid(self):
-        pass
+        art_path = os.path.join(self.tempdir, 'art:1.qza')
+        self.art1.save(art_path)
+
+        left_path = os.path.join(self.tempdir, 'left.qza')
+        right_path = os.path.join(self.tempdir, 'right.qza')
+
+        # The path to our artifact is definitely not a cache
+        result = self._run_command(
+            'split-ints', '--i-ints', art_path, '--o-left', left_path,
+            '--o-right', right_path, '--verbose', '--use-cache', art_path
+        )
+
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn(
+            f"received '{art_path}' which is not a path to an existing cache",
+            result.output)
 
     def _load_alias_execution_contexts(self, collection):
         execution_contexts = []
