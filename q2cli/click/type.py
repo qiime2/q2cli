@@ -65,20 +65,22 @@ class QIIME2Type(click.ParamType):
 
     def convert(self, value, param, ctx):
         import qiime2.sdk.util
+        from q2cli.core.artifact_cache_global import USED_ARTIFACT_CACHE
 
-        if value is None:
-            return None  # Them's the rules
+        with USED_ARTIFACT_CACHE:
+            if value is None:
+                return None  # Them's the rules
 
-        if self.is_output:
-            return self._convert_output(value, param, ctx)
+            if self.is_output:
+                return self._convert_output(value, param, ctx)
 
-        if qiime2.sdk.util.is_semantic_type(self.type_expr):
-            return self._convert_input(value, param, ctx)
+            if qiime2.sdk.util.is_semantic_type(self.type_expr):
+                return self._convert_input(value, param, ctx)
 
-        if qiime2.sdk.util.is_metadata_type(self.type_expr):
-            return self._convert_metadata(value, param, ctx)
+            if qiime2.sdk.util.is_metadata_type(self.type_expr):
+                return self._convert_metadata(value, param, ctx)
 
-        return self._convert_primitive(value, param, ctx)
+            return self._convert_primitive(value, param, ctx)
 
     def _convert_output(self, value, param, ctx):
         import os

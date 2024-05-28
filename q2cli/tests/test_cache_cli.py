@@ -934,6 +934,12 @@ class TestCacheCli(unittest.TestCase):
         self.assertEqual(result.exit_code, 1)
         self.assertIn('No such option: --parallel-config', result.output)
 
+    def test_no_cache_arg(self):
+        pass
+
+    def test_cache_arg_invalid(self):
+        pass
+
     def _load_alias_execution_contexts(self, collection):
         execution_contexts = []
 
