@@ -26,7 +26,7 @@ from qiime2.sdk import PluginManager
 from qiime2.core.archive.provenance_lib import DummyArtifacts, ProvDAG
 from qiime2.core.archive.provenance_lib.replay import (
     ReplayConfig, param_is_metadata_column, dump_recorded_md_file,
-    NamespaceCollections, build_import_usage, build_action_usage,
+    ReplayNamespaces, build_import_usage, build_action_usage,
     ActionCollections, replay_provenance, replay_supplement
 )
 from qiime2.core.archive.provenance_lib.usage_drivers import ReplayPythonUsage
@@ -283,7 +283,7 @@ class ReplayCLIUsageTests(unittest.TestCase):
             self.assertTrue(out_path2.is_file())
 
     def test_build_import_usage_cli(self):
-        ns = NamespaceCollections()
+        ns = ReplayNamespaces()
         cfg = ReplayConfig(use=ReplayCLIUsage(),
                            use_recorded_metadata=False, pm=self.pm)
         dag = self.das.concated_ints_v6.dag
@@ -293,12 +293,12 @@ class ReplayCLIUsageTests(unittest.TestCase):
         unq_var_nm = c_to_s_type + '_0'
         build_import_usage(import_node, ns, cfg)
         rendered = cfg.use.render()
-        vars = ns.usg_vars
-        out_name = vars[import_uuid].to_interface_name()
+        usg_var = ns.get_usg_var_record(import_uuid).variable
+        out_name = usg_var.to_interface_name()
 
-        self.assertIsInstance(vars[import_uuid], UsageVariable)
-        self.assertEqual(vars[import_uuid].var_type, 'artifact')
-        self.assertEqual(vars[import_uuid].name, unq_var_nm)
+        self.assertIsInstance(usg_var, UsageVariable)
+        self.assertEqual(usg_var.var_type, 'artifact')
+        self.assertEqual(usg_var.name, unq_var_nm)
         self.assertRegex(rendered, r'qiime tools import \\')
         self.assertRegex(rendered, f"  --type '{import_node.type}'")
         self.assertRegex(rendered, "  --input-path <your data here>")
@@ -310,7 +310,7 @@ class ReplayCLIUsageTests(unittest.TestCase):
         cfg = ReplayConfig(use=ReplayCLIUsage(),
                            use_recorded_metadata=False, pm=self.pm)
 
-        ns = NamespaceCollections()
+        ns = ReplayNamespaces()
         import_var_1 = CLIUsageVariable(
             'imported_ints_0', lambda: None, 'artifact', cfg.use
         )
@@ -319,10 +319,10 @@ class ReplayCLIUsageTests(unittest.TestCase):
         )
         import_uuid_1 = '8dea2f1a-2164-4a85-9f7d-e0641b1db22b'
         import_uuid_2 = '7727c060-5384-445d-b007-b64b41a090ee'
-        ns.usg_vars = {
-            import_uuid_1: import_var_1,
-            import_uuid_2: import_var_2
-        }
+        ns.add_usg_var_record(import_uuid_1, 'imported_ints_0')
+        ns.update_usg_var_record(import_uuid_1, import_var_1)
+        ns.add_usg_var_record(import_uuid_2, 'imported_ints_1')
+        ns.update_usg_var_record(import_uuid_2, import_var_2)
 
         dag = self.das.concated_ints_v6.dag
         action_uuid = '5035a60e-6f9a-40d4-b412-48ae52255bb5'
@@ -334,12 +334,13 @@ class ReplayCLIUsageTests(unittest.TestCase):
         unique_var_name = node.action.output_name + '_0'
         build_action_usage(node, ns, actions.std_actions, action_uuid, cfg)
         rendered = cfg.use.render()
-        out_name = ns.usg_vars[node_uuid].to_interface_name()
 
-        vars = ns.usg_vars
-        self.assertIsInstance(vars[node_uuid], UsageVariable)
-        self.assertEqual(vars[node_uuid].var_type, 'artifact')
-        self.assertEqual(vars[node_uuid].name, unique_var_name)
+        usg_var = ns.get_usg_var_record(node_uuid).variable
+        out_name = usg_var.to_interface_name()
+
+        self.assertIsInstance(usg_var, UsageVariable)
+        self.assertEqual(usg_var.var_type, 'artifact')
+        self.assertEqual(usg_var.name, unique_var_name)
 
         self.assertIn(f'qiime {plugin} {action}', rendered)
         self.assertIn('--i-ints1 imported-ints-0.qza', rendered)
