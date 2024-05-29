@@ -584,9 +584,6 @@ class ActionCommand(BaseCommandMixin, click.Command):
         # Set the USED_ARTIFACT_CACHE back to the default cache. This is mostly
         # useful for the tests that invoke actions back to back to back without
         # exiting the process
-        import time
-        print('sleep')
-        time.sleep(10)
         unset_used_artifact_cache()
 
     def _execute_action(self, action, arguments, cache, recycle_pool=None):
