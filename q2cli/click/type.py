@@ -65,9 +65,9 @@ class QIIME2Type(click.ParamType):
 
     def convert(self, value, param, ctx):
         import qiime2.sdk.util
-        from q2cli.core.artifact_cache_global import USED_ARTIFACT_CACHE
+        from q2cli.core.artifact_cache_global import get_used_artifact_cache
 
-        with USED_ARTIFACT_CACHE:
+        with get_used_artifact_cache():
             if value is None:
                 return None  # Them's the rules
 

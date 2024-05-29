@@ -9,8 +9,11 @@
 from qiime2.core.cache import Cache
 
 
-# Init this to the default temp cache
-USED_ARTIFACT_CACHE = Cache()
+# Do not make this the default cache. If this is the default cache then we will
+# instantiate the default cache when the module is imported which will write a
+# process pool to the default cache which is undesirable if that isn't the
+# cache we will be using for this action
+_USED_ARTIFACT_CACHE = None
 
 
 def set_used_artifact_cache(args):
@@ -21,7 +24,7 @@ def set_used_artifact_cache(args):
     Parameters
     ----------
     args : List[str]
-        The arguments provided on the cli to this QIIME 2 invocation
+        The arguments provided on the cli to this QIIME 2 invocation/
 
     NOTES
     -----
@@ -32,7 +35,7 @@ def set_used_artifact_cache(args):
     """
     from q2cli.util import exit_with_error
 
-    global USED_ARTIFACT_CACHE
+    global _USED_ARTIFACT_CACHE
 
     use_cache_idx = args.index('--use-cache')
 
@@ -51,12 +54,28 @@ def set_used_artifact_cache(args):
                          'not a path to an existing cache.')
         exit_with_error(exc)
 
-    USED_ARTIFACT_CACHE = Cache(cache_path)
+    _USED_ARTIFACT_CACHE = Cache(cache_path)
 
 
 def unset_used_artifact_cache():
     """Set the USED_ARTIFACT_CACHE back to the default cache.
     """
-    global USED_ARTIFACT_CACHE
+    global _USED_ARTIFACT_CACHE
 
-    USED_ARTIFACT_CACHE = Cache()
+    _USED_ARTIFACT_CACHE = None
+
+
+def get_used_artifact_cache():
+    """If the used cache has been set then return it otherwise return the
+    default cache. We use this getter because we don't want to instantiate the
+    default cache unless that is the cache we are using. This is because if we
+    instantiate the default cache we will put a process pool in it, and we want
+    to avoid that unless necessary.
+
+    Returns
+    -------
+    Cache
+        The default cache if the user didn't set a cache or the cache they set
+        if they did set one.
+    """
+    return Cache() if _USED_ARTIFACT_CACHE is None else _USED_ARTIFACT_CACHE

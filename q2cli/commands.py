@@ -378,7 +378,9 @@ class ActionCommand(BaseCommandMixin, click.Command):
         from q2cli.util import (output_in_cache, _get_cache_path_and_key,
                                 get_default_recycle_pool)
         from q2cli.core.artifact_cache_global import (
-            USED_ARTIFACT_CACHE, unset_used_artifact_cache)
+            get_used_artifact_cache, unset_used_artifact_cache)
+
+        cache = get_used_artifact_cache()
 
         output_dir = kwargs.pop('output_dir')
         # If they gave us a cache and key combo as an output dir, we want to
@@ -443,18 +445,18 @@ class ActionCommand(BaseCommandMixin, click.Command):
                 value_ = value
 
                 if isinstance(value, list):
-                    value_ = [USED_ARTIFACT_CACHE.process_pool.save(v)
+                    value_ = [cache.process_pool.save(v)
                               for v in value]
                 elif isinstance(value, dict) or \
                         isinstance(value, ResultCollection):
                     value_ = {
-                        k: USED_ARTIFACT_CACHE.process_pool.save(v)
+                        k: cache.process_pool.save(v)
                         for k, v in value.items()}
                 elif isinstance(value, set):
-                    value_ = set([USED_ARTIFACT_CACHE.process_pool.save(v)
+                    value_ = set([cache.process_pool.save(v)
                                   for v in value])
                 elif value is not None:
-                    value_ = USED_ARTIFACT_CACHE.process_pool.save(value)
+                    value_ = cache.process_pool.save(value)
 
                 arguments[key] = value_
             else:
@@ -477,10 +479,10 @@ class ActionCommand(BaseCommandMixin, click.Command):
             recycle_pool = default_pool
 
         if recycle_pool is not None and recycle_pool != default_pool and \
-                recycle_pool not in USED_ARTIFACT_CACHE.get_pools():
+                recycle_pool not in cache.get_pools():
             msg = ("The pool '%s' does not exist on the cache at '%s'. It "
                    "will be created." %
-                   (recycle_pool, USED_ARTIFACT_CACHE.path))
+                   (recycle_pool, cache.path))
             click.echo(CONFIG.cfg_style('warning', msg))
 
         # `qiime2.util.redirected_stdio` defaults to stdout/stderr when
@@ -519,10 +521,10 @@ class ActionCommand(BaseCommandMixin, click.Command):
 
                     with parallel_config:
                         results = self._execute_action(
-                            action, arguments, recycle_pool)
+                            action, arguments, cache, recycle_pool)
                 else:
                     results = self._execute_action(
-                        action, arguments, recycle_pool)
+                        action, arguments, cache, recycle_pool)
         except Exception as e:
             header = ('Plugin error from %s:'
                       % q2cli.util.to_cli_name(self.plugin['name']))
@@ -577,22 +579,23 @@ class ActionCommand(BaseCommandMixin, click.Command):
         # the very end so if a failure happens during writing results we still
         # have them
         if recycle_pool == default_pool:
-            USED_ARTIFACT_CACHE.remove(recycle_pool)
+            cache.remove(recycle_pool)
 
         # Set the USED_ARTIFACT_CACHE back to the default cache. This is mostly
         # useful for the tests that invoke actions back to back to back without
         # exiting the process
+        import time
+        print('sleep')
+        time.sleep(10)
         unset_used_artifact_cache()
 
-    def _execute_action(self, action, arguments, recycle_pool=None):
-        from q2cli.core.artifact_cache_global import USED_ARTIFACT_CACHE
-
-        with USED_ARTIFACT_CACHE:
+    def _execute_action(self, action, arguments, cache, recycle_pool=None):
+        with cache:
             if recycle_pool is None:
                 results = action(**arguments)
                 results = results._result()
             else:
-                pool = USED_ARTIFACT_CACHE.create_pool(
+                pool = cache.create_pool(
                     key=recycle_pool, reuse=True)
                 with pool:
                     results = action(**arguments)
