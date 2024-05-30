@@ -58,7 +58,7 @@ def set_used_artifact_cache(args):
 
 
 def unset_used_artifact_cache():
-    """Set the USED_ARTIFACT_CACHE back to the None.
+    """Set the USED_ARTIFACT_CACHE back to None.
     """
     global _USED_ARTIFACT_CACHE
 
