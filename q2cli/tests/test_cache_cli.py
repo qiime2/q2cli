@@ -436,6 +436,53 @@ class TestCacheCli(unittest.TestCase):
         self.assertEqual(collection['bar'].view(int), 1)
         self.assertEqual(list(collection.keys()), ['foo', 'bar'])
 
+    def test_use_cache_on_non_pipeline(self):
+        """This test is run in a subprocess so we can assert it created a
+           process pool in the used cache but not in the default cache
+        """
+        default_cache = Cache()
+
+        # Set the non-default cache here to ensure our artifact isn't in the
+        # cache from this step
+        with self.cache:
+            art1 = Artifact.import_data(IntSequence1, [0, 1, 2])
+            art1_path = os.path.join(self.tempdir, 'art1.qza')
+            art1.save(art1_path)
+
+        left_path = str(self.cache.path) + ':left'
+        right_path = str(self.cache.path) + ':right'
+
+        result = self._run_command(
+            'split-ints', '--i-ints', art1_path, '--o-left', left_path,
+            '--o-right', right_path, '--verbose'
+        )
+
+        # Without setting a cache the artifact should have been put in the
+        # default cache
+        self.assertEqual(result.exit_code, 0)
+        self.assertIn(str(art1.uuid), default_cache.get_data())
+
+        # Same as above make sure this step isn't putting the artifact in the
+        # default cache
+        with self.cache:
+            art2 = Artifact.import_data(IntSequence1, [3, 4, 5])
+            art2_path = os.path.join(self.tempdir, 'art2.qza')
+            art2.save(art2_path)
+
+        left_path = str(self.cache.path) + ':left'
+        right_path = str(self.cache.path) + ':right'
+
+        result = self._run_command(
+            'split-ints', '--i-ints', art2_path, '--o-left', left_path,
+            '--o-right', right_path, '--verbose', '--use-cache',
+            str(self.cache.path)
+        )
+
+        # Since we did set a cache the artifact should not be in the default
+        # cache
+        self.assertEqual(result.exit_code, 0)
+        self.assertNotIn(str(art2.uuid), default_cache.get_data())
+
     def test_pipeline_resumption_default(self):
         plugin_action = 'dummy_plugin_resumable_varied_pipeline'
         default_pool = get_default_recycle_pool(plugin_action)
@@ -790,7 +837,7 @@ class TestCacheCli(unittest.TestCase):
 
         self.assertEqual(result.exit_code, 1)
         self.assertIn(
-            'Cache keys cannot be used as output dirs.', str(result.exception))
+            'Cache keys cannot be used as output dirs.', result.output)
 
     def test_parallel(self):
         output = os.path.join(self.tempdir, 'output')
@@ -933,6 +980,41 @@ class TestCacheCli(unittest.TestCase):
 
         self.assertEqual(result.exit_code, 1)
         self.assertIn('No such option: --parallel-config', result.output)
+
+    def test_no_cache_arg(self):
+        art_path = os.path.join(self.tempdir, 'art:1.qza')
+        self.art1.save(art_path)
+
+        left_path = os.path.join(self.tempdir, 'left.qza')
+        right_path = os.path.join(self.tempdir, 'right.qza')
+
+        result = self._run_command(
+            'split-ints', '--i-ints', art_path, '--o-left', left_path,
+            '--o-right', right_path, '--verbose', '--use-cache'
+        )
+
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn(
+            '--use-cache expected an argument but none was provided.',
+            result.output)
+
+    def test_cache_arg_invalid(self):
+        art_path = os.path.join(self.tempdir, 'art:1.qza')
+        self.art1.save(art_path)
+
+        left_path = os.path.join(self.tempdir, 'left.qza')
+        right_path = os.path.join(self.tempdir, 'right.qza')
+
+        # The path to our artifact is definitely not a cache
+        result = self._run_command(
+            'split-ints', '--i-ints', art_path, '--o-left', left_path,
+            '--o-right', right_path, '--verbose', '--use-cache', art_path
+        )
+
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn(
+            f"received '{art_path}' which is not a path to an existing cache",
+            result.output)
 
     def _load_alias_execution_contexts(self, collection):
         execution_contexts = []

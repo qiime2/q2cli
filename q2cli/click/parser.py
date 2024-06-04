@@ -129,8 +129,17 @@ class Q2Parser(parser.OptionParser):
             self._long_opt[opt] = option
 
     def parse_args(self, args):
+        from q2cli.core.artifact_cache_global import set_used_artifact_cache
+
         backup = args.copy()  # args will be mutated by super()
         try:
+            # We need to set this before we would normally parse it out so we
+            # can use the requested cache for all the operations that use a
+            # cache. Look for all uses of USED_ARTIFACT_CACHE. Some of these
+            # are during arg parsing
+            if '--use-cache' in backup:
+                set_used_artifact_cache(backup)
+
             return super().parse_args(args)
         except exceptions.UsageError:
             if '--help' in backup:
