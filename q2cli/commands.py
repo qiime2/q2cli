@@ -355,10 +355,8 @@ class ActionCommand(BaseCommandMixin, click.Command):
         }
 
     def _get_citation_records(self):
-        import q2cli.util
-        pm = q2cli.util.get_plugin_manager()
         # Get plugin level citations
-        citations = list(pm.plugins[self.plugin['name']].citations)
+        citations = list(self._get_plugin().citations)
         # Add action level citations
         citations.extend(self._get_action().citations)
         return tuple(citations)
