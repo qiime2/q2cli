@@ -54,6 +54,9 @@ class CliTests(unittest.TestCase):
         self.assertIn('Installed plugins', result.output)
         self.assertIn('dummy-plugin', result.output)
         self.assertIn('other-plugin', result.output)
+        self.assertIn('Parallel Config', result.output)
+        self.assertIn('Config Source: test config dict', result.output)
+        self.assertIn('Mapping Source: test config dict', result.output)
 
     def test_list_commands(self):
         # top level commands, including a plugin, are present
