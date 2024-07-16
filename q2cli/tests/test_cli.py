@@ -27,6 +27,47 @@ from q2cli.commands import RootCommand
 from q2cli.click.type import QIIME2Type
 
 
+CONFIG_LEVEL_2 = """[parsl]
+strategy = "None"
+
+[[parsl.executors]]
+class = "ThreadPoolExecutor"
+label = "default"
+max_threads = 1
+
+[[parsl.executors]]
+class = "_TEST_EXECUTOR_"
+label = "test"
+max_threads = 1"""
+
+# This is formatted this way to ensure the trailing spaces tomlkit.dumps throws
+# at the end of a bunch of lines for no apparent reason are preserved here
+CONFIG_LEVEL_3 = "{'parsl': Config(" +\
+                 "\n    app_cache=True, " +\
+                 "\n    checkpoint_files=None, " +\
+                 "\n    checkpoint_mode=None, " +\
+                 "\n    checkpoint_period=None, " +\
+                 "\n    executors=(ThreadPoolExecutor(" +\
+                 "\n        label='default', " +\
+                 "\n        max_threads=1, " +\
+                 "\n        storage_access=None, " +\
+                 "\n        thread_name_prefix='', " +\
+                 "\n        working_dir=None" +\
+                 "\n    ), _TEST_EXECUTOR_()), " +\
+                 "\n    garbage_collect=True, " +\
+                 "\n    initialize_logging=True, " +\
+                 "\n    internal_tasks_max_threads=10, " +\
+                 "\n    max_idletime=120.0, " +\
+                 "\n    monitoring=None, " +\
+                 "\n    retries=0, " +\
+                 "\n    retry_handler=None, " +\
+                 "\n    run_dir='runinfo', " +\
+                 "\n    strategy='none', " +\
+                 "\n    strategy_period=5, " +\
+                 "\n    usage_tracking=False" +\
+                 "\n)}"
+
+
 class CliTests(unittest.TestCase):
     def setUp(self):
         get_dummy_plugin()
@@ -54,9 +95,58 @@ class CliTests(unittest.TestCase):
         self.assertIn('Installed plugins', result.output)
         self.assertIn('dummy-plugin', result.output)
         self.assertIn('other-plugin', result.output)
-        self.assertIn('Parallel Config', result.output)
+        self.assertIn('Config', result.output)
         self.assertIn('Config Source: test config dict', result.output)
-        self.assertIn('Mapping Source: test config dict', result.output)
+
+    def test_info_level_0(self):
+        result = self.runner.invoke(info, '--config-level 0')
+        self.assertEqual(result.exit_code, 0)
+        # May not always start with "System versions" if cache updating message
+        # is printed.
+        self.assertIn('System versions', result.output)
+        self.assertIn('Installed plugins', result.output)
+        self.assertIn('dummy-plugin', result.output)
+        self.assertIn('other-plugin', result.output)
+        self.assertNotIn('Config', result.output)
+        self.assertNotIn('Config Source: test config dict', result.output)
+
+    def test_info_level_1(self):
+        result = self.runner.invoke(info, '--config-level 1')
+        self.assertEqual(result.exit_code, 0)
+        # May not always start with "System versions" if cache updating message
+        # is printed.
+        self.assertIn('System versions', result.output)
+        self.assertIn('Installed plugins', result.output)
+        self.assertIn('dummy-plugin', result.output)
+        self.assertIn('other-plugin', result.output)
+        self.assertIn('Config', result.output)
+        self.assertIn('Config Source: test config dict', result.output)
+
+    def test_info_level_2(self):
+        result = self.runner.invoke(info, '--config-level 2')
+        self.assertEqual(result.exit_code, 0)
+        # May not always start with "System versions" if cache updating message
+        # is printed.
+        self.assertIn('System versions', result.output)
+        self.assertIn('Installed plugins', result.output)
+        self.assertIn('dummy-plugin', result.output)
+        self.assertIn('other-plugin', result.output)
+        self.assertIn('Config', result.output)
+        self.assertIn('Config Source: test config dict', result.output)
+        self.assertIn(CONFIG_LEVEL_2, result.output)
+
+    def test_info_level_3(self):
+        result = self.runner.invoke(info, '--config-level 3')
+        self.assertEqual(result.exit_code, 0)
+        # May not always start with "System versions" if cache updating message
+        # is printed.
+        self.assertIn('System versions', result.output)
+        self.assertIn('Installed plugins', result.output)
+        self.assertIn('dummy-plugin', result.output)
+        self.assertIn('other-plugin', result.output)
+        self.assertIn('Config', result.output)
+        self.assertIn('Config Source: test config dict', result.output)
+        self.assertIn(CONFIG_LEVEL_3, result.output)
 
     def test_list_commands(self):
         # top level commands, including a plugin, are present
