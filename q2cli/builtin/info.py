@@ -82,3 +82,10 @@ def info(config_level):
 
     click.secho('\nGetting help', fg='green')
     click.secho('To get help with QIIME 2, visit https://qiime2.org')
+
+    # When we have the final docs for this stuff up we should probably replace
+    # this with a reference to our docs which wil reference the parsl docs
+    if config_level:
+        click.secho('To get help with configuring/understanding QIIME 2 '
+                    'parallelization visit '
+                    'https://parsl.readthedocs.io/en/stable/')
