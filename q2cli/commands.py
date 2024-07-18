@@ -509,14 +509,14 @@ class ActionCommand(BaseCommandMixin, click.Command):
             with qiime2.util.redirected_stdio(stdout=log, stderr=log):
                 if parallel:
                     from qiime2.sdk.parallel_config import \
-                        (get_config_from_file, ParallelConfig)
+                        (load_config_from_file, ParallelConfig)
 
                     action = action.parallel
                     if parallel_config_fp is None:
                         parallel_config = ParallelConfig()
                     else:
                         config, mapping = \
-                              get_config_from_file(parallel_config_fp)
+                              load_config_from_file(parallel_config_fp)
                         parallel_config = ParallelConfig(config, mapping)
 
                     with parallel_config:
