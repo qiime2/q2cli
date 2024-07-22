@@ -67,6 +67,53 @@ CONFIG_LEVEL_3 = "{'parsl': Config(" +\
                  "\n    usage_tracking=False" +\
                  "\n)}"
 
+EXPECTED_CITATIONS = """% use `qiime tools citations` on a QIIME 2 result for complete list
+
+@article{key0,
+ author = {Unger, Donald L},
+ journal = {Arthritis & Rheumatology},
+ number = {5},
+ pages = {949--950},
+ publisher = {Wiley Online Library},
+ title = {Does knuckle cracking lead to arthritis of the fingers?},
+ volume = {41},
+ year = {1998}
+}
+
+@article{key1,
+ author = {Berry, Michael Victor and Geim, Andre Konstantin},
+ journal = {European Journal of Physics},
+ number = {4},
+ pages = {307},
+ publisher = {IOP Publishing},
+ title = {Of flying frogs and levitrons},
+ volume = {18},
+ year = {1997}
+}
+
+@article{key2,
+ author = {Witcombe, Brian and Meyer, Dan},
+ journal = {BMJ},
+ number = {7582},
+ pages = {1285--1287},
+ publisher = {British Medical Journal Publishing Group},
+ title = {Sword swallowing and its side effects},
+ volume = {333},
+ year = {2006}
+}
+
+@article{key3,
+ author = {Reimers, Eigil and Eftestøl, Sindre},
+ journal = {Arctic, antarctic, and alpine research},
+ number = {4},
+ pages = {483--489},
+ publisher = {BioOne},
+ title = {Response behaviors of Svalbard reindeer towards humans and humans disguised as polar bears on Edgeøya},
+ volume = {44},
+ year = {2012}
+}
+"""  # noqa: E501
+
 
 class CliTests(unittest.TestCase):
     def setUp(self):
@@ -451,6 +498,14 @@ class CliTests(unittest.TestCase):
         self.assertEqual(artifact.view(dict), {'foo': '43'})
 
         self.assertIn('deprecated', result.output)
+
+    def test_get_citations(self):
+        qiime_cli = RootCommand()
+        command = qiime_cli.get_command(ctx=None, name='dummy-plugin')
+        result = self.runner.invoke(command, ['split-ints', '--citations'])
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertEqual(result.output, EXPECTED_CITATIONS)
 
 
 class TestOptionalArtifactSupport(unittest.TestCase):
