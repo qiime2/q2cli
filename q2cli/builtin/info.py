@@ -43,8 +43,8 @@ def _echo_plugins():
               default=1,
               show_default=True,
               type=click.IntRange(0, 3),
-              help='Specify the level of detail you want the config to be '
-                   'displayed in')
+              help='The level of detail to be used for displaying the '
+                   'configuration summary.')
 def info(config_level):
     import q2cli.util
     # This import improves performance for repeated _echo_plugins
@@ -61,7 +61,7 @@ def info(config_level):
     click.secho('\nApplication config directory', fg='green')
     click.secho(q2cli.util.get_app_dir())
 
-    if config_level:
+    if config_level > 0:
         click.secho('\nConfig', fg='green')
 
         config, action_executor_mapping, vendored_source = \
@@ -83,8 +83,9 @@ def info(config_level):
     click.secho('\nGetting help', fg='green')
     click.secho('To get help with QIIME 2, visit https://qiime2.org')
 
-    # When we have the final docs for this stuff up we should probably replace
-    # this with a reference to our docs which wil reference the parsl docs
+    # TODO: When we have the final docs for this stuff up we should probably
+    # replace this with a reference to our docs which will reference the parsl
+    # docs
     if config_level:
         click.secho('To get help with configuring/understanding QIIME 2 '
                     'parallelization visit '
