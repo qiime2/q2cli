@@ -89,4 +89,5 @@ def info(config_level):
     if config_level:
         click.secho('To get help with configuring/understanding QIIME 2 '
                     'parallelization visit '
-                    'https://parsl.readthedocs.io/en/stable/')
+                    'https://develop.qiime2.org/en/latest/framework/'
+                    'how-to-guides/parallel-configuration.html')
