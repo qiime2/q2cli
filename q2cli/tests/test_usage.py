@@ -148,6 +148,29 @@ qiime dummy-plugin variadic-input-method \\
 qiime dummy-plugin list-of-ints \\
   --i-ints ints/ \\
   --o-output out/"""),
+        ('dict_of_ints',
+         """\
+qiime dummy-plugin dict-of-ints \\
+  --i-ints ints/ \\
+  --o-output out/
+qiime dev assert-result-type out/Foo.qza \\
+  --qiime-type SingleInt
+qiime dev assert-result-data out/Foo.qza \\
+  --zip-data-path file1.txt \\
+  --expression 1
+## constructing result collection ##
+rc_name=rc-in/
+ext=.qza
+keys=( a b )
+names=( ints-a.qza ints-b.qza )
+construct_result_collection
+##
+qiime dummy-plugin dict-of-ints \\
+  --i-ints rc-in/ \\
+  --o-output rc-out/
+## accessing result collection member ##
+ln -s rc-out/b.qza ints-b-from-collection.qza
+##"""),
         ('viz_collection_pipeline',
          """\
 qiime dummy-plugin viz-collection-pipeline \\
