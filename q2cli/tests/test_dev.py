@@ -121,7 +121,7 @@ class TestDev(unittest.TestCase):
 
         self.assertEqual(result.exit_code, 1)
         self.assertRegex(result.stderr,
-                         r'File\s*\'turkey_sandwhere\.qza\'\s*does not exist')
+                         r'Path\s*\'turkey_sandwhere\.qza\'\s*does not exist')
 
     def test_assert_result_type_invalid_qiime_type(self):
         result = self.runner.invoke(dev,
