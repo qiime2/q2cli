@@ -152,7 +152,9 @@ qiime dummy-plugin list-of-ints \\
          """\
 qiime dummy-plugin viz-collection-pipeline \\
   --i-ints ints.qza \\
-  --o-visualizations visualizations/"""),
+  --o-visualizations visualizations/
+qiime dev assert-result-type visualizations/ \\
+  --qiime-type Collection[Visualization]""")
         ]
 
 
