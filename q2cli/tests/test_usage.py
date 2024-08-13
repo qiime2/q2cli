@@ -148,6 +148,11 @@ qiime dummy-plugin variadic-input-method \\
 qiime dummy-plugin list-of-ints \\
   --i-ints ints/ \\
   --o-output out/"""),
+        ('viz_collection_pipeline',
+         """\
+qiime dummy-plugin viz-collection-pipeline \\
+  --i-ints ints.qza \\
+  --o-visualizations visualizations/"""),
         ]
 
 
