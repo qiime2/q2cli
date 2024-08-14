@@ -38,10 +38,20 @@ def _echo_plugins():
 
 @click.command(help='Display information about current deployment.',
                cls=ToolCommand)
-def info():
+@click.option('--config-level',
+              required=False,
+              default=1,
+              show_default=True,
+              type=click.IntRange(0, 3),
+              help='The level of detail to be used for displaying the '
+                   'configuration summary.')
+def info(config_level):
     import q2cli.util
     # This import improves performance for repeated _echo_plugins
     import q2cli.core.cache
+    from qiime2.sdk.parallel_config import (get_vendored_config,
+                                            load_config_from_dict)
+    from tomlkit import dumps
 
     click.secho('System versions', fg='green')
     _echo_version()
@@ -51,5 +61,35 @@ def info():
     click.secho('\nApplication config directory', fg='green')
     click.secho(q2cli.util.get_app_dir())
 
+    if config_level > 0:
+        click.secho('\nConfig', fg='green')
+
+        config, action_executor_mapping, vendored_source = \
+            get_vendored_config()
+
+        click.secho(f'Config Source: {vendored_source}')
+
+        if action_executor_mapping:
+            config['parsl.executor_mapping'] = action_executor_mapping
+
+        if config_level > 1:
+            if config_level == 2:
+                config = dumps(config)
+            elif config_level == 3:
+                config['parsl'], _ = load_config_from_dict(config)
+
+            click.secho(f'\n{config}')
+
     click.secho('\nGetting help', fg='green')
     click.secho('To get help with QIIME 2, visit https://qiime2.org')
+
+    # TODO: When we have user documentation on parallel QIIME 2 live,
+    # replace this with a reference to our docs which will reference the parsl
+    # docs.
+    if config_level:
+        click.secho('To get help with configuring and/or understanding '
+                    'QIIME 2 parallelization, visit '
+                    'https://develop.qiime2.org/en/latest/framework/'
+                    'how-to-guides/parallel-configuration.html')
+
+    click.secho('\n')
