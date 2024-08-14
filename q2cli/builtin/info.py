@@ -83,11 +83,13 @@ def info(config_level):
     click.secho('\nGetting help', fg='green')
     click.secho('To get help with QIIME 2, visit https://qiime2.org')
 
-    # TODO: When we have the final docs for this stuff up we should probably
+    # TODO: When we have user documentation on parallel QIIME 2 live,
     # replace this with a reference to our docs which will reference the parsl
-    # docs
+    # docs.
     if config_level:
-        click.secho('To get help with configuring/understanding QIIME 2 '
-                    'parallelization visit '
+        click.secho('To get help with configuring and/or understanding '
+                    'QIIME 2 parallelization, visit '
                     'https://develop.qiime2.org/en/latest/framework/'
                     'how-to-guides/parallel-configuration.html')
+
+    click.secho('\n')
