@@ -149,18 +149,22 @@ def reset_theme():
                   'expected type. Intended for developer testing.',
              cls=ToolCommand)
 @click.argument('input-path', type=click.Path(exists=True, file_okay=True,
-                dir_okay=False, readable=True),
+                dir_okay=True, readable=True),
                 metavar=_COMBO_METAVAR)
 @click.option('--qiime-type', required=True,
               help='QIIME 2 data type.')
 def assert_result_type(input_path, qiime_type):
     import q2cli.util
     import qiime2.sdk
+    from os.path import isdir
     from q2cli.core.config import CONFIG
 
     q2cli.util.get_plugin_manager()
     try:
-        result = qiime2.sdk.Result.load(input_path)
+        if isdir(input_path):
+            result = qiime2.sdk.ResultCollection.load(input_path)
+        else:
+            result = qiime2.sdk.Result.load(input_path)
     except Exception as e:
         header = 'There was a problem loading %s as a QIIME 2 Result:' % \
             input_path
