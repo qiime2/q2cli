@@ -587,7 +587,8 @@ class ActionCommand(BaseCommandMixin, click.Command):
         # and removed the pool we were using in which case we do not want to
         # attempt to delete it again and get an error
         with cache.lock:
-            if recycle_pool == default_pool and os.path.exists(recycle_pool):
+            if recycle_pool == default_pool \
+                    and os.path.exists(cache.pools / recycle_pool):
                 cache.remove(recycle_pool)
 
         # Set the USED_ARTIFACT_CACHE back to the default cache. This is mostly
