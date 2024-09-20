@@ -582,8 +582,13 @@ class ActionCommand(BaseCommandMixin, click.Command):
         # succeeded, then we need to clean up the pool. Make sure to do this at
         # the very end so if a failure happens during writing results we still
         # have them
-        if recycle_pool == default_pool:
-            cache.remove(recycle_pool)
+        #
+        # It is possible that another run of the same action already finished
+        # and removed the pool we were using in which case we do not want to
+        # attempt to delete it again and get an error
+        with cache.lock:
+            if recycle_pool == default_pool and os.path.exists(recycle_pool):
+                cache.remove(recycle_pool)
 
         # Set the USED_ARTIFACT_CACHE back to the default cache. This is mostly
         # useful for the tests that invoke actions back to back to back without
