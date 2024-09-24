@@ -14,8 +14,6 @@ import unittest.mock
 import tempfile
 import pkg_resources
 
-from parsl import bash_app
-
 from click.testing import CliRunner
 from qiime2.core.testing.type import (IntSequence1, IntSequence2, Mapping,
                                       SingleInt)
@@ -38,11 +36,6 @@ SECOND_SPLIT = '\n\nSee above for debug info.'
 
 def get_data_path(filename):
     return pkg_resources.resource_filename('q2cli.tests', 'data/%s' % filename)
-
-
-@bash_app
-def _run_command_parallel(command):
-    return command
 
 
 class TestCacheCli(unittest.TestCase):
@@ -1024,26 +1017,66 @@ class TestCacheCli(unittest.TestCase):
             f"received '{art_path}' which is not a path to an existing cache",
             result.output)
 
+    # NOTE: This test may fail stochastically. By running 5 of this action at
+    # once like this, we are almost guaranteed to have this warning be raised
+    # at least once, but it could be messed up by how things are scheduled
     def test_multiple_of_same_action_at_once_default_pool(self):
+        import subprocess
+        import re
+
         art1_path = os.path.join(self.tempdir, 'art1.qza')
         self.art1.save(art1_path)
 
         mapping_path = os.path.join(self.tempdir, 'mapping.qza')
         self.mapping2.save(mapping_path)
 
-        # NOTE: This test may fail stochastically. By running 5 of this action
-        # at once like this, we are almost guaranteed to have this warning be
-        # raised at least once, but it could be messed up by how things are
-        # scheduled
-        with self.assertWarns(Warning):
-            with ParallelConfig():
-                for i in range(5):
-                    _run_command_parallel(
-                        'qiime dummy-plugin typical-pipeline --i-int-sequence'
-                        f' {art1_path} --i-mapping {mapping_path}'
-                        ' --p-do-extra-thing --p-add 10 --output-dir'
-                        f' {os.path.join(self.tempdir, "out")}{i}.qza'
-                        ' --verbose')
+        commands = [
+            'qiime dummy-plugin typical-pipeline --i-int-sequence'
+            f' {art1_path} --i-mapping {mapping_path}'
+            ' --p-do-extra-thing False --output-dir'
+            f' {os.path.join(self.tempdir, "out")}1.qza'
+            ' --verbose',
+            'qiime dummy-plugin typical-pipeline --i-int-sequence'
+            f' {art1_path} --i-mapping {mapping_path}'
+            ' --p-do-extra-thing False --output-dir'
+            f' {os.path.join(self.tempdir, "out")}2.qza'
+            ' --verbose',
+            'qiime dummy-plugin typical-pipeline --i-int-sequence'
+            f' {art1_path} --i-mapping {mapping_path}'
+            ' --p-do-extra-thing False --output-dir'
+            f' {os.path.join(self.tempdir, "out")}3.qza'
+            ' --verbose',
+            'qiime dummy-plugin typical-pipeline --i-int-sequence'
+            f' {art1_path} --i-mapping {mapping_path}'
+            ' --p-do-extra-thing False --output-dir'
+            f' {os.path.join(self.tempdir, "out")}4.qza'
+            ' --verbose',
+            'qiime dummy-plugin typical-pipeline --i-int-sequence'
+            f' {art1_path} --i-mapping {mapping_path}'
+            ' --p-do-extra-thing False --output-dir'
+            f' {os.path.join(self.tempdir, "out")}5.qza'
+            ' --verbose'
+        ]
+
+        processes = [
+            subprocess.Popen(cmd, shell=True,
+                             stderr=subprocess.PIPE) for cmd in commands]
+
+        warned = False
+        regex = 'UserWarning: The named pool path.*does not exist'
+
+        for process in processes:
+            process.wait()
+            self.assertEqual(process.returncode, 0)
+
+            if process.stderr is not None:
+                err = process.stderr.read().decode()
+
+                if re.search(regex, err):
+                    warned = True
+
+        assert warned
+
 
     def _load_alias_execution_contexts(self, collection):
         execution_contexts = []
