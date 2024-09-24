@@ -25,7 +25,7 @@ from q2cli.commands import RootCommand
 from q2cli.builtin.tools import tools
 from q2cli.util import get_default_recycle_pool
 from qiime2.sdk import Artifact, Visualization, ResultCollection
-from qiime2.sdk.parallel_config import ParallelConfig, PARALLEL_CONFIG
+from qiime2.sdk.parallel_config import PARALLEL_CONFIG
 
 
 # What to split the errors raised by intentionally failed pipeline on to get
@@ -1076,7 +1076,6 @@ class TestCacheCli(unittest.TestCase):
                     warned = True
 
         assert warned
-
 
     def _load_alias_execution_contexts(self, collection):
         execution_contexts = []
