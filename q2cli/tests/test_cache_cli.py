@@ -1067,10 +1067,10 @@ class TestCacheCli(unittest.TestCase):
 
         for process in processes:
             process.wait()
-            self.assertEqual(process.returncode, 0)
-
             if process.stderr is not None:
                 err = process.stderr.read().decode()
+                if process.returncode != 0:
+                    raise ValueError(err)
 
                 if re.search(regex, err):
                     warned = True
