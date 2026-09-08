@@ -26,8 +26,9 @@ def dev():
                   "changes to take effect in the CLI. A refresh of the cache "
                   "is necessary because package versions do not typically "
                   "change each time an update is made to a package's code. "
-                  "Setting the environment variable Q2CLIDEV to any value "
-                  "will always refresh the cache when a command is run.",
+                  "Setting the environment variable RACHISCLIDEV (or the "
+                  "historical Q2CLIDEV) to any value will always refresh the "
+                  "cache when a command is run.",
              cls=ToolCommand)
 def refresh_cache():
     import rachis_cli.core.cache

@@ -23,11 +23,11 @@ class DeploymentCache:
     rachis-cli itself will trigger a cache refresh.
 
     Two mechanisms are provided to force a cache refresh. Setting the
-    environment variable Q2CLIDEV to any value will cause the cache to be
-    refreshed upon instantiation. Calling `.refresh()` will also refresh the
-    cache. Forced refreshing of the cache is useful for plugin and/or
-    rachis-cli developers who want their changes to take effect in the CLI
-    without changing their package versions.
+    environment variable RACHISCLIDEV (or the historical Q2CLIDEV) to any
+    value will cause the cache to be refreshed upon instantiation. Calling
+    `.refresh()` will also refresh the cache. Forced refreshing of the cache
+    is useful for plugin and/or rachis-cli developers who want their changes
+    to take effect in the CLI without changing their package versions.
 
     Cached CLI state is stored in a state.json file under the cache directory.
     It is not a public file format and it is not versioned. rachis-cli is
@@ -41,8 +41,9 @@ class DeploymentCache:
     multithreaded/multiprocessing situation). Also, having a single instance
     improves performance by only reading and/or refreshing the cache a
     single time during its lifetime. Having two instances could, for example,
-    trigger two cache refreshes if Q2CLIDEV is set. To support these use-cases,
-    a module-level `CACHE` variable stores a single instance of this class.
+    trigger two cache refreshes if RACHISCLIDEV is set. To support these
+    use-cases, a module-level `CACHE` variable stores a single instance of
+    this class.
 
     """
 
@@ -59,8 +60,9 @@ class DeploymentCache:
 
         self._cache_dir = self._get_cache_dir()
 
-        # TODO: update Q2CLIDEV to RACHISCLIDEV
-        refresh = 'Q2CLIDEV' in os.environ
+        # RACHISCLIDEV is the current name; Q2CLIDEV is historical
+        # and remains supported. The two are interchangeable.
+        refresh = 'RACHISCLIDEV' in os.environ or 'Q2CLIDEV' in os.environ
         self._state = self._get_cached_state(refresh=refresh)
 
     @property
@@ -135,10 +137,10 @@ class DeploymentCache:
 
     def _get_current_requirements(self):
         """Includes installed versions of rachis_cli and rachis plugins."""
-        import os
         import itertools
         import importlib.metadata
         import rachis_cli
+        from rachis.core.util import in_test_mode
 
         reqs = {f'rachis_cli=={rachis_cli.__version__}'}
 
@@ -158,7 +160,7 @@ class DeploymentCache:
         for entry_point in itertools.chain(
                 importlib.metadata.entry_points(group='rachis.plugins'),
                 importlib.metadata.entry_points(group='qiime2.plugins')):
-            if 'QIIMETEST' in os.environ:
+            if in_test_mode():
                 if entry_point.name in ('dummy-plugin', 'other-plugin'):
                     reqs.add(f'{entry_point.name}=={entry_point.dist.version}')
             else:
