@@ -132,7 +132,7 @@ class CLIUsageVariable(usage.UsageVariable):
 
         lines = [
             'rachis dev assert-result-type %s \\' % (input_path,),
-            INDENT + '--qiime-type %s' % (str(semantic_type),),
+            INDENT + '--type %s' % (str(semantic_type),),
         ]
 
         self.use.recorder.extend(lines)

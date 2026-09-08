@@ -151,10 +151,9 @@ def reset_theme():
 @click.argument('input-path', type=click.Path(exists=True, file_okay=True,
                 dir_okay=True, readable=True),
                 metavar=_COMBO_METAVAR)
-# TODO: we should probably change this to --rachis-type
-@click.option('--qiime-type', required=True,
+@click.option('--type', 'rachis_type', required=True,
               help='rachis data type.')
-def assert_result_type(input_path, qiime_type):
+def assert_rachis_type(input_path, rachis_type):
     import rachis_cli.util
     import rachis.sdk
     from os.path import isdir
@@ -171,16 +170,16 @@ def assert_result_type(input_path, qiime_type):
             input_path
         rachis_cli.util.exit_with_error(e, header=header)
 
-    if str(result.type) != qiime_type:
+    if str(result.type) != rachis_type:
         try:
-            msg = 'Expected %s, observed %s' % (qiime_type, result.type)
+            msg = 'Expected %s, observed %s' % (rachis_type, result.type)
             raise AssertionError(msg)
         except Exception as e:
             header = 'There was a problem asserting the type:'
             rachis_cli.util.exit_with_error(e, header=header)
     else:
         msg = 'The input file (%s) type and the expected type (%s)' \
-              ' match' % (input_path, qiime_type)
+              ' match' % (input_path, rachis_type)
         click.echo(CONFIG.cfg_style('success', msg))
 
 

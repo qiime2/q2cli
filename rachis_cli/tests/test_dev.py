@@ -83,7 +83,7 @@ class TestDev(unittest.TestCase):
         result = self.runner.invoke(dev,
                                     ['assert-result-type',
                                      self.mapping_path,
-                                     '--qiime-type', 'Mapping'])
+                                     '--type', 'Mapping'])
 
         # single regex to account for tempdir path
 
@@ -104,7 +104,7 @@ class TestDev(unittest.TestCase):
         result = self.runner.invoke(dev,
                                     ['assert-result-type',
                                      self.viz_path,
-                                     '--qiime-type',
+                                     '--type',
                                      'Visualization'])
 
         expected_regex = r'The input file \(.*viz\.qzv\) type and the'\
@@ -117,7 +117,7 @@ class TestDev(unittest.TestCase):
         result = self.runner.invoke(dev,
                                     ['assert-result-type',
                                      'turkey_sandwhere.qza',
-                                     '--qiime-type', 'Mapping'])
+                                     '--type', 'Mapping'])
 
         self.assertEqual(result.exit_code, 1)
         self.assertRegex(result.stderr,
@@ -127,7 +127,7 @@ class TestDev(unittest.TestCase):
         result = self.runner.invoke(dev,
                                     ['assert-result-type',
                                      self.mapping_path,
-                                     '--qiime-type', 'Squid'])
+                                     '--type', 'Squid'])
         self.assertEqual(result.exit_code, 1)
         self.assertIn('Expected Squid, observed Mapping', result.stderr)
 

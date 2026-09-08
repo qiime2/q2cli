@@ -112,9 +112,9 @@ rachis dev assert-result-data right2.qza \\
   --zip-data-path ints.txt \\
   --expression 1
 rachis dev assert-result-type right2.qza \\
-  --qiime-type IntSequence1
+  --type IntSequence1
 rachis dev assert-result-type out-map1.qza \\
-  --qiime-type Mapping"""),
+  --type Mapping"""),
         ('optional_artifacts_method',
          """\
 rachis dummy-plugin optional-artifacts-method \\
@@ -154,7 +154,7 @@ rachis dummy-plugin dict-of-ints \\
   --i-ints ints/ \\
   --o-output out/
 rachis dev assert-result-type out/Foo.qza \\
-  --qiime-type SingleInt
+  --type SingleInt
 rachis dev assert-result-data out/Foo.qza \\
   --zip-data-path file1.txt \\
   --expression 1
@@ -177,7 +177,7 @@ rachis dummy-plugin viz-collection-pipeline \\
   --i-ints ints.qza \\
   --o-visualizations visualizations/
 rachis dev assert-result-type visualizations/ \\
-  --qiime-type Collection[Visualization]""")
+  --type Collection[Visualization]""")
         ]
 
 
