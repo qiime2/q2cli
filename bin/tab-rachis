@@ -37,7 +37,7 @@ if [ -n "${_rachis_meta}" ]; then
   # Fall back to the front-ends provided by rachis-cli itself if the entry
   # point metadata is missing (e.g. an uninstalled source checkout).
   if [ -z "${_rachis_names}" ]; then
-    _rachis_names="rachis qiime"
+    _rachis_names="rachis"
   fi
 
   # NOTE: `_RACHIS_COMPLETION_PATH` is intentionally left set in the shell -

@@ -40,9 +40,9 @@ your .zshrc:
 @click.version_option(prog_name='rachis-cli',
                       message='%(prog)s version %(version)s\nRun `rachis info`'
                               ' for more version details.')
-def qiime():
+def rachis():
     pass
 
 
 if __name__ == '__main__':
-    qiime()
+    rachis()

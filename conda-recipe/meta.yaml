@@ -6,8 +6,7 @@ source:
 build:
   script: make install
   entry_points:
-  - qiime=rachis_cli.__main__:qiime
-  - rachis=rachis_cli.__main__:qiime
+  - rachis=rachis_cli.__main__:rachis
 requirements:
   host:
   - python {{ python }}

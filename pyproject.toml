@@ -13,12 +13,10 @@ Homepage = "https://qiime2.org"
 Repository = "https://github.com/rachis-org/rachis-cli"
 
 [project.scripts]
-"qiime" = "rachis_cli.__main__:qiime"
-"rachis" = "rachis_cli.__main__:qiime"
+"rachis" = "rachis_cli.__main__:rachis"
 
 [project.entry-points.'rachis.cli_commands']
-"qiime" = "rachis_cli.__main__:qiime"
-"rachis" = "rachis_cli.__main__:qiime"
+"rachis" = "rachis_cli.__main__:rachis"
 
 [project.entry-points.'rachis.usage_drivers']
 "cli" = "rachis_cli.core.usage:ReplayCLIUsage"

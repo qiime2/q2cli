@@ -29,7 +29,7 @@ def write_bash_completion_script(plugins, path):
     import os.path
     import stat
     import textwrap
-    from rachis_cli.__main__ import qiime as root
+    from rachis_cli.__main__ import rachis as root
 
     # `write_bash_completion_script` is called by
     # `rachis_cli.cache.DeploymentCache` when it is refreshing its cache.
