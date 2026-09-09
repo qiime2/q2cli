@@ -51,6 +51,35 @@ def get_cli_command_names():
                   importlib.metadata.entry_points(group='rachis.cli_commands'))
 
 
+# Rendered into cached example text in place of the front-end name. The
+# examples are rendered once per deployment but read by every front-end in
+# it, so the name cannot be resolved until the text is printed.
+BASE_COMMAND_TOKEN = '<base-command>'
+
+
+def get_base_command(default='rachis'):
+    """The name of the CLI front-end the user invoked.
+
+    Returns the invoked name (`qiime` or `mosh`) when it is one of the
+    front-ends installed in this deployment and defaults to `rachis` otherwise.
+    The fallback covers invocations with no click context such as documentation
+    builds and direct use of a usage driver, as well as program names that
+    are not front-ends at all, such as `python -m rachis_cli`.
+
+    """
+    import click
+
+    ctx = click.get_current_context(silent=True)
+    if ctx is None:
+        return default
+
+    name = ctx.find_root().info_name
+    if name not in get_cli_command_names():
+        return default
+
+    return name
+
+
 def hidden_to_cli_name(name):
     # Safety first
     if not name.startswith('_'):

@@ -671,8 +671,12 @@ class ActionCommand(BaseCommandMixin, click.Command):
 
     def format_epilog(self, ctx, formatter):
         if self.action['epilog']:
+            import rachis_cli.util
+
+            base_command = rachis_cli.util.get_base_command()
+            token = rachis_cli.util.BASE_COMMAND_TOKEN
             with formatter.section(click.style('Examples', bold=True)):
                 for line in self.action['epilog']:
                     formatter.write(' ' * formatter.current_indent)
-                    formatter.write(line)
+                    formatter.write(line.replace(token, base_command))
                     formatter.write('\n')

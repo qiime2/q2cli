@@ -113,7 +113,8 @@ class CLIUsageVariable(usage.UsageVariable):
             input_path = self._key_helper(input_path, key)
 
         lines = [
-            'rachis dev assert-result-data %s \\' % (input_path,),
+            '%s dev assert-result-data %s \\'
+            % (self.use.base_command, input_path),
             INDENT + '--zip-data-path %s \\' % (path,),
             INDENT + '--expression %s' % (expr,),
         ]
@@ -131,7 +132,8 @@ class CLIUsageVariable(usage.UsageVariable):
             input_path = self._key_helper(input_path, key)
 
         lines = [
-            'rachis dev assert-result-type %s \\' % (input_path,),
+            '%s dev assert-result-type %s \\'
+            % (self.use.base_command, input_path),
             INDENT + '--type %s' % (str(semantic_type),),
         ]
 
@@ -141,12 +143,18 @@ class CLIUsageVariable(usage.UsageVariable):
 class CLIUsage(usage.Usage):
     INDENT = ' ' * 2
 
-    def __init__(self, enable_assertions=False, action_collection_size=None):
+    def __init__(self, enable_assertions=False, action_collection_size=None,
+                 base_command=None):
         super().__init__()
         self.recorder = []
         self.init_data = []
         self.enable_assertions = enable_assertions
         self.action_collection_size = action_collection_size
+        # Resolved from the invocation unless a caller supplies one. Rendering
+        # that outlives the invocation (see `DeploymentCache`) must pass
+        # `util.BASE_COMMAND_TOKEN` instead.
+        self.base_command = (base_command if base_command is not None
+                             else util.get_base_command())
         self.output_dir_counter = collections.defaultdict(int)
 
     def usage_variable(self, name, factory, var_type):
@@ -231,7 +239,7 @@ class CLIUsage(usage.Usage):
         out_fp = imported_var.to_interface_name()
 
         lines = [
-            'rachis tools import \\',
+            '%s tools import \\' % (self.base_command,),
             self.INDENT + '--type %r \\' % (semantic_type,)
         ]
 
@@ -271,7 +279,8 @@ class CLIUsage(usage.Usage):
 
     def peek(self, variable):
         var_name = variable.to_interface_name()
-        self.recorder.append('rachis tools peek %s' % var_name)
+        self.recorder.append(
+            '%s tools peek %s' % (self.base_command, var_name))
 
     def merge_metadata(self, name, *variables):
         var = super().merge_metadata(name, *variables)
@@ -306,7 +315,9 @@ class CLIUsage(usage.Usage):
 
         plugin_name = util.to_cli_name(action.plugin_id)
         action_name = util.to_cli_name(action.action_id)
-        self.recorder.append('rachis %s %s \\' % (plugin_name, action_name))
+        self.recorder.append(
+            '%s %s %s \\'
+            % (self.base_command, plugin_name, action_name))
 
         action_f = action.get_action()
         action_state = get_action_state(action_f)
@@ -458,7 +469,8 @@ class ReplayCLIUsage(CLIUsage):
         f'{__package__}.assets', 'cli_howto.txt'
     ).split('\n')
 
-    def __init__(self, enable_assertions=False, action_collection_size=None):
+    def __init__(self, enable_assertions=False, action_collection_size=None,
+                 base_command=None):
         '''
         Identical to parent but creates header and footer attributes.
 
@@ -469,8 +481,11 @@ class ReplayCLIUsage(CLIUsage):
         action_collection_size : int
             The number of outputs returned by an action above which outputs are
             grouped into and accessed from an --output-dir.
+        base_command : str
+            The front-end name to render examples with. Resolved from the
+            invocation when not provided.
         '''
-        super().__init__()
+        super().__init__(base_command=base_command)
         self.header = []
         self.footer = []
         self.enable_assertions = enable_assertions
@@ -505,11 +520,11 @@ class ReplayCLIUsage(CLIUsage):
         else:  # no matching param name
             line = self.INDENT + (
                 '# FIXME: The following parameter name was not found in '
-                'your current\n  # rachis environment. This may occur '
-                'when the plugin version you have\n  # installed does not '
-                'match the version used in the original analysis.\n  # '
-                'Please see the docs and correct the parameter name '
-                'before running.')
+                f'your current\n  # {self.base_command} environment. '
+                'This may occur when the plugin version you have\n  '
+                '# installed does not match the version used in the '
+                'original analysis.\n  # Please see the docs and correct '
+                'the parameter name before running.')
             self.recorder.append(line)
             self._append_unknown_param(param_name, value)
 
@@ -581,7 +596,7 @@ class ReplayCLIUsage(CLIUsage):
         out_fp = imported_var.to_interface_name()
 
         lines = [
-            'rachis tools import \\',
+            '%s tools import \\' % (self.base_command,),
             self.INDENT + '--type %r \\' % (semantic_type,)
         ]
 
@@ -682,7 +697,9 @@ class ReplayCLIUsage(CLIUsage):
         inputs: UsageInputs,
         outputs: UsageOutputs
     ):
-        self.recorder.append('rachis %s %s \\' % (plugin_name, action_name))
+        self.recorder.append(
+            '%s %s %s \\'
+            % (self.base_command, plugin_name, action_name))
 
         variables = Usage.action(self, action, inputs, outputs)
         vars_dict = variables._asdict()
@@ -738,10 +755,12 @@ class ReplayCLIUsage(CLIUsage):
 
         self.recorder.append(
             '# FIXME: The following action was not found in your current '
-            'rachis\n# environment. Please ensure the action and its '
-            'parameters are correct before\n# running.'
+            f'{self.base_command}\n# environment. Please ensure the action '
+            'and its parameters are correct before\n# running.'
         )
-        self.recorder.append('rachis %s %s \\' % (plugin_name, action_name))
+        self.recorder.append(
+            '%s %s %s \\'
+            % (self.base_command, plugin_name, action_name))
 
         for param_name, value in ins.items():
             self._append_unknown_param(param_name, value)

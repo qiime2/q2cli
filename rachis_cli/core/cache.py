@@ -270,11 +270,16 @@ class DeploymentCache:
         return state
 
     def _get_action_epilog(self, action):
+        import rachis_cli.util
         import rachis_cli.core.usage
 
         lines = []
         for name, example in action.examples.items():
-            use = rachis_cli.core.usage.CLIUsage()
+            # Rendered once per deployment but read by every front-end
+            # installed in it, so the front-end name is left as a token for
+            # `ActionCommand.format_epilog` to resolve when it prints.
+            use = rachis_cli.core.usage.CLIUsage(
+                base_command=rachis_cli.util.BASE_COMMAND_TOKEN)
 
             use.comment('### example: %s\n' % (name.replace('_', ' '),))
             example(use)
