@@ -14,6 +14,7 @@ import unittest
 import configparser
 import zipfile
 
+import click
 import pandas as pd
 
 from click.testing import CliRunner
@@ -452,6 +453,22 @@ class WriteReproducibilitySupplementTests(unittest.TestCase):
                 namelist_set = set(myzip.namelist())
                 for item in exp:
                     self.assertIn(item, namelist_set)
+
+
+class BaseCommandTests(unittest.TestCase):
+    def setUp(self):
+        self.command = click.Command('root')
+
+    def test_installed_front_end(self):
+        front_ends = rachis_cli.util.get_cli_command_names()
+        self.assertTrue(front_ends)
+
+        for front_end in front_ends:
+            with self.subTest(front_end=front_end):
+                with click.Context(self.command, info_name=front_end):
+                    obs = rachis_cli.util.get_base_command()
+
+                self.assertEqual(obs, front_end)
 
 
 if __name__ == "__main__":

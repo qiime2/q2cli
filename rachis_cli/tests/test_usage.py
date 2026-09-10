@@ -201,6 +201,24 @@ def test_templated(dummy_plugin, action, exp):
     assert exp == obs
 
 
+@pytest.mark.parametrize('base_command', ['rachis', 'qiime', 'mosh'])
+def test_templated_base_command(dummy_plugin, base_command):
+    obs = ''
+    for action in dummy_plugin.actions.values():
+        for example_f in action.examples.values():
+            use = CLIUsage(enable_assertions=True,
+                           base_command=base_command)
+            example_f(use)
+            obs += use.render()
+            obs += '\n'
+
+    rendered = [line for line in obs.splitlines()
+                if line.startswith(('rachis ', 'qiime ', 'mosh '))]
+
+    assert rendered
+    assert all(line.startswith(base_command + ' ') for line in rendered)
+
+
 def get_rt_tests():
     tests = []
     try:

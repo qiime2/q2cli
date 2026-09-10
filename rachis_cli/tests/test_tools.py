@@ -28,7 +28,7 @@ from rachis.sdk.result import Result
 from rachis.sdk.plugin_manager import PluginManager
 from rachis.core.annotate import Note
 
-from rachis_cli.util import load_metadata
+from rachis_cli.util import load_metadata, get_cli_command_names
 from rachis_cli.builtin.tools import tools
 from rachis_cli.commands import RootCommand
 from rachis_cli.core.usage import ReplayCLIUsage
@@ -1074,6 +1074,29 @@ class TestReplay(unittest.TestCase):
         self.assertIn('--p-int2 0', rendered)
         self.assertIn('--o-concatenated-ints concatenated-ints-0.qza',
                       rendered)
+
+    def test_replay_provenance_base_command(self):
+        in_fp = os.path.join(self.tempdir, 'concated_ints.qza')
+
+        for base_command in get_cli_command_names():
+            with self.subTest(base_command=base_command):
+                out_fp = os.path.join(
+                    self.tempdir, '%s_rendered.txt' % base_command)
+                result = self.runner.invoke(
+                    tools,
+                    ['replay-provenance', '--in-fp', in_fp,
+                     '--out-fp', out_fp],
+                    prog_name=base_command
+                )
+                self.assertEqual(result.exit_code, 0)
+
+                with open(out_fp, 'r') as fh:
+                    rendered = fh.read()
+
+                self.assertIn('%s tools import' % base_command, rendered)
+                self.assertIn(
+                    '%s dummy-plugin concatenate-ints' % base_command,
+                    rendered)
 
     def test_replay_provenance_python(self):
         in_fp = os.path.join(self.tempdir, 'concated_ints.qza')

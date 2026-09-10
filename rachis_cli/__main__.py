@@ -37,9 +37,9 @@ your .zshrc:
 @click.command(cls=rachis_cli.commands.RootCommand,
                invoke_without_command=True,
                no_args_is_help=True, help=ROOT_COMMAND_HELP)
-@click.version_option(prog_name='rachis-cli',
-                      message='%(prog)s version %(version)s\nRun `rachis info`'
-                              ' for more version details.')
+@click.version_option(package_name='rachis-cli',
+                      message='%(package)s version %(version)s\n'
+                              'Run `%(prog)s info` for more version details.')
 def rachis():
     pass
 

@@ -32,6 +32,9 @@ from rachis_cli.builtin.tools import tools
 from rachis_cli.commands import PluginCommand, RootCommand
 from rachis_cli.click.type import QIIME2Type
 from rachis_cli.core.state import get_plugin_state
+from rachis_cli.util import (
+    BASE_COMMAND_TOKEN, get_cli_command_names
+)
 
 
 CONFIG_LEVEL_2 = """[parsl]
@@ -240,6 +243,21 @@ class CliTests(unittest.TestCase):
         self.assertNotIn('mapping_viz', commands)
         self.assertNotIn('_underscore_method', commands)
         self.assertNotIn('-underscore-method', commands)
+
+    def test_action_examples_base_command(self):
+        command = RootCommand().get_command(ctx=None, name='dummy-plugin')
+
+        for base_command in get_cli_command_names():
+            with self.subTest(base_command=base_command):
+                result = self.runner.invoke(
+                    command, ['concatenate-ints', '--help'],
+                    prog_name=base_command)
+
+                self.assertEqual(result.exit_code, 0)
+                self.assertIn(
+                    '%s dummy-plugin concatenate-ints' % base_command,
+                    result.output)
+                self.assertNotIn(BASE_COMMAND_TOKEN, result.output)
 
     def test_action_parameter_types(self):
         rachis_cli = RootCommand()
