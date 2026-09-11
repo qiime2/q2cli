@@ -77,4 +77,4 @@ runinfo
 _version.py
 
 # Built vendored view
-q2cli/assets/view
+rachis_cli/assets/view

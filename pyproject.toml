@@ -1,5 +1,5 @@
 [project]
-name = "q2cli"
+name = "rachis-cli"
 authors = [
     { name = "None", email = "developers@qiime2.org" }
 ]
@@ -10,13 +10,16 @@ dynamic = ["version"]
 
 [project.urls]
 Homepage = "https://qiime2.org"
-Repository = "https://github.com/qiime2/q2cli"
+Repository = "https://github.com/rachis-org/rachis-cli"
 
 [project.scripts]
-"qiime" = "q2cli.__main__:qiime"
+"rachis" = "rachis_cli.__main__:rachis"
 
-[project.entry-points.'qiime2.usage_drivers']
-"cli" = "q2cli.core.usage:ReplayCLIUsage"
+[project.entry-points.'rachis.cli_commands']
+"rachis" = "rachis_cli.__main__:rachis"
+
+[project.entry-points.'rachis.usage_drivers']
+"cli" = "rachis_cli.core.usage:ReplayCLIUsage"
 
 [build-system]
 requires = [
@@ -40,17 +43,17 @@ dirty = "{base_version}+{distance}.{vcs}{rev}.dirty"
 distance-dirty = "{base_version}+{distance}.{vcs}{rev}.dirty"
 
 [tool.versioningit.write]
-file = "q2cli/_version.py"
+file = "rachis_cli/_version.py"
 
 [tool.setuptools]
 include-package-data = true
 script-files = [
-    "bin/tab-qiime"
+    "bin/tab-rachis"
 ]
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["q2cli*"]
+include = ["rachis_cli*"]
 
 [tool.setuptools.package-data]
-q2cli = ["**/*"]
+rachis_cli = ["**/*"]

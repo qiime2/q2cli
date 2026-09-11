@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+
+# Shell completion for every rachis-cli front-end installed in this
+# environment (e.g. `rachis`, `qiime`, and `mosh` in a MOSHPIT deployment).
+#
+# Front-ends advertise themselves through the `rachis.cli_commands` entry
+# point group; see `rachis_cli.util.get_cli_command_names`.
+#
+# This script is intended to be sourced by the conda activation hook, or on
+# the command-line/in .bashrc/.bash_profile:
+#
+#     source tab-rachis
+#
+# NOTE: this file is always sourced, never executed, so its contents must be
+# valid in both bash and zsh (the shebang above is decorative).
+
+# The cached completion script's path and the set of front-end command names
+# are both fixed for the life of an activation, so they are resolved here once
+# in a single interpreter start - rather than on every <tab>. If rachis-cli
+# isn't installed, or is an incompatible version, this yields nothing and no
+# completion is registered.
+_rachis_meta="$(python -c "import rachis_cli.util as u
+print(u.get_completion_path())
+print('\n'.join(u.get_cli_command_names()))" 2> /dev/null)"
+
+if [ -n "${_rachis_meta}" ]; then
+  _RACHIS_COMPLETION_PATH="${_rachis_meta%%$'\n'*}"
+  _rachis_names="${_rachis_meta#*$'\n'}"
+
+  # `${var#*<newline>}` yields the string unchanged when it holds no newline,
+  # which is what a deployment reporting no front-ends looks like: the empty
+  # trailing line is stripped by the command substitution above.
+  if [ "${_rachis_names}" = "${_rachis_meta}" ]; then
+    _rachis_names=""
+  fi
+
+  # Fall back to the front-ends provided by rachis-cli itself if the entry
+  # point metadata is missing (e.g. an uninstalled source checkout).
+  if [ -z "${_rachis_names}" ]; then
+    _rachis_names="rachis"
+  fi
+
+  # NOTE: `_RACHIS_COMPLETION_PATH` is intentionally left set in the shell -
+  # the completion function below reads it every time it runs.
+  _rachis_completion()
+  {
+    # If the completion script exists, attempt completion by invoking the
+    # script in a subshell, supplying COMP_WORDS and COMP_CWORD. Capture the
+    # output as the completion reply. If the completion script failed, don't
+    # attempt completion.
+    if [[ -f "${_RACHIS_COMPLETION_PATH}" ]] ; then
+      COMPREPLY=( $(COMP_WORDS="${COMP_WORDS[*]}" COMP_CWORD="${COMP_CWORD}" \
+                    "${_RACHIS_COMPLETION_PATH}" 2> /dev/null) )
+
+      if [[ $? != 0 ]]; then
+        unset COMPREPLY
+      fi
+    else
+      unset COMPREPLY
+    fi
+
+    return 0
+  }
+
+  # Register the completion function against each installed front-end.
+  #
+  # NOTE: the iteration is over a command substitution rather than over
+  # `${_rachis_names}` directly because zsh does not word-split unquoted
+  # parameter expansions - passing the list as one argument would register a
+  # single command whose name is the entire list.
+  _rachis_first=""
+  for _rachis_cmd in $(printf '%s\n' "${_rachis_names}"); do
+    # Enable default readline and bash completion behavior when
+    # `_rachis_completion` doesn't have a reply.
+    complete -F _rachis_completion -o default -o bashdefault "${_rachis_cmd}"
+
+    if [ -z "${_rachis_first}" ]; then
+      _rachis_first="${_rachis_cmd}"
+    fi
+  done
+
+  # Execute one of the front-ends (any command will do) so that tab-completion
+  # will work out-of-the-box (e.g. with a fresh installation of rachis-cli).
+  # Running a command will create or refresh the cache if necessary, which
+  # contains the actual completion script.
+  #
+  # Ignore stdout to avoid displaying help text to users enabling
+  # tab-completion. stderr displays the note about cache refreshing, as that
+  # can take a few moments to complete.
+  if [ -n "${_rachis_first}" ]; then
+    "${_rachis_first}" &> /dev/null
+  fi
+
+  unset _rachis_names _rachis_cmd _rachis_first
+fi
+
+unset _rachis_meta

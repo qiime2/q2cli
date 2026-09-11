@@ -1,13 +1,12 @@
-# q2cli
+# rachis-cli
 
-![](https://github.com/qiime2/q2cli/workflows/ci-dev/badge.svg)
+![](https://github.com/rachis-org/rachis-cli/workflows/ci-dev/badge.svg)
 
-A [click-based](http://click.pocoo.org/) command line interface for [QIIME
-2](https://github.com/qiime2/qiime2).
+A [click-based](http://click.pocoo.org/) command line interface for [rachis](https://github.com/rachis-org/rachis).
 
 ## Installation and getting help
 
-Visit https://qiime2.org to learn more about q2cli and the QIIME 2 project.
+Visit https://qiime2.org to learn more about rachis-cli and the rachis project.
 
 ## Enabling tab completion
 
@@ -17,7 +16,7 @@ To enable tab completion in Bash, run the following command or add it to your
 `.bashrc`/`.bash_profile`:
 
 ```bash
-source tab-qiime
+source tab-rachis
 ```
 
 ### ZSH
@@ -26,5 +25,5 @@ To enable tab completion in ZSH, run the following commands or add them to your
 `.zshrc`:
 
 ```bash
-autoload -Uz compinit && compinit && autoload bashcompinit && bashcompinit && source tab-qiime
+autoload -Uz compinit && compinit && autoload bashcompinit && bashcompinit && source tab-rachis
 ```

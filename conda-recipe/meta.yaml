@@ -1,12 +1,12 @@
 package:
-  name: q2cli
+  name: rachis-cli
   version: {{ PLUGIN_VERSION }}
 source:
   path: ..
 build:
   script: make install
   entry_points:
-  - qiime=q2cli.__main__:qiime
+  - rachis=rachis_cli.__main__:rachis
 requirements:
   host:
   - python {{ python }}
@@ -18,7 +18,7 @@ requirements:
   - python {{ python }}
   - setuptools
   - click {{ click }}
-  - qiime2 >={{ qiime2 }}
+  - rachis >={{ rachis }}
   - q2templates >={{ q2templates }}
   build:
   - python {{ python }}
@@ -26,16 +26,16 @@ requirements:
   - versioningit
 test:
   requires:
-  - qiime2 >={{ qiime2 }}
+  - rachis >={{ rachis }}
   - q2templates >={{ q2templates }}
   - pytest
   - pytest-xdist
   - q2-mystery-stew
   imports:
-  - q2cli
+  - rachis_cli
   commands:
-  - Q2CLIDEV=1 QIIMETEST= qiime --help
-  - Q2CLIDEV=1 QIIMETEST= py.test --pyargs q2cli
+  - Q2CLIDEV=1 QIIMETEST= rachis --help
+  - Q2CLIDEV=1 QIIMETEST= py.test --pyargs rachis_cli
 about:
   home: https://qiime2.org
   license: BSD-3-Clause
